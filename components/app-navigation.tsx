@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { logout } from "@/lib/actions/auth";
 
 type IconName = "book" | "calendar" | "camera" | "home" | "plus" | "user";
 
@@ -33,5 +34,15 @@ export function AppNavigation() {
       return <Link className={`sidebar-link ${active ? "is-active" : ""} ${item.icon === "plus" ? "is-add" : ""}`} href={item.href} key={item.href} aria-current={active ? "page" : undefined}><Icon name={item.icon} /><span>{item.label}</span></Link>;
     })}</div>
     <Link className="sidebar-profile" href="/profile"><span className="sidebar-avatar" aria-hidden="true">כ</span><span><strong>קרן כהן</strong><small>הפרופיל שלי</small></span></Link>
+    <form action={logout}>
+      <button type="submit" className="sidebar-link" style={{ width: '100%', border: 0, background: 'transparent', cursor: 'pointer', textAlign: 'right' }}>
+        <svg width={21} height={21} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <polyline points="16 17 21 12 16 7" />
+          <line x1="21" y1="12" x2="9" y2="12" />
+        </svg>
+        <span>יציאה</span>
+      </button>
+    </form>
   </nav>;
 }
