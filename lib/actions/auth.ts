@@ -79,8 +79,7 @@ export async function register(
   }
 
   if (data.user) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.from('profiles') as any).insert({
+    await supabase.from('profiles').insert({
       id: data.user.id,
       display_name: parsed.data.displayName,
     })
