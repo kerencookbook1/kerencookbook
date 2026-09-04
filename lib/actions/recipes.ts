@@ -1,0 +1,166 @@
+'use server'
+
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { recipeFormSchema } from '@/lib/validations/recipes'
+import type { IngredientItem, StepItem } from '@/lib/validations/recipes'
+
+export type RecipeActionState = { error?: string } | null
+
+function parseJson<T>(raw: string): T[] {
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+export async function createRecipe(
+  _prev: RecipeActionState,
+  formData: FormData
+): Promise<RecipeActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'לא מחובר' }
+
+  const parsed = recipeFormSchema.safeParse({
+    title: formData.get('title'),
+    description: formData.get('description') || '',
+    prepTime: formData.get('prepTime') || null,
+    cookTime: formData.get('cookTime') || null,
+    servings: formData.get('servings') || null,
+    ingredientsJson: formData.get('ingredientsJson') ?? '[]',
+    stepsJson: formData.get('stepsJson') ?? '[]',
+  })
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const { title, description, prepTime, cookTime, servings, ingredientsJson, stepsJson } = parsed.data
+  const ingredients = parseJson<IngredientItem>(ingredientsJson)
+  const steps = parseJson<StepItem>(stepsJson)
+
+  const { data: recipe, error: recipeError } = await supabase
+    .from('recipes')
+    .insert({
+      owner_id: user.id,
+      title,
+      description: description || null,
+      prep_time: prepTime ?? null,
+      cook_time: cookTime ?? null,
+      servings: servings ?? null,
+    })
+    .select('id')
+    .single()
+
+  if (recipeError || !recipe) return { error: 'שגיאה ביצירת המתכון' }
+
+  if (ingredients.length > 0) {
+    await supabase.from('ingredients').insert(
+      ingredients
+        .filter(ing => ing.name.trim())
+        .map((ing, i) => ({
+          recipe_id: recipe.id,
+          name: ing.name.trim(),
+          amount: ing.amount?.trim() || null,
+          unit: ing.unit?.trim() || null,
+          position: i,
+        }))
+    )
+  }
+
+  if (steps.length > 0) {
+    await supabase.from('recipe_steps').insert(
+      steps
+        .filter(s => s.body.trim())
+        .map((s, i) => ({
+          recipe_id: recipe.id,
+          title: s.title?.trim() || null,
+          body: s.body.trim(),
+          duration_seconds: s.durationSeconds ?? null,
+          position: i,
+        }))
+    )
+  }
+
+  redirect(`/recipes/${recipe.id}`)
+}
+
+export async function updateRecipe(
+  _prev: RecipeActionState,
+  formData: FormData
+): Promise<RecipeActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'לא מחובר' }
+
+  const recipeId = formData.get('recipeId') as string
+  if (!recipeId) return { error: 'מזהה מתכון חסר' }
+
+  const parsed = recipeFormSchema.safeParse({
+    title: formData.get('title'),
+    description: formData.get('description') || '',
+    prepTime: formData.get('prepTime') || null,
+    cookTime: formData.get('cookTime') || null,
+    servings: formData.get('servings') || null,
+    ingredientsJson: formData.get('ingredientsJson') ?? '[]',
+    stepsJson: formData.get('stepsJson') ?? '[]',
+  })
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const { title, description, prepTime, cookTime, servings, ingredientsJson, stepsJson } = parsed.data
+  const ingredients = parseJson<IngredientItem>(ingredientsJson)
+  const steps = parseJson<StepItem>(stepsJson)
+
+  const { error: updateError } = await supabase
+    .from('recipes')
+    .update({
+      title,
+      description: description || null,
+      prep_time: prepTime ?? null,
+      cook_time: cookTime ?? null,
+      servings: servings ?? null,
+    })
+    .eq('id', recipeId)
+    .eq('owner_id', user.id)
+
+  if (updateError) return { error: 'שגיאה בעדכון המתכון' }
+
+  await supabase.from('ingredients').delete().eq('recipe_id', recipeId)
+  await supabase.from('recipe_steps').delete().eq('recipe_id', recipeId)
+
+  if (ingredients.length > 0) {
+    await supabase.from('ingredients').insert(
+      ingredients
+        .filter(ing => ing.name.trim())
+        .map((ing, i) => ({
+          recipe_id: recipeId,
+          name: ing.name.trim(),
+          amount: ing.amount?.trim() || null,
+          unit: ing.unit?.trim() || null,
+          position: i,
+        }))
+    )
+  }
+
+  if (steps.length > 0) {
+    await supabase.from('recipe_steps').insert(
+      steps
+        .filter(s => s.body.trim())
+        .map((s, i) => ({
+          recipe_id: recipeId,
+          title: s.title?.trim() || null,
+          body: s.body.trim(),
+          duration_seconds: s.durationSeconds ?? null,
+          position: i,
+        }))
+    )
+  }
+
+  redirect(`/recipes/${recipeId}`)
+}
+
+export async function deleteRecipe(recipeId: string): Promise<void> {
+  const supabase = await createClient()
+  await supabase.from('recipes').delete().eq('id', recipeId)
+  redirect('/recipes')
+}
