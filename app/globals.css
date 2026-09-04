@@ -94,3 +94,56 @@ button:focus-visible, .text-button:focus-visible { outline: 3px solid rgb(22 95 
 .auth-links a { color: var(--terracotta-dark); font-weight: 700; text-decoration: none; }
 .auth-links a:hover { text-decoration: underline; }
 .auth-form .primary-button { width: 100%; justify-content: center; }
+
+/* Recipe editor form */
+.recipe-editor-form { display: grid; gap: 32px; padding: 24px 16px 80px; max-width: 640px; margin: 0 auto; }
+.form-section { display: grid; gap: 16px; }
+.form-section label { display: grid; gap: 6px; font-weight: 700; }
+.form-section input[type="text"], .form-section input[type="number"], .form-section textarea { width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; background: #fffdfa; color: var(--ink); font-size: 1rem; }
+.form-section textarea { padding: 12px 14px; min-height: 80px; resize: vertical; }
+.form-section input:focus, .form-section textarea:focus { border-color: var(--focus); outline: 3px solid rgb(22 95 113 / 20%); }
+.time-servings-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.form-actions { position: sticky; bottom: 0; background: var(--canvas); padding: 16px; border-top: 1px solid var(--line); display: flex; gap: 12px; }
+
+/* Ingredient fields */
+.ingredient-fields { display: grid; gap: 8px; }
+.ingredient-row { display: grid; grid-template-columns: 70px 80px 1fr 36px; gap: 8px; align-items: center; }
+.ingredient-row input { min-height: 40px; border: 1px solid var(--line); border-radius: 10px; padding: 0 10px; background: #fffdfa; color: var(--ink); font-size: .95rem; }
+.ingredient-row input:focus { border-color: var(--focus); outline: 2px solid rgb(22 95 113 / 20%); }
+
+/* Step fields */
+.step-fields { display: grid; gap: 12px; }
+.step-row { display: grid; grid-template-columns: 32px 1fr 36px; gap: 8px; align-items: start; }
+.step-number { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--terracotta); color: #fff; border-radius: 50%; font-weight: 700; font-size: .85rem; flex-shrink: 0; margin-top: 6px; }
+.step-row textarea { width: 100%; min-height: 72px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fffdfa; color: var(--ink); font-size: .95rem; resize: vertical; }
+.step-row textarea:focus { border-color: var(--focus); outline: 2px solid rgb(22 95 113 / 20%); }
+.remove-btn { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 6px; }
+.remove-btn:hover:not(:disabled) { background: #fff0eb; color: var(--terracotta); }
+.remove-btn:disabled { opacity: .3; cursor: default; }
+
+/* Recipe detail */
+.recipe-photo-placeholder { width: 100%; aspect-ratio: 16/9; background: var(--line); border-radius: 16px; }
+.detail-content { padding: 20px 16px; display: grid; gap: 24px; max-width: 640px; margin: 0 auto; }
+.detail-title { margin: 0; font-family: Georgia, serif; font-size: 1.75rem; letter-spacing: -.02em; }
+.detail-description { margin: 0; color: var(--muted); line-height: 1.6; }
+.detail-meta { display: flex; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: .9rem; }
+.detail-meta span { display: flex; align-items: center; gap: 4px; }
+.detail-recipe-actions { display: flex; gap: 8px; }
+.detail-footer-actions { padding: 16px; border-top: 1px solid var(--line); display: flex; gap: 12px; position: sticky; bottom: 0; background: var(--canvas); }
+.ingredients-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.ingredients-list li { display: flex; gap: 6px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.ing-amount { font-weight: 700; color: var(--terracotta); }
+.ing-unit { color: var(--muted); }
+.steps-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 20px; counter-reset: steps; }
+.steps-list li { display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: start; counter-increment: steps; }
+.steps-list li::before { content: counter(steps); width: 36px; height: 36px; border-radius: 50%; background: var(--terracotta); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .9rem; flex-shrink: 0; }
+.steps-list p { margin: 0; line-height: 1.6; }
+.steps-list strong { display: block; font-weight: 700; margin-bottom: 4px; }
+
+/* Empty state */
+.empty-state { display: grid; place-items: center; gap: 20px; padding: 80px 24px; text-align: center; color: var(--muted); }
+.empty-state p { margin: 0; font-size: 1.1rem; }
+
+/* Delete button */
+.delete-button { margin-top: 8px; color: #7a2f1e; border-color: #cfbfae; }
+.delete-button:hover { background: #fff0eb; }
