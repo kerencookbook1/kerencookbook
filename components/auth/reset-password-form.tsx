@@ -29,6 +29,8 @@ export function ResetPasswordForm() {
           setReady(true)
         }
       })
+    } else {
+      setExchangeError('קישור לאיפוס סיסמה לא נמצא. בקש קישור חדש.')
     }
   }, [])
 

@@ -81,8 +81,8 @@ describe('register', () => {
     expect(result?.error).toBe('כתובת האימייל כבר רשומה במערכת')
   })
 
-  it('creates profile and redirects on success', async () => {
-    mockSignUp.mockResolvedValue({ error: null, data: { user: { id: 'uid-123' } } })
+  it('creates profile and redirects on success (email confirmation off)', async () => {
+    mockSignUp.mockResolvedValue({ error: null, data: { user: { id: 'uid-123' }, session: { access_token: 'tok' } } })
     mockInsert.mockResolvedValue({ error: null })
     await register(null, makeFormData({
       displayName: 'קרן', email: 'a@b.com',
@@ -90,6 +90,17 @@ describe('register', () => {
     }))
     expect(mockInsert).toHaveBeenCalledWith({ id: 'uid-123', display_name: 'קרן' })
     expect(redirect).toHaveBeenCalledWith('/')
+  })
+
+  it('returns success when email confirmation required (no session)', async () => {
+    mockSignUp.mockResolvedValue({ error: null, data: { user: { id: 'uid-123' }, session: null } })
+    mockInsert.mockResolvedValue({ error: null })
+    const result = await register(null, makeFormData({
+      displayName: 'קרן', email: 'a@b.com',
+      password: '123456', confirmPassword: '123456',
+    }))
+    expect(result?.success).toBe(true)
+    expect(redirect).not.toHaveBeenCalled()
   })
 })
 

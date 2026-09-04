@@ -8,6 +8,20 @@ import Link from 'next/link'
 export function RegisterForm() {
   const [state, action, isPending] = useActionState<AuthActionState, FormData>(register, null)
 
+  if (state?.success) {
+    return (
+      <div>
+        <p className="auth-success">
+          נשלח אימייל אימות לכתובת שהזנת. אנא אשרי את הכתובת ואז כנסי לאפליקציה.
+        </p>
+        <div className="auth-links" style={{ marginTop: '20px' }}>
+          <span />
+          <Link href="/login">חזרה לכניסה</Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <form action={action} className="auth-form">
       {state?.error && <p className="auth-error" role="alert">{state.error}</p>}

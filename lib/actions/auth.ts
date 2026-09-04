@@ -79,10 +79,17 @@ export async function register(
   }
 
   if (data.user) {
-    await supabase.from('profiles').insert({
+    const { error: profileError } = await supabase.from('profiles').insert({
       id: data.user.id,
       display_name: parsed.data.displayName,
     })
+    if (profileError) {
+      console.error('profiles insert failed:', profileError.message)
+    }
+  }
+
+  if (!data.session) {
+    return { success: true }
   }
 
   redirect('/')
