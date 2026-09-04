@@ -29,7 +29,7 @@ export async function getRecipe(id: string): Promise<RecipeWithDetails | null> {
     supabase.from('ingredients').select('*').eq('recipe_id', id).order('position'),
     supabase.from('recipe_steps').select('*').eq('recipe_id', id).order('position'),
   ])
-  if (recipeRes.error) return null
+  if (recipeRes.error || !recipeRes.data) return null
   return {
     recipe: recipeRes.data,
     ingredients: ingredientsRes.data ?? [],
