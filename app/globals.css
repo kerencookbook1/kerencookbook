@@ -147,3 +147,7 @@ button:focus-visible, .text-button:focus-visible { outline: 3px solid rgb(22 95 
 /* Delete button */
 .delete-button { margin-top: 8px; color: #7a2f1e; border-color: #cfbfae; }
 .delete-button:hover { background: #fff0eb; }
+
+.hero-food-illustration { width: 100%; height: 100%; background: radial-gradient(circle at 40% 60%, #f4a06d 0%, #e8754a 35%, #c8543a 65%, #8b3522 100%); }
+.recipe-section-header { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
+.recipe-section-header h2 { margin: 0; font-family: Georgia, serif; font-size: clamp(2rem, 3vw, 3rem); letter-spacing: -.025em; }
