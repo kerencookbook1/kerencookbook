@@ -42,3 +42,6 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# Preview-mode local storage (API keys, provider config)
+/.data/

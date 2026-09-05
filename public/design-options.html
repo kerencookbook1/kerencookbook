@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>השוואת עיצובים — המטבח של קרן</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;400;700;900&family=Heebo:wght@300;400;500;700;900&family=Playfair+Display:wght@400;700;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0a0a0a;
+  color: #fff;
+  font-family: 'Heebo', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+
+/* ── Toggle bar ───────────────────────────── */
+.toggle-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px;
+  padding: 4px;
+  margin-bottom: 40px;
+}
+
+.toggle-btn {
+  padding: 10px 32px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,.45);
+  font-family: 'Heebo', sans-serif;
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .25s ease;
+  white-space: nowrap;
+}
+
+.toggle-btn.active {
+  color: #fff;
+  background: rgba(255,255,255,.13);
+}
+
+/* opt2 active */
+body.show-opt2 .toggle-btn[data-opt="2"] { background: #2d6a4f; color: #fff; }
+/* opt3 active */
+body.show-opt3 .toggle-btn[data-opt="3"] { background: #ff4d2c; color: #fff; }
+
+/* ── Phone frame ─────────────────────────── */
+.phone-wrap {
+  position: relative;
+  width: 340px;
+}
+
+.phone {
+  width: 340px;
+  height: 700px;
+  border-radius: 44px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 40px 100px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.07);
+  background: #111;
+}
+
+.phone::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%; transform: translateX(-50%);
+  width: 110px; height: 30px;
+  background: #0a0a0a;
+  border-radius: 0 0 20px 20px;
+  z-index: 200;
+}
+
+/* ── Screens ─────────────────────────────── */
+.phone-screen {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  position: absolute; inset: 0;
+  transition: opacity .3s ease;
+  overflow: hidden;
+}
+
+.screen-opt2 { opacity: 0; pointer-events: none; }
+.screen-opt3 { opacity: 0; pointer-events: none; }
+
+body.show-opt2 .screen-opt2 { opacity: 1; pointer-events: auto; }
+body.show-opt3 .screen-opt3 { opacity: 1; pointer-events: auto; }
+
+/* ── OPTION 2: Modern / Clean ──────────────── */
+.screen-opt2 { background: #f8f8f6; }
+
+.opt2-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 42px 20px 16px;
+  background: #f8f8f6;
+}
+.opt2-logo {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: .9rem; font-weight: 700; letter-spacing: -.01em; color: #111;
+}
+.opt2-logo span { color: #2d6a4f; }
+.opt2-search-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: #111; display: grid; place-items: center;
+}
+.opt2-search-btn svg { width: 17px; height: 17px; stroke: #fff; fill: none; stroke-width: 2; }
+
+.opt2-featured {
+  margin: 0 20px 18px;
+  border-radius: 22px; overflow: hidden;
+  position: relative; height: 200px;
+  background: #2d6a4f;
+}
+.opt2-featured img { width: 100%; height: 100%; object-fit: cover; opacity: .65; mix-blend-mode: multiply; }
+.opt2-featured-text {
+  position: absolute; inset: 0; padding: 18px;
+  display: flex; flex-direction: column; justify-content: flex-end;
+}
+.opt2-featured-label { font-size: .62rem; letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,.65); margin-bottom: 5px; }
+.opt2-featured-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.3rem; font-weight: 700; color: #fff; line-height: 1.2; letter-spacing: -.02em; }
+.opt2-featured-meta { font-size: .65rem; color: rgba(255,255,255,.6); margin-top: 6px; }
+.opt2-badge {
+  position: absolute; top: 14px; right: 14px;
+  background: rgba(255,255,255,.15); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,.2); color: #fff;
+  font-size: .6rem; font-weight: 600; padding: 4px 11px; border-radius: 999px;
+}
+
+.opt2-content { flex: 1; overflow: hidden; padding: 0 20px; }
+.opt2-section-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 12px;
+}
+.opt2-section-header h3 {
+  font-family: 'Space Grotesk', sans-serif; font-size: .95rem; font-weight: 700; color: #111;
+}
+.opt2-section-header a { font-size: .68rem; color: #2d6a4f; }
+
+.opt2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.opt2-gcard { border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.06); }
+.opt2-gcard-img { height: 90px; overflow: hidden; }
+.opt2-gcard-img img { width: 100%; height: 100%; object-fit: cover; }
+.opt2-gcard-body { padding: 8px 10px 10px; }
+.opt2-gcard-body p { font-size: .73rem; font-weight: 600; color: #111; line-height: 1.3; }
+.opt2-gcard-body span { font-size: .6rem; color: #888; }
+
+.opt2-nav {
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 8px 0 14px;
+  background: #fff; border-top: 1px solid #e8e8e8;
+  flex-shrink: 0;
+}
+.opt2-nav .ni { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: .58rem; color: #aaa; font-family: 'Space Grotesk', sans-serif; }
+.opt2-nav .ni.a { color: #111; }
+.opt2-nav svg { width: 22px; height: 22px; }
+
+/* ── OPTION 3: Bold / Editorial ──────────── */
+.screen-opt3 { background: #0a0a0a; }
+
+.opt3-top {
+  padding: 40px 20px 18px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.opt3-wordmark {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.15rem; font-weight: 900; color: #fff; letter-spacing: -.02em;
+}
+.opt3-wordmark em { color: #ff4d2c; font-style: normal; }
+.opt3-icon-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.15); display: grid; place-items: center;
+}
+.opt3-icon-btn svg { width: 17px; height: 17px; stroke: rgba(255,255,255,.8); fill: none; stroke-width: 1.5; }
+
+.opt3-big {
+  margin: 0 20px 0;
+  border-radius: 20px; overflow: hidden;
+  position: relative; height: 230px;
+}
+.opt3-big img { width: 100%; height: 100%; object-fit: cover; }
+.opt3-big-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.92) 0%, rgba(0,0,0,.08) 60%);
+}
+.opt3-pill {
+  position: absolute; top: 14px; left: 14px;
+  background: #ff4d2c; color: #fff;
+  font-size: .6rem; font-weight: 700; letter-spacing: .08em;
+  padding: 4px 11px; border-radius: 5px; text-transform: uppercase;
+}
+.opt3-big-content {
+  position: absolute; bottom: 0; right: 0; left: 0; padding: 16px 18px;
+}
+.opt3-category { font-size: .62rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #ff4d2c; margin-bottom: 5px; }
+.opt3-big-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.4rem; font-weight: 900; color: #fff; line-height: 1.15; letter-spacing: -.02em;
+}
+.opt3-big-sub { font-size: .65rem; color: rgba(255,255,255,.5); margin-top: 5px; }
+
+.opt3-divider {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 20px 10px;
+}
+.opt3-divider span { font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.3); white-space: nowrap; }
+.opt3-divider-line { flex: 1; height: 1px; background: rgba(255,255,255,.1); }
+
+.opt3-strip { display: flex; gap: 10px; padding: 0 20px; }
+.opt3-strip-item {
+  flex: 1;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px; overflow: hidden;
+}
+.opt3-strip-img { height: 75px; overflow: hidden; }
+.opt3-strip-img img { width: 100%; height: 100%; object-fit: cover; opacity: .8; }
+.opt3-strip-body { padding: 7px 9px 9px; }
+.opt3-strip-cat { font-size: .55rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #ff4d2c; margin-bottom: 2px; }
+.opt3-strip-title { font-size: .7rem; font-weight: 600; color: #fff; line-height: 1.3; }
+
+.opt3-nav {
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 10px 0 16px; margin-top: auto;
+  background: rgba(255,255,255,.02);
+  border-top: 1px solid rgba(255,255,255,.07);
+  flex-shrink: 0;
+}
+.opt3-nav .ni { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: .58rem; color: rgba(255,255,255,.28); }
+.opt3-nav .ni.a { color: #ff4d2c; }
+.opt3-nav svg { width: 22px; height: 22px; }
+
+/* ── Label below phone ───────────────────── */
+.design-label {
+  text-align: center;
+  margin-top: 28px;
+  min-height: 52px;
+  transition: opacity .3s;
+}
+.design-label h2 { font-family: 'Frank Ruhl Libre', serif; font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; }
+.design-label p { color: rgba(255,255,255,.45); font-size: .85rem; }
+
+.label-opt2 { display: none; }
+.label-opt3 { display: none; }
+body.show-opt2 .label-opt2 { display: block; }
+body.show-opt3 .label-opt3 { display: block; }
+</style>
+</head>
+<body class="show-opt2">
+
+<!-- Toggle -->
+<div class="toggle-bar">
+  <button class="toggle-btn active" data-opt="2" onclick="setOpt(2)">עיצוב 2 — מודרני</button>
+  <button class="toggle-btn" data-opt="3" onclick="setOpt(3)">עיצוב 3 — עז ועיתונותי</button>
+</div>
+
+<!-- Phone -->
+<div class="phone-wrap">
+  <div class="phone">
+
+    <!-- SCREEN 2: Modern/Clean -->
+    <div class="phone-screen screen-opt2">
+      <div class="opt2-topbar">
+        <div class="opt2-logo">המטבח<span> של קרן</span></div>
+        <div class="opt2-search-btn">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+      </div>
+      <div class="opt2-featured">
+        <img src="https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=640&q=80" alt="">
+        <div class="opt2-badge">✦ מתכון השבוע</div>
+        <div class="opt2-featured-text">
+          <div class="opt2-featured-label">ארוחת ערב</div>
+          <div class="opt2-featured-title">פילה דג עם תרד ולימון</div>
+          <div class="opt2-featured-meta">25 דק׳ · 2 מנות · קל</div>
+        </div>
+      </div>
+      <div class="opt2-content">
+        <div class="opt2-section-header">
+          <h3>הספרייה שלך</h3>
+          <a>כל המתכונים</a>
+        </div>
+        <div class="opt2-grid">
+          <div class="opt2-gcard">
+            <div class="opt2-gcard-img">
+              <img src="https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=300&q=80" alt="">
+            </div>
+            <div class="opt2-gcard-body">
+              <p>ריגטוני ברוטב עגבניות</p>
+              <span>35 דק׳ · פסטה</span>
+            </div>
+          </div>
+          <div class="opt2-gcard">
+            <div class="opt2-gcard-img">
+              <img src="https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=300&q=80" alt="">
+            </div>
+            <div class="opt2-gcard-body">
+              <p>עוגת לימון סבתא רוזה</p>
+              <span>50 דק׳ · קינוח</span>
+            </div>
+          </div>
+          <div class="opt2-gcard">
+            <div class="opt2-gcard-img">
+              <img src="https://images.unsplash.com/photo-1590301157890-4810ed352733?w=300&q=80" alt="">
+            </div>
+            <div class="opt2-gcard-body">
+              <p>שקשוקה ביתית</p>
+              <span>20 דק׳ · ביצים</span>
+            </div>
+          </div>
+          <div class="opt2-gcard">
+            <div class="opt2-gcard-img">
+              <img src="https://images.unsplash.com/photo-1484723091739-30a097e8f929?w=300&q=80" alt="">
+            </div>
+            <div class="opt2-gcard-body">
+              <p>פנקייק בוקר תוסס</p>
+              <span>20 דק׳ · בוקר</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <nav class="opt2-nav">
+        <div class="ni a">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>בית</span>
+        </div>
+        <div class="ni">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span>חיפוש</span>
+        </div>
+        <div class="ni">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+          <span>אוספים</span>
+        </div>
+        <div class="ni">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>פרופיל</span>
+        </div>
+      </nav>
+    </div>
+
+    <!-- SCREEN 3: Bold/Editorial -->
+    <div class="phone-screen screen-opt3">
+      <div class="opt3-top">
+        <div class="opt3-wordmark">המטבח<em> ✦</em> קרן</div>
+        <div class="opt3-icon-btn">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+      </div>
+      <div class="opt3-big">
+        <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=640&q=80" alt="">
+        <div class="opt3-big-overlay"></div>
+        <div class="opt3-pill">חדש</div>
+        <div class="opt3-big-content">
+          <div class="opt3-category">ארוחת ערב חגיגית</div>
+          <div class="opt3-big-title">כבש צלוי בתנור עם<br>ירקות שורש</div>
+          <div class="opt3-big-sub">2 שעות · 6 מנות · בינוני</div>
+        </div>
+      </div>
+      <div class="opt3-divider">
+        <div class="opt3-divider-line"></div>
+        <span>מהספרייה שלך</span>
+        <div class="opt3-divider-line"></div>
+      </div>
+      <div class="opt3-strip">
+        <div class="opt3-strip-item">
+          <div class="opt3-strip-img">
+            <img src="https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=200&q=80" alt="">
+          </div>
+          <div class="opt3-strip-body">
+            <div class="opt3-strip-cat">פסטה</div>
+            <div class="opt3-strip-title">ריגטוני<br>של אמא</div>
+          </div>
+        </div>
+        <div class="opt3-strip-item">
+          <div class="opt3-strip-img">
+            <img src="https://images.unsplash.com/photo-1590301157890-4810ed352733?w=200&q=80" alt="">
+          </div>
+          <div class="opt3-strip-body">
+            <div class="opt3-strip-cat">ביצים</div>
+            <div class="opt3-strip-title">שקשוקה<br>ביתית</div>
+          </div>
+        </div>
+        <div class="opt3-strip-item">
+          <div class="opt3-strip-img">
+            <img src="https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=200&q=80" alt="">
+          </div>
+          <div class="opt3-strip-body">
+            <div class="opt3-strip-cat">קינוח</div>
+            <div class="opt3-strip-title">עוגת<br>לימון</div>
+          </div>
+        </div>
+      </div>
+      <nav class="opt3-nav">
+        <div class="ni a">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>בית</span>
+        </div>
+        <div class="ni">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span>חיפוש</span>
+        </div>
+        <div class="ni">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+          <span>אוספים</span>
+        </div>
+        <div class="ni">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>פרופיל</span>
+        </div>
+      </nav>
+    </div>
+
+  </div><!-- /phone -->
+</div><!-- /phone-wrap -->
+
+<!-- Label -->
+<div class="design-label">
+  <div class="label-opt2">
+    <h2>מודרני ונקי</h2>
+    <p>לבן · ירוק כהה · Space Grotesk</p>
+  </div>
+  <div class="label-opt3">
+    <h2>עז ועיתונותי</h2>
+    <p>שחור · כתום-אדום · Playfair Display</p>
+  </div>
+</div>
+
+<script>
+function setOpt(n) {
+  document.body.className = 'show-opt' + n;
+  document.querySelectorAll('.toggle-btn').forEach(b => b.classList.toggle('active', +b.dataset.opt === n));
+}
+</script>
+</body>
+</html>

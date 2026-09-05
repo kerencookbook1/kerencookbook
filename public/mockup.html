@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>המטבח של קרן — מוקאפ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&family=Frank+Ruhl+Libre:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1e1611;--muted:#7a6b5f;--canvas:#faf6ef;--surface:#ffffff;
+  --line:#e8ddd0;--terra:#c94a2e;--terra2:#a53a21;--sage:#5a6e3a;
+  --warm:#f5e6d0;--shadow:0 24px 64px rgba(60,35,15,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#ede8e0;font-family:'Heebo',sans-serif;color:var(--ink);padding:56px 32px 100px;direction:rtl}
+img{display:block;width:100%;height:100%;object-fit:cover}
+
+/* ─── GALLERY ─── */
+.page-title{text-align:center;margin-bottom:64px}
+.page-title h1{font-family:'Frank Ruhl Libre',serif;font-size:3.2rem;letter-spacing:-.04em;color:#1e1611}
+.page-title p{color:var(--muted);margin-top:10px;font-size:1.1rem}
+.gallery{display:flex;flex-wrap:wrap;gap:52px;justify-content:center;align-items:flex-start}
+.group{display:flex;flex-direction:column;align-items:center;gap:14px}
+.group-label{font-size:.72rem;font-weight:800;letter-spacing:.1em;color:#a89888;text-transform:uppercase}
+
+/* ─── PHONE FRAME ─── */
+.phone{
+  width:393px;
+  background:var(--canvas);
+  border-radius:52px;
+  overflow:hidden;
+  box-shadow:
+    0 0 0 10px #1a1210,
+    0 0 0 12px #2e2018,
+    0 28px 80px rgba(30,20,10,.45),
+    inset 0 1px 0 rgba(255,255,255,.15);
+  position:relative;
+}
+.status-bar{
+  height:52px;background:transparent;
+  display:flex;align-items:flex-end;justify-content:space-between;
+  padding:0 28px 10px;
+  font-size:.72rem;font-weight:700;
+  position:absolute;top:0;left:0;right:0;z-index:100;
+}
+.status-bar.light{color:#1e1611}
+.status-bar.dark{color:#fffaf2}
+.status-icons{display:flex;align-items:center;gap:5px}
+.body{padding-top:52px}
+.bottom-safe{height:34px}
+
+/* ─── BOTTOM NAV ─── */
+.bnav{
+  display:flex;justify-content:space-around;align-items:center;
+  height:82px;padding-bottom:20px;
+  border-top:1px solid var(--line);
+  background:rgba(250,246,239,.94);
+  backdrop-filter:blur(20px);
+}
+.bni{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:.62rem;font-weight:700;color:#8a7a6e;min-width:56px}
+.bni.on{color:var(--terra)}
+.bni svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ─── SCREEN: HOME ─── */
+.h-bar{display:flex;align-items:center;justify-content:space-between;padding:16px 24px 10px}
+.h-logo{font-family:'Frank Ruhl Libre',serif;font-size:1.4rem;color:#2a1f15;display:flex;align-items:center;gap:7px}
+.h-logo-mark{width:28px;height:28px;border-radius:8px;background:#ddebd0;display:grid;place-items:center;color:var(--sage);font-size:.85rem}
+.h-add{width:42px;height:42px;border-radius:13px;background:var(--terra);color:#fff;font-size:1.4rem;font-weight:300;display:grid;place-items:center;border:none;box-shadow:0 6px 18px rgba(201,74,46,.35)}
+.h-search{margin:6px 24px 16px;display:flex;align-items:center;gap:10px;border:1.5px solid #e0d3c4;border-radius:16px;padding:0 16px;height:50px;background:rgba(255,255,255,.8);backdrop-filter:blur(10px)}
+.h-search span{color:#a0907f;font-size:.88rem}
+.h-search svg{width:18px;height:18px;flex-shrink:0;fill:none;stroke:#a0907f;stroke-width:2;stroke-linecap:round}
+.hero-card{margin:0 24px 20px;border-radius:26px;overflow:hidden;position:relative;height:215px;box-shadow:0 12px 36px rgba(60,30,10,.18)}
+.hero-img{position:absolute;inset:0}
+.hero-img img{filter:brightness(.55) saturate(1.1)}
+.hero-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,.1) 100%)}
+.hero-copy{position:absolute;inset:0;padding:22px 22px;display:flex;flex-direction:column;justify-content:flex-end;color:#fff}
+.hero-copy .ey{font-size:.65rem;font-weight:800;letter-spacing:.1em;color:rgba(255,230,200,.85);margin-bottom:5px;text-transform:uppercase}
+.hero-copy h2{font-family:'Frank Ruhl Libre',serif;font-size:1.85rem;line-height:1.1;letter-spacing:-.03em;margin-bottom:12px}
+.hero-copy .btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.22);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.3);border-radius:11px;padding:8px 16px;font-size:.82rem;font-weight:700;color:#fff}
+.chips{display:flex;gap:9px;padding:0 24px;overflow-x:auto;margin-bottom:22px}
+.chips::-webkit-scrollbar{display:none}
+.chip{border:1.5px solid #ddd0c0;border-radius:14px;padding:9px 18px;font-size:.8rem;font-weight:700;background:#fff;white-space:nowrap;color:#4a3c30;box-shadow:0 3px 10px rgba(60,35,15,.06)}
+.chip.on{background:var(--sage);border-color:var(--sage);color:#fff}
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:0 24px;margin-bottom:14px}
+.sec-head h3{font-family:'Frank Ruhl Libre',serif;font-size:1.4rem;letter-spacing:-.02em}
+.sec-head a{color:var(--terra);font-size:.78rem;font-weight:800}
+.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 24px 16px}
+.rc{border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 6px 20px rgba(60,35,15,.1);position:relative}
+.rc-img{height:126px;position:relative}
+.rc-fav{position:absolute;top:9px;right:9px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.88);backdrop-filter:blur(6px);display:grid;place-items:center;border:none;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.rc-fav svg{width:15px;height:15px;fill:none;stroke:#2a1f15;stroke-width:2}
+.rc-info{padding:10px 13px 13px}
+.rc-info h4{font-size:.88rem;font-weight:700;margin-bottom:3px;line-height:1.3}
+.rc-info .meta{font-size:.7rem;color:var(--muted);display:flex;align-items:center;gap:4px}
+.dot{width:3px;height:3px;border-radius:50%;background:var(--muted)}
+
+/* ─── SCREEN: LIBRARY ─── */
+.lib-head{padding:22px 24px 16px;border-bottom:1px solid var(--line)}
+.lib-head .ey{color:var(--sage);font-size:.68rem;font-weight:800;letter-spacing:.08em;margin-bottom:5px}
+.lib-head h1{font-family:'Frank Ruhl Libre',serif;font-size:2.1rem;letter-spacing:-.04em;margin-bottom:14px}
+.lib-search{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:14px;padding:0 14px;height:46px;background:#fff}
+.lib-search svg{width:16px;height:16px;flex-shrink:0;fill:none;stroke:#a0907f;stroke-width:2;stroke-linecap:round}
+.lib-search span{color:#a0907f;font-size:.85rem}
+.pills{display:flex;gap:7px;padding:12px 24px;overflow-x:auto}
+.pills::-webkit-scrollbar{display:none}
+.pill{border:1.5px solid var(--line);border-radius:999px;padding:6px 14px;font-size:.73rem;font-weight:700;background:#fff;white-space:nowrap;color:#5a4c40}
+.pill.on{border-color:var(--terra);background:rgba(201,74,46,.08);color:var(--terra2)}
+.lib-count{padding:4px 24px 12px;font-size:.82rem;color:var(--muted);font-weight:700}
+.lib-list{display:grid;gap:10px;padding:0 24px 12px}
+.lc{display:grid;grid-template-columns:38% 1fr;border:1.5px solid var(--line);border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 4px 14px rgba(60,35,15,.07)}
+.lc-img{position:relative}
+.lc-img img{height:110px}
+.lc-body{padding:14px 15px;align-self:center}
+.lc-body h3{font-size:.92rem;font-weight:700;margin-bottom:5px;line-height:1.3}
+.lc-body .meta{font-size:.72rem;color:var(--muted);display:flex;gap:4px;align-items:center}
+.lc-tag{display:inline-block;border-radius:999px;padding:2px 9px;background:#eef3e6;color:#4a6330;font-size:.62rem;font-weight:800;margin-top:6px}
+
+/* ─── SCREEN: RECIPE DETAIL ─── */
+.rd-hero{position:relative;height:240px}
+.rd-hero img{filter:brightness(.82)}
+.rd-hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 55%)}
+.rd-header{position:absolute;top:16px;right:0;left:0;display:flex;align-items:center;justify-content:space-between;padding:0 20px}
+.rd-back{color:#fff;font-size:.82rem;font-weight:800;background:rgba(0,0,0,.25);backdrop-filter:blur(8px);border-radius:10px;padding:7px 13px;border:1px solid rgba(255,255,255,.2)}
+.rd-edit{color:#fff;font-size:.78rem;font-weight:800;background:rgba(0,0,0,.25);backdrop-filter:blur(8px);border-radius:10px;padding:7px 13px;border:1px solid rgba(255,255,255,.2)}
+.rd-title-on-img{position:absolute;bottom:16px;right:0;left:0;padding:0 20px;color:#fff}
+.rd-title-on-img h1{font-family:'Frank Ruhl Libre',serif;font-size:1.9rem;letter-spacing:-.03em;line-height:1.1;margin-bottom:6px}
+.rd-meta-badges{display:flex;gap:7px;flex-wrap:wrap}
+.badge{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.22);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:4px 10px;font-size:.7rem;font-weight:700;color:#fff}
+.rd-body{padding:18px 22px}
+.rd-section-title{font-family:'Frank Ruhl Libre',serif;font-size:1.1rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.rd-section-title::after{content:'';flex:1;height:1px;background:var(--line)}
+.ing-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:18px}
+.ing-item{background:var(--warm);border-radius:12px;padding:10px 13px}
+.ing-item strong{display:block;font-size:.78rem;color:var(--terra2);font-weight:800;margin-bottom:1px}
+.ing-item span{font-size:.82rem;color:#4a3c30}
+.steps-list{display:grid;gap:12px;margin-bottom:20px}
+.step-item{display:flex;gap:12px;align-items:flex-start}
+.step-num{width:28px;height:28px;border-radius:50%;background:var(--terra);color:#fff;display:grid;place-items:center;font-size:.72rem;font-weight:800;flex-shrink:0;margin-top:1px}
+.step-text{font-size:.84rem;line-height:1.6;color:#3a2e24;padding-top:4px}
+.rd-actions{display:flex;gap:10px;padding:0 22px 22px}
+.cook-btn{flex:1;height:52px;background:var(--terra);color:#fff;border-radius:16px;border:none;font-weight:800;font-size:.95rem;box-shadow:0 8px 24px rgba(201,74,46,.3);display:flex;align-items:center;justify-content:center;gap:8px}
+.edit-btn{height:52px;border:1.5px solid var(--line);border-radius:16px;padding:0 20px;font-weight:800;font-size:.88rem;color:var(--ink);background:#fff;display:flex;align-items:center}
+
+/* ─── SCREEN: COOK MODE ─── */
+.cook{background:#1c1510;color:#f5ede0;min-height:100%}
+.cook-bar{display:flex;align-items:center;justify-content:space-between;padding:20px 22px 0}
+.cook-back{color:#e8c5a5;font-size:.82rem;font-weight:800;display:flex;align-items:center;gap:5px}
+.cook-timer-btn{border:1px solid rgba(255,255,255,.2);border-radius:11px;padding:7px 14px;font-size:.75rem;color:#f5ede0;background:rgba(255,255,255,.08);backdrop-filter:blur(6px)}
+.cook-prog-wrap{padding:18px 22px 0}
+.cook-prog{height:3px;border-radius:999px;background:rgba(255,255,255,.12)}
+.cook-prog-fill{height:100%;border-radius:inherit;background:var(--terra);width:66%}
+.cook-step-label{padding:24px 22px 12px;font-size:.68rem;font-weight:800;letter-spacing:.1em;color:#b09880;text-transform:uppercase}
+.cook-step-text{padding:0 22px;font-family:'Frank Ruhl Libre',serif;font-size:2rem;line-height:1.12;letter-spacing:-.03em;color:#f5ede0;margin-bottom:28px}
+.cook-ing-panel{margin:0 22px 24px;border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:18px;background:rgba(255,255,255,.05)}
+.cook-ing-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cook-ing-head span{font-size:.7rem;font-weight:800;letter-spacing:.08em;color:#b09880;text-transform:uppercase}
+.cook-servings{display:flex;align-items:center;gap:10px}
+.cook-servings button{width:28px;height:28px;border:1px solid rgba(255,255,255,.2);border-radius:50%;background:transparent;color:#f5ede0;font-size:1.1rem;display:grid;place-items:center}
+.cook-servings strong{font-size:.95rem;color:#f5ede0}
+.cook-ings{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.cook-ing{font-size:.76rem;color:#c8b8a5;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:7px}
+.cook-ing strong{color:#e8c5a5;display:block;font-size:.68rem}
+.cook-actions{display:flex;gap:10px;padding:0 22px 24px}
+.cook-prev{height:52px;border:1.5px solid rgba(255,255,255,.18);border-radius:16px;padding:0 22px;color:#f5ede0;background:transparent;font-weight:700;font-size:.88rem}
+.cook-next{flex:1;height:52px;background:var(--terra);border:none;border-radius:16px;color:#fff;font-weight:800;font-size:.92rem;box-shadow:0 8px 24px rgba(201,74,46,.35)}
+.cook-dots{display:flex;justify-content:center;gap:7px;padding-bottom:16px}
+.cook-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.15)}
+.cook-dot.on{background:var(--terra);width:22px;border-radius:4px}
+
+/* ─── SCREEN: IMPORT ─── */
+.imp-head{padding:22px 24px 18px;border-bottom:1px solid var(--line)}
+.imp-head .back{color:var(--terra);font-size:.78rem;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:4px}
+.imp-head .ey{color:var(--sage);font-size:.68rem;font-weight:800;letter-spacing:.08em;margin-bottom:6px}
+.imp-head h1{font-family:'Frank Ruhl Libre',serif;font-size:1.9rem;letter-spacing:-.04em;margin-bottom:5px}
+.imp-head p{color:var(--muted);font-size:.8rem;line-height:1.55}
+.imp-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:18px 24px}
+.imp-card{border:1.5px solid var(--line);border-radius:20px;padding:20px 17px;background:#fff;display:flex;flex-direction:column;gap:9px;box-shadow:0 4px 16px rgba(60,35,15,.07)}
+.imp-card.primary{background:linear-gradient(140deg,#fdf0e3,#f5e4cc);border-color:#e8c89a}
+.imp-icon{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:1.35rem;margin-bottom:2px}
+.imp-icon.red{background:#ffece8}
+.imp-icon.green{background:#edf3e5}
+.imp-icon.blue{background:#e8f0f8}
+.imp-icon.purple{background:#f0ebf8}
+.imp-num{font-size:.65rem;font-weight:900;letter-spacing:.05em;color:var(--terra)}
+.imp-card h3{font-family:'Frank Ruhl Libre',serif;font-size:1.15rem;font-weight:700;margin:0}
+.imp-card p{font-size:.73rem;color:var(--muted);line-height:1.5;margin:0}
+.imp-cta{margin-top:auto;display:inline-flex;align-items:center;gap:5px;border:1.5px solid #c8b8a0;border-radius:10px;padding:6px 13px;font-size:.74rem;font-weight:800;color:#4a3c30;background:rgba(255,255,255,.6)}
+
+/* ─── SCREEN: COLLECTIONS ─── */
+.col-head{padding:20px 24px 16px}
+.col-head .ey{color:var(--sage);font-size:.68rem;font-weight:800;letter-spacing:.08em;margin-bottom:5px}
+.col-head h1{font-family:'Frank Ruhl Libre',serif;font-size:1.9rem;letter-spacing:-.04em;margin-bottom:16px}
+.col-family{display:flex;gap:14px;overflow-x:auto;padding:0 24px 16px;border-bottom:1px solid var(--line)}
+.col-family::-webkit-scrollbar{display:none}
+.col-member{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0}
+.col-av{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#fff;font-size:1.1rem;box-shadow:0 3px 12px rgba(0,0,0,.18)}
+.col-member span{font-size:.62rem;color:var(--muted);font-weight:700}
+.col-add-btn{width:48px;height:48px;border-radius:50%;border:2px dashed #c8b8a0;display:grid;place-items:center;color:var(--terra);font-size:1.4rem;background:transparent}
+.col-tabs{display:flex;gap:7px;padding:12px 24px;overflow-x:auto}
+.col-tabs::-webkit-scrollbar{display:none}
+.col-tab{border:1.5px solid var(--line);border-radius:999px;padding:6px 13px;font-size:.73rem;font-weight:700;white-space:nowrap;background:#fff;color:#5a4c40}
+.col-tab.on{border-color:var(--terra);background:rgba(201,74,46,.08);color:var(--terra2)}
+.col-count{padding:4px 24px 10px;font-size:.82rem;color:var(--muted);font-weight:700}
+.col-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:0 24px 10px}
+.cc{border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 5px 16px rgba(60,35,15,.1);position:relative}
+.cc-img{height:118px;position:relative}
+.cc-who{position:absolute;bottom:8px;right:8px;width:26px;height:26px;border-radius:50%;border:2px solid #fff;display:grid;place-items:center;font-size:.6rem;font-weight:800;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.cc-info{padding:10px 12px 12px}
+.cc-info h4{font-size:.86rem;font-weight:700;margin-bottom:3px}
+.cc-info .meta{font-size:.7rem;color:var(--muted)}
+
+/* ─── SCREEN: PROFILE ─── */
+.pro-wrap{padding:20px 22px}
+.pro-ey{color:var(--sage);font-size:.68rem;font-weight:800;letter-spacing:.08em;margin-bottom:5px}
+.pro-hero{border-radius:22px;padding:22px;background:linear-gradient(140deg,#fdf0e3,#f5e4cc);margin-bottom:14px;border:1.5px solid #e8c89a}
+.pro-hero-inner{display:flex;align-items:center;gap:15px;margin-bottom:14px}
+.pro-av{width:62px;height:62px;border-radius:50%;background:var(--terra);color:#fff;display:grid;place-items:center;font-family:'Frank Ruhl Libre',serif;font-size:1.6rem;font-weight:700;flex-shrink:0;box-shadow:0 6px 18px rgba(201,74,46,.3)}
+.pro-name h2{font-family:'Frank Ruhl Libre',serif;font-size:1.3rem;margin-bottom:2px}
+.pro-name p{font-size:.75rem;color:var(--muted)}
+.pro-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,.4);border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.6)}
+.pro-stat{background:rgba(255,255,255,.55);padding:10px;text-align:center}
+.pro-stat strong{display:block;font-family:'Frank Ruhl Libre',serif;font-size:1.5rem;color:var(--terra2);letter-spacing:-.03em}
+.pro-stat span{font-size:.62rem;color:var(--muted);font-weight:700}
+.pro-cards{display:grid;gap:10px}
+.pro-card{border:1.5px solid var(--line);border-radius:18px;padding:16px 18px;background:#fff;box-shadow:0 3px 12px rgba(60,35,15,.06)}
+.pro-card .ey{color:var(--sage);font-size:.65rem;font-weight:800;letter-spacing:.08em;margin-bottom:5px}
+.pro-card h3{font-family:'Frank Ruhl Libre',serif;font-size:1.05rem;margin-bottom:4px}
+.pro-card p{font-size:.75rem;color:var(--muted);margin-bottom:10px;line-height:1.5}
+.pro-family-row{display:flex;margin-bottom:10px}
+.pro-fav{width:32px;height:32px;border-radius:50%;border:2.5px solid #fff;display:grid;place-items:center;font-size:.65rem;font-weight:800;color:#fff;margin-right:-8px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.pro-link{color:var(--terra);font-size:.78rem;font-weight:800;display:flex;align-items:center;gap:4px}
+.pro-logout{margin-top:14px;border:1.5px solid var(--line);border-radius:14px;padding:13px;text-align:center;font-weight:800;color:var(--muted);font-size:.85rem;background:#fff}
+
+/* ─── TABLET / WIDE ─── */
+.tablet{
+  width:1000px;
+  background:var(--canvas);
+  border-radius:28px;
+  overflow:hidden;
+  box-shadow:0 0 0 8px #1a1210,0 0 0 10px #2e2018,0 28px 80px rgba(30,20,10,.35);
+  display:flex;
+  min-height:700px;
+}
+.t-sidebar{width:230px;background:#fffdfa;border-left:1px solid #e8ddd2;padding:28px 14px 22px;display:flex;flex-direction:column;flex-shrink:0}
+.t-brand{font-family:'Frank Ruhl Libre',serif;font-size:1.2rem;color:#2a1f15;padding:0 8px 28px;display:flex;align-items:center;gap:8px;font-weight:700}
+.t-brand-mark{width:28px;height:28px;border-radius:9px;background:#ddebd0;display:grid;place-items:center;color:var(--sage);font-size:.9rem}
+.t-items{display:grid;gap:4px}
+.t-item{display:flex;align-items:center;gap:11px;border-radius:12px;padding:10px 12px;font-size:.85rem;font-weight:700;color:#6a5a4e;cursor:default}
+.t-item.on{background:#fff0eb;color:var(--terra2)}
+.t-item svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.t-prof{margin-top:auto;border-top:1px solid #e8ddd2;padding-top:16px;display:flex;align-items:center;gap:10px}
+.t-pav{width:38px;height:38px;border-radius:50%;background:#ddebd0;color:var(--sage);display:grid;place-items:center;font-family:'Frank Ruhl Libre',serif;font-size:1rem;flex-shrink:0}
+.t-prof strong{display:block;font-size:.82rem}
+.t-prof small{color:var(--muted);font-size:.68rem}
+.t-main{flex:1;min-width:0;overflow:hidden;display:flex;flex-direction:column}
+.t-topbar{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;padding:26px 32px 0}
+.t-tlogo{font-family:'Frank Ruhl Libre',serif;font-size:1.7rem;color:#2a1f15;display:flex;align-items:center;gap:7px}
+.t-tlogo-mark{color:var(--sage)}
+.t-tsearch{display:flex;align-items:center;gap:10px;height:52px;border:1.5px solid var(--line);border-radius:16px;padding:0 16px;background:rgba(255,255,255,.7);backdrop-filter:blur(6px);color:var(--muted);font-size:.88rem}
+.t-tsearch svg{width:17px;height:17px;flex-shrink:0;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round}
+.t-addbtn{height:52px;background:var(--terra);color:#fff;border-radius:15px;padding:0 22px;font-weight:800;font-size:.88rem;display:flex;align-items:center;gap:8px;border:none;box-shadow:0 8px 22px rgba(201,74,46,.28);white-space:nowrap}
+.t-hero{margin:20px 32px;border-radius:26px;overflow:hidden;display:grid;grid-template-columns:1fr .85fr;min-height:230px;box-shadow:0 12px 40px rgba(60,30,10,.14)}
+.t-hero-copy{background:linear-gradient(140deg,rgba(255,255,255,.9) 0%,transparent 50%),#f5e6d0;padding:30px 32px;display:flex;flex-direction:column;justify-content:center}
+.t-hero-copy .ey{color:var(--sage);font-size:.65rem;font-weight:800;letter-spacing:.1em;margin-bottom:6px}
+.t-hero-copy h2{font-family:'Frank Ruhl Libre',serif;font-size:2.2rem;line-height:1.05;letter-spacing:-.04em;margin-bottom:10px}
+.t-hero-copy p{font-size:.85rem;color:#5a4030;line-height:1.6;margin-bottom:16px;max-width:30ch}
+.t-hero-copy .btn{display:inline-flex;align-items:center;gap:7px;background:var(--terra);color:#fff;border-radius:13px;padding:10px 20px;font-size:.85rem;font-weight:800;border:none;box-shadow:0 6px 18px rgba(201,74,46,.28)}
+.t-hero-img{position:relative;overflow:hidden}
+.t-hero-img img{object-position:center 30%}
+.t-chips{display:flex;gap:11px;padding:0 32px;margin-bottom:22px;justify-content:flex-start}
+.t-chip{border:1.5px solid var(--line);border-radius:15px;padding:9px 22px;font-size:.82rem;font-weight:700;background:#fff;color:#4a3c30;box-shadow:0 3px 10px rgba(60,35,15,.06)}
+.t-chip.on{background:var(--sage);border-color:var(--sage);color:#fff}
+.t-sec-head{display:flex;align-items:center;justify-content:space-between;padding:0 32px;margin-bottom:14px}
+.t-sec-head h3{font-family:'Frank Ruhl Libre',serif;font-size:1.6rem;letter-spacing:-.03em}
+.t-sec-head a{color:var(--terra);font-size:.82rem;font-weight:800}
+.t-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 32px 28px}
+.tc{border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 6px 20px rgba(60,35,15,.09);position:relative}
+.tc-img{height:145px;position:relative}
+.tc-fav{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.88);backdrop-filter:blur(6px);display:grid;place-items:center;border:none;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.tc-fav svg{width:15px;height:15px;fill:none;stroke:#2a1f15;stroke-width:2}
+.tc-info{padding:11px 13px 14px}
+.tc-info h4{font-size:.88rem;font-weight:700;margin-bottom:3px;line-height:1.3}
+.tc-info .meta{font-size:.7rem;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>המטבח של קרן</h1>
+  <p>מוקאפ ממשק מלא — כל המסכים</p>
+</div>
+
+<div class="gallery">
+
+<!-- ══════════ TABLET ══════════ -->
+<div class="group" style="width:1000px">
+  <div class="group-label">דסקטופ — מסך בית</div>
+  <div class="tablet">
+    <div class="t-sidebar">
+      <div class="t-brand"><div class="t-brand-mark">✿</div> המטבח של קרן</div>
+      <div class="t-items">
+        <div class="t-item on">
+          <svg viewBox="0 0 24 24"><path d="m3.5 10 8.5-7 8.5 7v9.5H14v-6h-4v6H3.5Z"/></svg>
+          בית
+        </div>
+        <div class="t-item">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+          חיפוש
+        </div>
+        <div class="t-item">
+          <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          אוספים
+        </div>
+        <div class="t-item">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>
+          הפרופיל שלי
+        </div>
+      </div>
+      <div class="t-prof">
+        <div class="t-pav">כ</div>
+        <div><strong>קרן כהן</strong><small>הפרופיל שלי</small></div>
+      </div>
+    </div>
+    <div class="t-main">
+      <div class="t-topbar">
+        <div class="t-tlogo"><span class="t-tlogo-mark">✿</span> המטבח של קרן</div>
+        <div class="t-tsearch">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+          חיפוש מתכון, מרכיב, קטגוריה...
+        </div>
+        <button class="t-addbtn">+ הוספת מתכון</button>
+      </div>
+      <div class="t-hero">
+        <div class="t-hero-copy">
+          <p class="ey">מועדפי הבית</p>
+          <h2>ארוחת ערב<br>שמרגישה כמו בית</h2>
+          <p>המתכונים האהובים מהמטבח שלי, לאנשים שאני אוהבת.</p>
+          <button class="btn">למתכונים שלי →</button>
+        </div>
+        <div class="t-hero-img">
+          <img src="https://images.unsplash.com/photo-1604152135912-04a022e23696?w=500&fit=crop&auto=format" alt="אוכל טעים">
+        </div>
+      </div>
+      <div class="t-chips">
+        <div class="t-chip on">מהיר</div>
+        <div class="t-chip">צמחוני</div>
+        <div class="t-chip">מתוקים</div>
+        <div class="t-chip">עוף</div>
+      </div>
+      <div class="t-sec-head"><h3>נבחרו בשבילך</h3><a>הכל →</a></div>
+      <div class="t-grid">
+        <div class="tc">
+          <div class="tc-img"><img src="https://images.unsplash.com/photo-1590301157890-4810ed352733?w=300&fit=crop&auto=format" alt="שקשוקה"></div>
+          <button class="tc-fav"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+          <div class="tc-info"><h4>שקשוקה ביתית</h4><div class="meta">25 דק׳ · 4 מנות</div></div>
+        </div>
+        <div class="tc">
+          <div class="tc-img"><img src="https://images.unsplash.com/photo-1547592166-23ac45744acd?w=300&fit=crop&auto=format" alt="מרק"></div>
+          <button class="tc-fav"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+          <div class="tc-info"><h4>מרק עגבניות</h4><div class="meta">30 דק׳ · 6 מנות</div></div>
+        </div>
+        <div class="tc">
+          <div class="tc-img"><img src="https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=300&fit=crop&auto=format" alt="עוגה"></div>
+          <button class="tc-fav"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+          <div class="tc-info"><h4>עוגת לימון</h4><div class="meta">55 דק׳ · 8 מנות</div></div>
+        </div>
+        <div class="tc">
+          <div class="tc-img"><img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300&fit=crop&auto=format" alt="סלט"></div>
+          <button class="tc-fav"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+          <div class="tc-info"><h4>סלט עשבים</h4><div class="meta">15 דק׳ · 4 מנות</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PHONES ROW 1 ══════════ -->
+
+<!-- HOME -->
+<div class="group">
+  <div class="group-label">נייד — בית</div>
+  <div class="phone">
+    <div class="status-bar light"><span>9:41</span><div class="status-icons"><svg width="16" height="10" viewBox="0 0 16 10" fill="#1e1611"><rect x="0" y="3" width="3" height="7" rx="1"/><rect x="4.5" y="2" width="3" height="8" rx="1"/><rect x="9" y="0" width="3" height="10" rx="1"/><rect x="13.5" y="0" width="2.5" height="10" rx="1" opacity=".3"/></svg></div></div>
+    <div class="body">
+      <div class="h-bar">
+        <div class="h-logo"><div class="h-logo-mark">✿</div> המטבח של קרן</div>
+        <button class="h-add">+</button>
+      </div>
+      <div class="h-search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35" stroke="#a0907f" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>חיפוש מתכון, מרכיב...</span>
+      </div>
+      <div class="hero-card">
+        <div class="hero-img"><img src="https://images.unsplash.com/photo-1604152135912-04a022e23696?w=500&h=280&fit=crop&auto=format" alt="הירו"></div>
+        <div class="hero-overlay"></div>
+        <div class="hero-copy">
+          <p class="ey">מועדפי הבית</p>
+          <h2>ארוחת ערב<br>שמרגישה כמו בית</h2>
+          <span class="btn">למתכונים שלי →</span>
+        </div>
+      </div>
+      <div class="chips">
+        <div class="chip on">מהיר</div>
+        <div class="chip">צמחוני</div>
+        <div class="chip">מתוקים</div>
+        <div class="chip">עוף</div>
+      </div>
+      <div class="sec-head"><h3>נבחרו בשבילך</h3><a>הכל</a></div>
+      <div class="card-grid">
+        <div class="rc">
+          <div class="rc-img"><img src="https://images.unsplash.com/photo-1590301157890-4810ed352733?w=240&h=160&fit=crop&auto=format" alt="שקשוקה"></div>
+          <button class="rc-fav"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+          <div class="rc-info"><h4>שקשוקה ביתית</h4><div class="meta">25 דק׳ <span class="dot"></span> 4 מנות</div></div>
+        </div>
+        <div class="rc">
+          <div class="rc-img"><img src="https://images.unsplash.com/photo-1547592166-23ac45744acd?w=240&h=160&fit=crop&auto=format" alt="מרק"></div>
+          <button class="rc-fav"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+          <div class="rc-info"><h4>מרק עגבניות</h4><div class="meta">30 דק׳ <span class="dot"></span> 6 מנות</div></div>
+        </div>
+        <div class="rc">
+          <div class="rc-img"><img src="https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=240&h=160&fit=crop&auto=format" alt="עוגה"></div>
+          <div class="rc-info"><h4>עוגת לימון</h4><div class="meta">55 דק׳ <span class="dot"></span> 8 מנות</div></div>
+        </div>
+        <div class="rc">
+          <div class="rc-img"><img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=240&h=160&fit=crop&auto=format" alt="סלט"></div>
+          <div class="rc-info"><h4>סלט עשבים</h4><div class="meta">15 דק׳ <span class="dot"></span> 4 מנות</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="bnav">
+      <div class="bni on"><svg viewBox="0 0 24 24"><path d="m3.5 10 8.5-7 8.5 7v9.5H14v-6h-4v6H3.5Z"/></svg>בית</div>
+      <div class="bni"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>חיפוש</div>
+      <div class="bni"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>אוספים</div>
+      <div class="bni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>פרופיל</div>
+    </div>
+  </div>
+</div>
+
+<!-- LIBRARY -->
+<div class="group">
+  <div class="group-label">נייד — ספרייה</div>
+  <div class="phone">
+    <div class="status-bar light"><span>9:41</span></div>
+    <div class="body">
+      <div class="lib-head">
+        <p class="ey">הספרייה שלי</p>
+        <h1>המתכונים שלי</h1>
+        <div class="lib-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35" stroke="#a0907f" stroke-width="2" stroke-linecap="round"/></svg><span>חיפוש...</span></div>
+      </div>
+      <div class="pills">
+        <div class="pill on">הכל</div>
+        <div class="pill">צמחוני</div>
+        <div class="pill">מהיר</div>
+        <div class="pill">מתוקים</div>
+        <div class="pill">עוף</div>
+        <div class="pill">בשר</div>
+      </div>
+      <div class="lib-count">8 מתכונים</div>
+      <div class="lib-list">
+        <div class="lc">
+          <div class="lc-img"><img src="https://images.unsplash.com/photo-1590301157890-4810ed352733?w=200&h=130&fit=crop&auto=format" alt="שקשוקה"></div>
+          <div class="lc-body"><h3>שקשוקה ביתית</h3><div class="meta">25 דק׳ · 4 מנות</div><span class="lc-tag">ארוחת בוקר</span></div>
+        </div>
+        <div class="lc">
+          <div class="lc-img"><img src="https://images.unsplash.com/photo-1547592166-23ac45744acd?w=200&h=130&fit=crop&auto=format" alt="מרק"></div>
+          <div class="lc-body"><h3>מרק עגבניות עשיר</h3><div class="meta">30 דק׳ · 6 מנות</div><span class="lc-tag">מרקים</span></div>
+        </div>
+        <div class="lc">
+          <div class="lc-img"><img src="https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=200&h=130&fit=crop&auto=format" alt="עוגה"></div>
+          <div class="lc-body"><h3>עוגת לימון בחושה</h3><div class="meta">55 דק׳ · 8 מנות</div><span class="lc-tag">קינוחים</span></div>
+        </div>
+        <div class="lc">
+          <div class="lc-img"><img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=200&h=130&fit=crop&auto=format" alt="סלט"></div>
+          <div class="lc-body"><h3>סלט עשבים טרי</h3><div class="meta">15 דק׳ · 4 מנות</div><span class="lc-tag">סלטים</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="bnav">
+      <div class="bni"><svg viewBox="0 0 24 24"><path d="m3.5 10 8.5-7 8.5 7v9.5H14v-6h-4v6H3.5Z"/></svg>בית</div>
+      <div class="bni on"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>חיפוש</div>
+      <div class="bni"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>אוספים</div>
+      <div class="bni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>פרופיל</div>
+    </div>
+  </div>
+</div>
+
+<!-- RECIPE DETAIL -->
+<div class="group">
+  <div class="group-label">נייד — פרטי מתכון</div>
+  <div class="phone">
+    <div class="status-bar dark"><span>9:41</span></div>
+    <div class="body">
+      <div class="rd-hero">
+        <img src="https://images.unsplash.com/photo-1590301157890-4810ed352733?w=500&h=320&fit=crop&auto=format" alt="שקשוקה">
+        <div class="rd-hero-overlay"></div>
+        <div class="rd-header">
+          <span class="rd-back">← חזרה</span>
+          <span class="rd-edit">עריכה</span>
+        </div>
+        <div class="rd-title-on-img">
+          <h1>שקשוקה ביתית</h1>
+          <div class="rd-meta-badges">
+            <span class="badge">⏱ 25 דק׳</span>
+            <span class="badge">🍽 4 מנות</span>
+            <span class="badge">🥚 ירקות</span>
+          </div>
+        </div>
+      </div>
+      <div class="rd-body">
+        <div class="rd-section-title">מרכיבים</div>
+        <div class="ing-grid">
+          <div class="ing-item"><strong>4</strong><span>ביצים</span></div>
+          <div class="ing-item"><strong>400 גר׳</strong><span>עגבניות</span></div>
+          <div class="ing-item"><strong>1 גדול</strong><span>בצל</span></div>
+          <div class="ing-item"><strong>3</strong><span>שיני שום</span></div>
+          <div class="ing-item"><strong>1 כפית</strong><span>כמון</span></div>
+          <div class="ing-item"><strong>1 כפית</strong><span>פפריקה</span></div>
+        </div>
+        <div class="rd-section-title">הכנה</div>
+        <div class="steps-list">
+          <div class="step-item"><div class="step-num">1</div><div class="step-text">מחממים שמן בכלי רחב ומטגנים בצל עד שקיפות, כ-5 דקות.</div></div>
+          <div class="step-item"><div class="step-num">2</div><div class="step-text">מוסיפים שום, עגבניות ותבלינים ומבשלים על אש בינונית 8 דקות.</div></div>
+          <div class="step-item"><div class="step-num">3</div><div class="step-text">שוברים ביצים לרוטב ומבשלים עד שהחלבון קופא.</div></div>
+        </div>
+      </div>
+      <div class="rd-actions">
+        <button class="cook-btn">▶ התחל בישול</button>
+        <button class="edit-btn">עריכה</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COOK MODE -->
+<div class="group">
+  <div class="group-label">נייד — מצב בישול</div>
+  <div class="phone">
+    <div class="status-bar dark" style="color:#f5ede0"><span>9:41</span></div>
+    <div class="body cook">
+      <div class="cook-bar">
+        <span class="cook-back">← שקשוקה ביתית</span>
+        <button class="cook-timer-btn">⏱ טיימר</button>
+      </div>
+      <div class="cook-prog-wrap">
+        <div class="cook-prog"><div class="cook-prog-fill"></div></div>
+      </div>
+      <div class="cook-step-label">שלב 2 מתוך 3</div>
+      <div class="cook-step-text">מוסיפים שום, עגבניות ותבלינים ומבשלים 8 דקות.</div>
+      <div class="cook-ing-panel">
+        <div class="cook-ing-head">
+          <span>מרכיבים</span>
+          <div class="cook-servings">
+            <button>−</button>
+            <strong>4 מנות</strong>
+            <button>+</button>
+          </div>
+        </div>
+        <div class="cook-ings">
+          <div class="cook-ing"><strong>4</strong> ביצים</div>
+          <div class="cook-ing"><strong>400 גר׳</strong> עגבניות</div>
+          <div class="cook-ing"><strong>1</strong> בצל</div>
+          <div class="cook-ing"><strong>3</strong> שיני שום</div>
+          <div class="cook-ing"><strong>1 כפ׳</strong> כמון</div>
+          <div class="cook-ing"><strong>1 כפ׳</strong> פפריקה</div>
+        </div>
+      </div>
+      <div class="cook-actions">
+        <button class="cook-prev">הקודם</button>
+        <button class="cook-next">לשלב הבא →</button>
+      </div>
+      <div class="cook-dots">
+        <div class="cook-dot"></div>
+        <div class="cook-dot on"></div>
+        <div class="cook-dot"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT -->
+<div class="group">
+  <div class="group-label">נייד — הוספת מתכון</div>
+  <div class="phone">
+    <div class="status-bar light"><span>9:41</span></div>
+    <div class="body">
+      <div class="imp-head">
+        <div class="back">← חזרה לבית</div>
+        <p class="ey">הוספת מתכון</p>
+        <h1>איך תוסיפי את המתכון?</h1>
+        <p>כל השיטות יוצרות טיוטה לבדיקה לפני השמירה.</p>
+      </div>
+      <div class="imp-cards">
+        <div class="imp-card primary">
+          <div class="imp-icon red">✏️</div>
+          <div class="imp-num">01</div>
+          <h3>הקלדה ידנית</h3>
+          <p>כתיבת מתכון חדש שלב אחר שלב.</p>
+          <span class="imp-cta">התחלי →</span>
+        </div>
+        <div class="imp-card">
+          <div class="imp-icon blue">🔗</div>
+          <div class="imp-num">02</div>
+          <h3>ייבוא מקישור</h3>
+          <p>הדביקי URL מכל אתר מתכונים.</p>
+          <span class="imp-cta">בחרי →</span>
+        </div>
+        <div class="imp-card">
+          <div class="imp-icon green">📷</div>
+          <div class="imp-num">03</div>
+          <h3>צילום מתכון</h3>
+          <p>OCR יקרא ויעצב עבורך.</p>
+          <span class="imp-cta">בחרי →</span>
+        </div>
+        <div class="imp-card">
+          <div class="imp-icon purple">🎤</div>
+          <div class="imp-num">04</div>
+          <h3>הקלטת קול</h3>
+          <p>AI יתמלל ויסדר את המתכון.</p>
+          <span class="imp-cta">בחרי →</span>
+        </div>
+      </div>
+    </div>
+    <div class="bnav">
+      <div class="bni"><svg viewBox="0 0 24 24"><path d="m3.5 10 8.5-7 8.5 7v9.5H14v-6h-4v6H3.5Z"/></svg>בית</div>
+      <div class="bni on"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>חיפוש</div>
+      <div class="bni"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>אוספים</div>
+      <div class="bni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>פרופיל</div>
+    </div>
+  </div>
+</div>
+
+<!-- COLLECTIONS -->
+<div class="group">
+  <div class="group-label">נייד — אוסף משפחתי</div>
+  <div class="phone">
+    <div class="status-bar light"><span>9:41</span></div>
+    <div class="body">
+      <div class="col-head">
+        <p class="ey">ספרייה משפחתית</p>
+        <h1>האוסף המשפחתי</h1>
+      </div>
+      <div class="col-family">
+        <div class="col-member"><div class="col-av" style="background:#c94a2e">כ</div><span>קרן</span></div>
+        <div class="col-member"><div class="col-av" style="background:#5a6e3a">י</div><span>יוסי</span></div>
+        <div class="col-member"><div class="col-av" style="background:#b07a30">ר</div><span>רחל</span></div>
+        <div class="col-member"><div class="col-av" style="background:#6a5888">מ</div><span>מיכל</span></div>
+        <div class="col-member"><button class="col-add-btn">+</button><span>הוספה</span></div>
+      </div>
+      <div class="col-tabs">
+        <div class="col-tab on">כל האוסף</div>
+        <div class="col-tab">מועדפים</div>
+        <div class="col-tab">שיתפתי</div>
+        <div class="col-tab">שותף איתי</div>
+      </div>
+      <div class="col-count">8 מתכונים משותפים</div>
+      <div class="col-grid">
+        <div class="cc">
+          <div class="cc-img"><img src="https://images.unsplash.com/photo-1590301157890-4810ed352733?w=200&h=150&fit=crop&auto=format" alt="שקשוקה"></div>
+          <div class="cc-who" style="background:#c94a2e">כ</div>
+          <div class="cc-info"><h4>שקשוקה</h4><div class="meta">25 דק׳</div></div>
+        </div>
+        <div class="cc">
+          <div class="cc-img"><img src="https://images.unsplash.com/photo-1547592166-23ac45744acd?w=200&h=150&fit=crop&auto=format" alt="מרק"></div>
+          <div class="cc-who" style="background:#5a6e3a">י</div>
+          <div class="cc-info"><h4>מרק עגבניות</h4><div class="meta">30 דק׳</div></div>
+        </div>
+        <div class="cc">
+          <div class="cc-img"><img src="https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=200&h=150&fit=crop&auto=format" alt="עוגה"></div>
+          <div class="cc-who" style="background:#b07a30">ר</div>
+          <div class="cc-info"><h4>עוגת לימון</h4><div class="meta">55 דק׳</div></div>
+        </div>
+        <div class="cc">
+          <div class="cc-img"><img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=200&h=150&fit=crop&auto=format" alt="סלט"></div>
+          <div class="cc-who" style="background:#6a5888">מ</div>
+          <div class="cc-info"><h4>סלט עשבים</h4><div class="meta">15 דק׳</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="bnav">
+      <div class="bni"><svg viewBox="0 0 24 24"><path d="m3.5 10 8.5-7 8.5 7v9.5H14v-6h-4v6H3.5Z"/></svg>בית</div>
+      <div class="bni"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>חיפוש</div>
+      <div class="bni on"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>אוספים</div>
+      <div class="bni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>פרופיל</div>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE -->
+<div class="group">
+  <div class="group-label">נייד — פרופיל</div>
+  <div class="phone">
+    <div class="status-bar light"><span>9:41</span></div>
+    <div class="body">
+      <div class="pro-wrap">
+        <p class="pro-ey">הפרופיל שלי</p>
+        <div class="pro-hero">
+          <div class="pro-hero-inner">
+            <div class="pro-av">כ</div>
+            <div class="pro-name"><h2>קרן כהן</h2><p>בעלת ספר המתכונים</p></div>
+          </div>
+          <div class="pro-stats">
+            <div class="pro-stat"><strong>8</strong><span>מתכונים</span></div>
+            <div class="pro-stat"><strong>4</strong><span>חברי משפחה</span></div>
+            <div class="pro-stat"><strong>2</strong><span>אוספים</span></div>
+          </div>
+        </div>
+        <div class="pro-cards">
+          <div class="pro-card">
+            <p class="ey">ספר משפחתי</p>
+            <h3>המטבח של קרן</h3>
+            <p>3 חברים יכולים לצפות ולהוסיף מתכונים.</p>
+            <div class="pro-family-row">
+              <div class="pro-fav" style="background:#c94a2e">כ</div>
+              <div class="pro-fav" style="background:#5a6e3a">י</div>
+              <div class="pro-fav" style="background:#b07a30">ר</div>
+              <div class="pro-fav" style="background:#6a5888">מ</div>
+            </div>
+            <span class="pro-link">ניהול משפחה →</span>
+          </div>
+          <div class="pro-card">
+            <p class="ey">AI ו-OCR</p>
+            <h3>בחירת ספק</h3>
+            <p>חברי כלים לייבוא ועיבוד מתכונים.</p>
+            <span class="pro-link">הגדרות חיבורים →</span>
+          </div>
+        </div>
+        <div class="pro-logout">יציאה מהחשבון</div>
+      </div>
+    </div>
+    <div class="bnav">
+      <div class="bni"><svg viewBox="0 0 24 24"><path d="m3.5 10 8.5-7 8.5 7v9.5H14v-6h-4v6H3.5Z"/></svg>בית</div>
+      <div class="bni"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>חיפוש</div>
+      <div class="bni"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>אוספים</div>
+      <div class="bni on"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>פרופיל</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /gallery -->
+</body>
+</html>

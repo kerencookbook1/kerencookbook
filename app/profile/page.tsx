@@ -83,13 +83,13 @@ export default async function ProfilePage() {
           </Link>
         </article>
 
-        {/* Connections card */}
+        {/* AI connections card */}
         <article className="profile-card">
-          <p className="eyebrow">AI ו-OCR</p>
-          <h2>בחירת ספק</h2>
-          <p>חברי את הכלים שיסייעו לייבוא ועיבוד מתכונים.</p>
+          <p className="eyebrow">חיבורי AI</p>
+          <h2>מפתחות ספקי AI</h2>
+          <p>הוסיפי מפתח של OpenAI, Anthropic או Google לחילוץ מתכונים מתמונות ומכתובות אתר.</p>
           <Link className="text-button" href="/profile/connections" style={{ marginTop: 16, display: 'inline-block' }}>
-            הגדרות חיבורים
+            ניהול מפתחות
           </Link>
         </article>
       </section>
