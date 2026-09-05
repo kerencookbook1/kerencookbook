@@ -11,8 +11,17 @@ const QUICK_FILTERS = [
   { label: 'מתוקים', icon: '🍰', href: '/recipes?filter=sweet' },
 ] as const
 
-// ערכות צבע לכרטיסי מתכון — מחזוריות לפי אינדקס
-const CARD_THEMES = ['', 'cauliflower', 'lemon', 'pumpkin', 'garden'] as const
+const FOOD_IMAGES = [
+  '/images/recipes/shakshuka-default.png',
+  '/images/recipes/cauliflower-tahini-default.png',
+  '/images/recipes/lemon-cake-default.png',
+  '/images/recipes/creamy-pasta-default.png',
+  '/images/recipes/meatballs-default.png',
+  '/images/recipes/pumpkin-soup-default.png',
+  '/images/recipes/salmon-default.png',
+  '/images/recipes/herb-salad-default.png',
+  '/images/recipes/tomato-pasta-default.png',
+] as const
 
 // אייקון לב למועדפים
 function HeartIcon() {
@@ -77,9 +86,13 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        {/* ויזואל — גרדיאנט CSS בלי תמונה חיצונית */}
         <div className="hero-image-wrap" aria-hidden="true">
-          <div className="hero-food-illustration" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/recipes/shakshuka-default.png"
+            alt=""
+            className="hero-image"
+          />
         </div>
       </section>
 
@@ -109,23 +122,20 @@ export default async function HomePage() {
         {displayed.length > 0 ? (
           <div className="recipe-grid">
             {displayed.map((recipe, index) => {
-              const theme = CARD_THEMES[index % CARD_THEMES.length]
               const totalMinutes =
                 (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0)
 
-              return (
+              const imgSrc = (recipe as { image_url?: string | null }).image_url || FOOD_IMAGES[index % FOOD_IMAGES.length]
+            return (
                 <article key={recipe.id} className="recipe-card">
-                  {/* ויזואל הכרטיס עם אילוסטרציית צלחת */}
                   <Link
                     href={`/recipes/${recipe.id}`}
-                    className={`recipe-visual${theme ? ` ${theme}` : ''}`}
+                    className="recipe-visual"
                     tabIndex={-1}
                     aria-hidden="true"
                   >
-                    <div className="plate" />
-                    <span className="ingredient ingredient-one" />
-                    <span className="ingredient ingredient-two" />
-                    <span className="ingredient ingredient-three" />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={imgSrc} alt="" className="recipe-photo" loading="lazy" />
                   </Link>
 
                   {/* כפתור מועדפים */}

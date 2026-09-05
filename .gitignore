@@ -42,3 +42,16 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# Preview-mode local storage (API keys, provider config)
+/.data/
+
+# local dev noise
+dev.log
+build.log
+/test-results/
+/playwright-report/
+/.claude/worktrees/
+
+# Supabase CLI local state
+/supabase/.temp/

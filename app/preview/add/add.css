@@ -1,0 +1,117 @@
+/* ═══════════════════════════════════════════════════
+   Add recipe options preview
+   matches "הוספת מתכון - אפשרויות" mockup
+   ═══════════════════════════════════════════════════ */
+
+.add-page {
+  min-height: 100dvh;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 20px 20px 40px;
+  background: var(--pv-canvas, #faf6ef);
+  color: #241a10;
+  font-family: "Heebo", "Assistant", sans-serif;
+  direction: rtl;
+}
+
+/* ===== HEADER ===== */
+.add-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.add-header h1 {
+  margin: 0;
+  text-align: center;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1.55rem;
+  font-weight: 900;
+  color: #241a10;
+}
+.add-back {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: transparent;
+  color: #4a3d30;
+  text-decoration: none;
+}
+.add-back:hover { background: rgba(120, 90, 50, 0.08); }
+.add-header-spacer { width: 40px; }
+
+.add-intro {
+  margin: 8px 0 22px;
+  color: #6d5540;
+  font-size: 1rem;
+  text-align: center;
+}
+
+/* ===== OPTIONS ===== */
+.add-options {
+  display: grid;
+  gap: 14px;
+}
+.add-option {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 18px;
+  border: 1.5px solid #e2d5bd;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #241a10;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: right;
+  box-shadow: 0 3px 12px rgba(60, 40, 20, 0.06);
+  transition: all 200ms ease-out;
+}
+.add-option:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(60, 40, 20, 0.12);
+  border-color: var(--pv-terra);
+}
+.add-option-icon {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+.add-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.add-option-text strong {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #241a10;
+}
+.add-option-text span {
+  font-size: 0.85rem;
+  color: #6d5540;
+  line-height: 1.4;
+}
+.add-option-arrow {
+  color: #b58048;
+  transition: transform 200ms ease-out;
+}
+.add-option:hover .add-option-arrow {
+  color: var(--pv-terra);
+  transform: translateX(-3px);
+}
+
+/* Per-option accent colors */
+.add-tint-photo   .add-option-icon { background: linear-gradient(135deg, #4a6b34, #35502a); }
+.add-tint-url     .add-option-icon { background: linear-gradient(135deg, #3f9db2, #2f6474); }
+.add-tint-search  .add-option-icon { background: linear-gradient(135deg, #d4531e, #b3420e); }
+.add-tint-manual  .add-option-icon { background: linear-gradient(135deg, #e5a01a, #b57816); }

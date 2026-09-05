@@ -1,0 +1,77 @@
+/* Icon-choice comparison page */
+
+.icon-choice-page {
+  padding-bottom: 60px;
+}
+
+.icon-choice-head {
+  max-width: 1200px;
+  margin: 0 auto 32px;
+  text-align: right;
+}
+.icon-choice-head h1 {
+  margin: 8px 0 10px;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 900;
+  color: #241a10;
+}
+.icon-choice-head p {
+  margin: 0;
+  color: #6d5540;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.icon-back {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #b3420e;
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.icon-back:hover { text-decoration: underline; }
+
+.icon-option {
+  max-width: 1200px;
+  margin: 0 auto 28px;
+  padding: 22px 26px 26px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1.5px solid #c9b89a;
+  box-shadow: 0 4px 18px rgba(90, 65, 30, 0.08);
+  position: relative;
+}
+.icon-option::before {
+  content: attr(data-tag);
+  position: absolute;
+  top: -12px;
+  right: 22px;
+  padding: 5px 14px;
+  border-radius: 8px;
+  background: #d4531e;
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(212, 83, 30, 0.32);
+}
+.option-a::before { content: "A"; }
+.option-b::before { content: "B"; }
+.option-c::before { content: "C"; }
+
+.icon-option-head {
+  margin-bottom: 20px;
+  text-align: right;
+}
+.icon-option-head h2 {
+  margin: 0 0 4px;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #241a10;
+}
+.icon-option-head p {
+  margin: 0;
+  color: #6d5540;
+  font-size: 0.88rem;
+}

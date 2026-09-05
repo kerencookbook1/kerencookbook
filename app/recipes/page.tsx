@@ -4,7 +4,18 @@ import Link from 'next/link'
 
 export const metadata = { title: 'המתכונים שלי — המטבח של קרן' }
 
-const CARD_THEMES = ['', 'cauliflower', 'lemon', 'pumpkin', 'garden'] as const
+const FOOD_IMAGES = [
+  '/images/recipes/shakshuka-default.png',
+  '/images/recipes/cauliflower-tahini-default.png',
+  '/images/recipes/lemon-cake-default.png',
+  '/images/recipes/creamy-pasta-default.png',
+  '/images/recipes/meatballs-default.png',
+  '/images/recipes/pumpkin-soup-default.png',
+  '/images/recipes/salmon-default.png',
+  '/images/recipes/herb-salad-default.png',
+  '/images/recipes/tomato-pasta-default.png',
+] as const
+
 const FILTERS = ['הכל', 'צמחוני', 'מהיר', 'מתוקים', 'עוף', 'בשר', 'דגים'] as const
 
 export default async function RecipesPage({
@@ -68,15 +79,13 @@ export default async function RecipesPage({
           </div>
           <div className="library-grid">
             {recipes.map((recipe, index) => {
-              const theme = CARD_THEMES[index % CARD_THEMES.length]
               const totalMinutes = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0)
+              const imgSrc = (recipe as { image_url?: string | null }).image_url || FOOD_IMAGES[index % FOOD_IMAGES.length]
               return (
                 <Link key={recipe.id} href={`/recipes/${recipe.id}`} className="library-card">
-                  <div className={`library-visual${theme ? ` ${theme}` : ''}`}>
-                    <div className="plate" />
-                    <span className="ingredient ingredient-one" />
-                    <span className="ingredient ingredient-two" />
-                    <span className="ingredient ingredient-three" />
+                  <div className="library-visual">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={imgSrc} alt={recipe.title} className="recipe-photo" loading="lazy" />
                   </div>
                   <div className="library-card-body">
                     <h3>{recipe.title}</h3>

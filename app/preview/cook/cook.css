@@ -1,0 +1,175 @@
+/* ═══════════════════════════════════════════════════
+   Cook mode preview — matches "מצב בישול" mockup
+   ═══════════════════════════════════════════════════ */
+
+.cook-page {
+  min-height: 100dvh;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 20px 20px 40px;
+  background: var(--pv-canvas, #faf6ef);
+  color: #241a10;
+  font-family: "Heebo", "Assistant", sans-serif;
+  direction: rtl;
+  position: relative;
+}
+
+/* ===== HEADER ===== */
+.cook-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.cook-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  color: #4a3d30;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.cook-back:hover { background: rgba(120, 90, 50, 0.08); }
+.cook-title {
+  text-align: center;
+  color: #6d5540;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.cook-header-spacer { width: 60px; }
+
+/* ===== PROGRESS ===== */
+.cook-progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eee0c8;
+  margin-bottom: 32px;
+}
+.cook-progress span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #4a6b34, #7fb548);
+  border-radius: inherit;
+  transition: width 300ms ease-out;
+}
+
+/* ===== STEP INSTRUCTION ===== */
+.cook-step {
+  margin: 0 auto 28px;
+  max-width: 460px;
+  text-align: center;
+}
+.cook-step h1 {
+  margin: 0;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(1.4rem, 3.5vw, 1.75rem);
+  font-weight: 800;
+  color: #241a10;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+/* ===== VISUAL ===== */
+.cook-visual {
+  overflow: hidden;
+  border-radius: 22px;
+  aspect-ratio: 4 / 3;
+  margin-bottom: 26px;
+  box-shadow: 0 8px 30px rgba(60, 40, 20, 0.14);
+}
+.cook-visual img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ===== TIMER ===== */
+.cook-timer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1.5px solid #e2d5bd;
+  box-shadow: 0 4px 14px rgba(60, 40, 20, 0.06);
+  margin-bottom: 24px;
+}
+.cook-timer-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #6d5540;
+  font-weight: 700;
+  font-size: 1rem;
+}
+.cook-timer-value {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #4a6b34;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== ACTIONS ===== */
+.cook-actions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+}
+.cook-back-btn {
+  padding: 14px 22px;
+  min-height: 52px;
+  border: 1.5px solid #c9b89a;
+  border-radius: 12px;
+  background: transparent;
+  color: #4a3d30;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 160ms ease-out;
+}
+.cook-back-btn:hover {
+  background: #f7ecd6;
+  border-color: #7a4a1a;
+}
+.cook-next-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 22px;
+  min-height: 52px;
+  border: 0;
+  border-radius: 12px;
+  background: #4a6b34;
+  color: white;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(74, 107, 52, 0.28);
+  transition: background 160ms ease-out, transform 160ms ease-out;
+}
+.cook-next-btn:hover {
+  background: #35502a;
+  transform: translateY(-1px);
+}
+
+/* ===== CHEF DECO ===== */
+.cook-chef {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: none;
+}
