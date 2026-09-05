@@ -3,7 +3,7 @@ project: Smart Recipe Web App
 version: 0.1.0
 status: in_progress
 current_phase: foundation
-last_updated: 2026-09-04
+last_updated: 2026-09-05
 updated_by: codex-orchestrator
 ---
 
@@ -207,12 +207,12 @@ npx vercel --prod
 
 | ID | משימה | אחראי | סטטוס | תלות | בדיקת קבלה | תוצאה |
 |---|---|---|---|---|---|---|
-| SETUP-001 | התקנה ואימות `ui-ux-pro-max` | orchestrator | pending | - | skill מופיע וזמין ל-Codex | - |
-| FND-001 | יצירת Next.js shell | agent-web-pwa | in_progress | - | build + responsive smoke | `lint` ו-TypeScript עברו; build ממתין לשחרור נעילת שרת הפיתוח. |
-| FND-002 | Design System RTL באמצעות `ui-ux-pro-max` | agent-responsive-ui | in_progress | SETUP-001, FND-001 | visual + axe | נבנו בית, ספרייה, יצירה, OCR, בישול, תכנון ופרופיל; נדרשת בדיקת viewport ו-axe. |
-| DB-001 | סכמת Supabase ראשונית | agent-supabase | pending | - | migration from zero | - |
-| SEC-001 | RLS לכל טבלאות הליבה | agent-supabase | pending | DB-001 | two-user RLS tests | - |
-| AUTH-001 | Supabase SSR Auth | agent-supabase | pending | FND-001 | login/session E2E | - |
+| SETUP-001 | התקנה ואימות `ui-ux-pro-max` | orchestrator | completed | - | skill מופיע וזמין ל-Codex | הסקיל רץ; design system נוצר; pre-delivery checklist תוקן (emoji→SVG, focus-ring→var, cursor-pointer). |
+| FND-001 | יצירת Next.js shell | agent-web-pwa | completed | - | build + responsive smoke | lint, TypeScript ו-build עברו נקי. |
+| FND-002 | Design System RTL באמצעות `ui-ux-pro-max` | agent-responsive-ui | completed | SETUP-001, FND-001 | visual + axe | שני נושאים (modern/editorial) עם toggle; גופנים Space Grotesk ו-Playfair; 20/20 בדיקות Playwright עברו: viewport, RTL, nav, touch targets ≥44px, keyboard, axe WCAG 2 AA. |
+| DB-001 | סכמת Supabase ראשונית | agent-supabase | completed | - | migration from zero | `0001_core_schema.sql` — 6 טבלאות + trigger updated_at. |
+| SEC-001 | RLS לכל טבלאות הליבה | agent-supabase | completed | DB-001 | two-user RLS tests | RLS + policy על כל טבלה; טבלאות ילד מוגנות דרך JOIN ל-recipes. Storage policy — `0002_storage_policy.sql`. |
+| AUTH-001 | Supabase SSR Auth | agent-supabase | completed | FND-001 | login/session E2E | SSR client/server, middleware, login/register/logout/forgot/reset — כולם ממומשים עם Zod. |
 | REC-001 | CRUD מתכונים | unassigned | pending | DB-001, AUTH-001 | CRUD integration | - |
 | IMP-001 | העלאת תמונה ו-job | agent-import-ai | pending | REC-001 | upload/import E2E | - |
 | IMP-002 | שכבת ספקי AI/OCR ובחירת ספק | agent-import-ai | pending | IMP-001, DB-001 | provider selection + fallback + audit tests | - |
@@ -269,6 +269,7 @@ npx vercel --prod
 | 2026-09-04 | Codex + AGENTS.md | חיסכון בטוקנים והוראות אוטומטיות ממוקדות | Codex קורא AGENTS.md; האפיון נטען לפי צורך בלבד |
 | 2026-09-04 | התקנת UI/UX Pro Max | שימוש בסקיל המבוקש לפני בניית הממשק | Codex מתקין ומאמת באמצעות פקודת `npx skills add` |
 | 2026-09-04 | ספקי AI/OCR ניתנים לבחירה | בחירת ספק/מודל מתוך ספקים מוגדרים, ללא חשיפת מפתחות | שכבת ספקים, תיעוד job ואישור משתמש לפני שמירה |
+| 2026-09-05 | CSS מותאם במקום Tailwind | מאפשר RTL מלא, theming עם CSS variables ושני נושאים (modern/editorial) בלי תלות ב-Tailwind; shadcn/ui יתווסף בשלב components | כל ה-UI בנוי על CSS variables; Tailwind מותקן אך לא בשימוש כרגע |
 
 ## 17. סיכונים וחסימות
 
@@ -281,10 +282,11 @@ npx vercel --prod
 
 ## 18. מצב נוכחי והצעד הבא
 
-- מצב: Foundation בבנייה.
-- הושלם: Next.js shell, PWA manifest ושכבת UI עם נתיבים לבית, ספרייה, יצירה, OCR, בישול, תכנון ופרופיל.
-- הבא: בדיקה חזותית בטלפון ובטאבלט, ואז חיבור Supabase Auth/Database/Storage ויישום OCR מול ספקים מוגדרים.
-- חסימות נוכחיות: טרם נבחר שם מסחרי, דומיין ורשימת ספקי AI/OCR שיוגדרו בגרסת ההשקה.
+- מצב: Foundation — UI Shell + Design System הושלמו; כל בדיקות Foundation עברו.
+- הושלם: Next.js shell, PWA manifest, שכבת UI מלאה (בית/ספרייה/מתכון/בישול/ייבוא/אוספים/פרופיל/תכנון שבועי), שני נושאי עיצוב (modern/editorial) עם toggle, תיקוני pre-delivery מ-ui-ux-pro-max, lint+TypeScript נקיים, 20/20 Playwright E2E עברו (viewport, RTL, touch targets, keyboard, axe WCAG 2 AA).
+- החלטת ארכיטקטורה: CSS מותאם במקום Tailwind — מתועד בסעיף 16; מאפשר RTL ו-theming מלא ללא תלויות נוספות.
+- הבא: (1) הרצת migration `0002_storage_policy.sql` על פרויקט Supabase; (2) בדיקת E2E לזרם login → בית עם מתכונים אמיתיים.
+- חסימות: טרם נבחר שם מסחרי, דומיין ורשימת ספקי AI/OCR.
 
 ## 19. היסטוריית שינויים
 
@@ -296,6 +298,10 @@ npx vercel --prod
 | 2026-09-04 | 0.1.2 | הוספת התקנת `ui-ux-pro-max` כשלב Setup מחייב | הפקודה וה-dependency נבדקו במסמכים | codex-orchestrator |
 | 2026-09-04 | 0.1.3 | התחלת בניית Next.js ומסך בית RTL | `npm run lint`, `tsc --noEmit --incremental false`, preview מקומי | codex |
 | 2026-09-04 | 0.1.4 | השלמת שכבת UI מרכזית ו-PWA manifest | lint, TypeScript וכל נתיבי ה-UI מחזירים 200 מקומית | codex |
+| 2026-09-05 | 0.1.5 | שני נושאי עיצוב (modern/editorial) עם theme toggle; תיקוני pre-delivery מ-ui-ux-pro-max: emoji→SVG, focus-ring→CSS var, cursor-pointer; עדכון PROJECT.md | lint + TypeScript עברו נקי | claude-code |
+| 2026-09-05 | 0.1.6 | הוספת החלטת ארכיטקטורה: CSS מותאם במקום Tailwind; CSS custom מאפשר RTL ו-theming מלא | תועד ב-PROJECT.md | claude-code |
+| 2026-09-05 | 0.1.7 | השלמת Foundation: Playwright E2E 20/20 עברו (viewport/RTL/touch/keyboard/axe WCAG2AA); תיקון touch target לכפתורי דפדפן נייטיב; FND-002 → completed | `npx playwright test --project=chromium`: 20 passed (14.6s) | claude-code |
+| 2026-09-05 | 0.1.8 | DB-001 + AUTH-001 + SEC-001 → completed (כבר היו ממומשים); הוספת `0002_storage_policy.sql` — באקט recipe-images + 4 policies לפי owner_id בנתיב | קוד נבדק; migration טרם הורץ על Supabase | claude-code |
 
 ## 20. מדיניות עדכון
 

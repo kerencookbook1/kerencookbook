@@ -64,7 +64,18 @@ export default function ImportUrlPage() {
 
           {loading && (
             <div style={{ marginTop: 24, color: 'var(--muted)', textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', marginBottom: 8 }}>⏳</div>
+              <svg
+                aria-hidden="true"
+                width="32" height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                style={{ display: 'block', margin: '0 auto 8px', animation: 'spin 1s linear infinite' }}
+              >
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
               <p style={{ margin: 0 }}>מוצא ומחלץ את המתכון…</p>
             </div>
           )}

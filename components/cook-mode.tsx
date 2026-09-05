@@ -25,6 +25,7 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
   const stepDuration = currentStep?.duration_seconds ?? null
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTimerActive(false)
     if (intervalRef.current) clearInterval(intervalRef.current)
     setTimeLeft(stepDuration)
@@ -37,6 +38,7 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
       }, 1000)
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (timerActive && timeLeft === 0) setTimerActive(false)
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }

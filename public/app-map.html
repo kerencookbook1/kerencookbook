@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>מפת האפליקציה — המטבח של קרן</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1a1a1a;
+    --muted: #6b6b6b;
+    --canvas: #f8f5f0;
+    --surface: #ffffff;
+    --line: #e8e0d5;
+    --primary: #2d6a4f;
+    --primary-light: #e8f4ee;
+    --accent: #d97845;
+    --accent-light: #fdf0e8;
+    --error: #c64242;
+    --shadow: 0 2px 12px rgba(0,0,0,.1);
+    --r: 14px;
+  }
+
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--canvas);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    padding: 28px 40px 20px;
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px;
+  }
+  .page-header h1 {
+    font-size: 1.4rem; font-weight: 900;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .page-header p { color: var(--muted); font-size: .85rem; margin-top: 2px; }
+  .badge {
+    display: inline-block;
+    background: var(--primary-light); color: var(--primary);
+    border-radius: 999px; padding: 2px 10px;
+    font-size: .75rem; font-weight: 700; letter-spacing: .02em;
+  }
+
+  /* ── SECTIONS ── */
+  .section { padding: 48px 40px; }
+  .section + .section { border-top: 1px solid var(--line); }
+  .section-title {
+    font-size: 1rem; font-weight: 900; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 24px;
+  }
+
+  /* ── SITEMAP ── */
+  .sitemap {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .nav-tab {
+    background: var(--surface);
+    border: 1.5px solid var(--line);
+    border-radius: var(--r);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .nav-tab.primary { border-color: var(--primary); background: var(--primary-light); }
+  .nav-tab.accent  { border-color: var(--accent);  background: var(--accent-light);  }
+  .nav-tab-icon { font-size: 1.6rem; margin-bottom: 8px; }
+  .nav-tab h3 { font-size: .95rem; font-weight: 800; margin-bottom: 6px; }
+  .nav-tab .path { font-size: .75rem; color: var(--muted); font-family: monospace; margin-bottom: 8px; }
+  .nav-tab ul { list-style: none; }
+  .nav-tab ul li { font-size: .8rem; color: var(--muted); padding: 2px 0; display: flex; align-items: flex-start; gap: 6px; }
+  .nav-tab ul li::before { content: '·'; color: var(--primary); font-weight: 900; flex-shrink: 0; }
+
+  /* ── DATA MODEL ── */
+  .tables-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+  }
+  .table-chip {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px 14px;
+    font-size: .8rem; font-weight: 700;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .table-chip .table-name { color: var(--ink); }
+  .table-chip .table-desc { font-size: .72rem; font-weight: 400; color: var(--muted); }
+  .table-chip.done { border-color: var(--primary); }
+  .table-chip.done .table-name { color: var(--primary); }
+
+  /* ── PHONE FRAMES SECTION ── */
+  .phones-row {
+    display: flex;
+    gap: 32px;
+    overflow-x: auto;
+    padding-bottom: 16px;
+    align-items: flex-start;
+  }
+  .phone-wrap {
+    flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .phone-label {
+    font-size: .8rem; font-weight: 700; color: var(--muted);
+    letter-spacing: .04em; text-align: center;
+  }
+  .phone {
+    width: 260px;
+    height: 520px;
+    background: #0a0a0a;
+    border-radius: 36px;
+    padding: 10px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3), 0 0 0 1.5px #333;
+    position: relative;
+    overflow: hidden;
+  }
+  .phone-screen {
+    width: 100%; height: 100%;
+    background: #f8f5f0;
+    border-radius: 28px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    font-size: 11px;
+    position: relative;
+  }
+
+  /* STATUS BAR */
+  .status-bar {
+    background: inherit;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 14px 4px;
+    font-size: 9px; font-weight: 700; color: #555;
+    flex-shrink: 0;
+  }
+
+  /* SCROLL CONTENT */
+  .screen-scroll {
+    flex: 1; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    display: flex;
+    background: #fff;
+    border-top: 1px solid #e8e0d5;
+    flex-shrink: 0;
+    padding: 6px 0 10px;
+  }
+  .bnav-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 2px;
+    color: #aaa; font-size: 8px; font-weight: 600;
+    cursor: pointer;
+  }
+  .bnav-item.active { color: #2d6a4f; }
+  .bnav-icon { font-size: 14px; line-height: 1; }
+  .bnav-add {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+  }
+  .bnav-add-btn {
+    width: 38px; height: 38px;
+    background: #2d6a4f;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 18px; line-height: 1;
+    margin-top: -14px;
+    box-shadow: 0 4px 12px rgba(45,106,79,.4);
+  }
+
+  /* ── SCREEN: HOME ── */
+  .s-topbar {
+    background: #fff;
+    padding: 8px 14px 6px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid #ede8e0;
+    flex-shrink: 0;
+  }
+  .s-brand { font-weight: 900; font-size: 11px; color: #2d6a4f; }
+  .s-search {
+    flex: 1;
+    background: #f4f0ea;
+    border-radius: 20px;
+    padding: 5px 10px;
+    font-size: 9px; color: #aaa;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .s-add-btn {
+    background: #2d6a4f; color: #fff;
+    border-radius: 14px; padding: 4px 8px;
+    font-size: 8px; font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .s-hero {
+    background: linear-gradient(135deg, #e8f4ee 0%, #f0ece4 100%);
+    padding: 14px 14px 10px;
+    flex-shrink: 0;
+  }
+  .s-eyebrow { font-size: 8px; font-weight: 700; color: var(--primary); letter-spacing: .06em; text-transform: uppercase; }
+  .s-hero h2 { font-size: 15px; font-weight: 900; line-height: 1.2; margin: 4px 0 6px; }
+  .s-hero p { font-size: 8px; color: #666; margin-bottom: 8px; }
+  .s-hero-btn {
+    display: inline-block;
+    background: #2d6a4f; color: #fff;
+    border-radius: 20px; padding: 5px 12px;
+    font-size: 8px; font-weight: 700;
+  }
+
+  .s-chips {
+    display: flex; gap: 6px; padding: 8px 14px;
+    overflow-x: auto; flex-shrink: 0;
+  }
+  .s-chip {
+    background: #fff; border: 1px solid #ddd;
+    border-radius: 999px; padding: 3px 10px;
+    font-size: 8px; font-weight: 600; white-space: nowrap;
+    color: #555;
+  }
+  .s-chip.active { background: #2d6a4f; color: #fff; border-color: #2d6a4f; }
+
+  .s-section-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 14px 4px;
+    flex-shrink: 0;
+  }
+  .s-section-head h3 { font-size: 10px; font-weight: 800; }
+  .s-section-head a { font-size: 8px; color: #2d6a4f; font-weight: 700; }
+
+  .s-recipe-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; padding: 0 14px 10px;
+    overflow-y: auto;
+  }
+  .s-recipe-card {
+    background: #fff; border-radius: 12px;
+    overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  }
+  .s-recipe-img {
+    height: 60px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    position: relative;
+  }
+  .s-recipe-img .s-fav {
+    position: absolute; top: 4px; left: 4px;
+    font-size: 10px; color: #ccc;
+  }
+  .s-recipe-info { padding: 5px 7px 7px; }
+  .s-recipe-info h4 { font-size: 9px; font-weight: 800; margin-bottom: 2px; }
+  .s-recipe-info span { font-size: 7px; color: #aaa; }
+
+  /* card color themes */
+  .card-green  { background: linear-gradient(135deg,#b7dfc8,#8cc5a3); }
+  .card-yellow { background: linear-gradient(135deg,#f5e4a0,#e8c96a); }
+  .card-orange { background: linear-gradient(135deg,#f5c9a0,#e8a06a); }
+  .card-purple { background: linear-gradient(135deg,#d4b8e0,#b896cc); }
+
+  /* ── SCREEN: RECIPES/SEARCH ── */
+  .s-search-bar {
+    background: #fff; padding: 10px 14px;
+    border-bottom: 1px solid #ede8e0; flex-shrink: 0;
+  }
+  .s-search-input {
+    background: #f4f0ea; border-radius: 20px;
+    padding: 6px 12px; width: 100%;
+    font-size: 9px; color: #555;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .s-filter-row {
+    display: flex; gap: 5px; overflow-x: auto;
+    padding: 6px 14px; flex-shrink: 0;
+  }
+  .s-filter { background: #fff; border: 1px solid #ddd; border-radius: 999px; padding: 3px 8px; font-size: 7.5px; color: #666; white-space: nowrap; }
+  .s-filter.on { background: #e8f4ee; border-color: #2d6a4f; color: #2d6a4f; font-weight: 700; }
+
+  .s-recipe-list {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 8px 14px; overflow-y: auto; flex: 1;
+  }
+  .s-list-card {
+    background: #fff; border-radius: 10px;
+    display: flex; gap: 8px; overflow: hidden;
+    box-shadow: 0 1px 6px rgba(0,0,0,.07);
+  }
+  .s-list-thumb {
+    width: 52px; height: 52px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .s-list-info { padding: 7px 8px 7px 0; flex: 1; }
+  .s-list-info h4 { font-size: 9px; font-weight: 800; }
+  .s-list-meta { display: flex; gap: 6px; margin-top: 3px; }
+  .s-list-meta span { font-size: 7px; color: #aaa; }
+  .s-list-badge {
+    display: inline-block; border-radius: 999px; padding: 1px 6px;
+    font-size: 6.5px; font-weight: 700; margin-top: 3px;
+  }
+  .badge-meat { background: #fde8e8; color: #c64242; }
+  .badge-veg  { background: #e8f4ee; color: #2d6a4f; }
+  .badge-pareve { background: #f4f0ea; color: #888; }
+
+  /* ── SCREEN: IMPORT ── */
+  .s-import-header {
+    background: #fff; padding: 10px 14px; border-bottom: 1px solid #ede8e0; flex-shrink: 0;
+  }
+  .s-back { font-size: 9px; color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 3px; }
+  .s-import-header h2 { font-size: 13px; font-weight: 900; margin-top: 4px; }
+  .s-import-header p { font-size: 8px; color: #888; margin-top: 2px; }
+
+  .s-import-options {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; padding: 14px;
+    flex: 1;
+  }
+  .s-import-card {
+    background: #fff; border-radius: 12px;
+    padding: 14px; text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,.07);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    cursor: pointer; border: 1.5px solid transparent;
+  }
+  .s-import-card:hover { border-color: #2d6a4f; }
+  .s-import-card .ico { font-size: 24px; }
+  .s-import-card h4 { font-size: 9px; font-weight: 800; }
+  .s-import-card p { font-size: 7.5px; color: #888; }
+  .s-import-card.primary-card { grid-column: 1 / -1; flex-direction: row; text-align: right; gap: 12px; }
+  .s-import-card.primary-card .ico { font-size: 28px; }
+
+  /* ── SCREEN: MEAL PLAN ── */
+  .s-week-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; background: #fff; border-bottom: 1px solid #ede8e0; flex-shrink: 0;
+  }
+  .s-week-nav { font-size: 12px; color: #aaa; cursor: pointer; padding: 4px; }
+  .s-week-title { font-size: 10px; font-weight: 800; }
+
+  .s-week-days {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    padding: 6px 10px; gap: 3px; background: #fff;
+    border-bottom: 1px solid #ede8e0; flex-shrink: 0;
+  }
+  .s-day-head { text-align: center; font-size: 7px; color: #aaa; font-weight: 700; }
+  .s-day-head.today { color: #2d6a4f; }
+
+  .s-meal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 3px; padding: 6px 10px;
+    flex: 1; overflow-y: auto; align-content: start;
+  }
+  .s-meal-slot {
+    background: #fff; border-radius: 6px; min-height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 7px; color: #ccc; cursor: pointer;
+    padding: 3px;
+    border: 1px dashed #e0d8d0;
+  }
+  .s-meal-slot.filled {
+    background: #e8f4ee; border-color: #a8d4ba; color: #2d6a4f;
+    font-weight: 700; font-size: 6px; text-align: center;
+    align-items: flex-start; padding: 4px;
+  }
+  .s-meal-slot.accent-fill {
+    background: #fdf0e8; border-color: #f5c4a0; color: #c0621a;
+  }
+
+  .s-shopping-preview {
+    margin: 8px 14px 0;
+    background: #fff; border-radius: 10px;
+    padding: 10px; flex-shrink: 0;
+    box-shadow: 0 1px 6px rgba(0,0,0,.06);
+  }
+  .s-shopping-preview h4 { font-size: 9px; font-weight: 800; margin-bottom: 6px; }
+  .s-shop-item { font-size: 8px; color: #555; display: flex; gap: 6px; align-items: center; padding: 2px 0; }
+  .s-shop-check { width: 10px; height: 10px; border: 1.5px solid #ccc; border-radius: 3px; flex-shrink: 0; }
+  .s-shop-check.done { background: #2d6a4f; border-color: #2d6a4f; }
+
+  /* ── SCREEN: PROFILE ── */
+  .s-profile-header {
+    background: linear-gradient(180deg, #e8f4ee 0%, #f8f5f0 100%);
+    padding: 20px 14px 14px; text-align: center; flex-shrink: 0;
+  }
+  .s-avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #2d6a4f; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 900; margin: 0 auto 8px;
+    box-shadow: 0 4px 12px rgba(45,106,79,.3);
+  }
+  .s-profile-name { font-size: 13px; font-weight: 900; }
+  .s-profile-email { font-size: 8px; color: #888; margin-top: 2px; }
+  .s-profile-stats {
+    display: flex; gap: 1px; margin-top: 10px;
+  }
+  .s-stat {
+    flex: 1; text-align: center;
+    background: #fff; padding: 6px 0;
+  }
+  .s-stat:first-child { border-radius: 10px 0 0 10px; }
+  .s-stat:last-child  { border-radius: 0 10px 10px 0; }
+  .s-stat-num { font-size: 13px; font-weight: 900; color: #2d6a4f; }
+  .s-stat-label { font-size: 7px; color: #aaa; }
+
+  .s-profile-menu {
+    display: flex; flex-direction: column; gap: 1px;
+    margin: 8px 14px; overflow-y: auto; flex: 1;
+  }
+  .s-menu-section { font-size: 7.5px; font-weight: 800; color: #aaa; letter-spacing: .06em; text-transform: uppercase; padding: 6px 0 3px; }
+  .s-menu-item {
+    background: #fff; padding: 9px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 9px; font-weight: 600;
+  }
+  .s-menu-item:first-of-type { border-radius: 10px 10px 0 0; }
+  .s-menu-item:last-of-type  { border-radius: 0 0 10px 10px; }
+  .s-menu-item .s-arrow { color: #ccc; font-size: 10px; }
+  .s-menu-item.danger { color: #c64242; }
+
+  /* ── SCREEN: RECIPE DETAIL ── */
+  .s-recipe-hero {
+    height: 110px; position: relative;
+    background: linear-gradient(135deg, #b7dfc8, #8cc5a3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 44px; flex-shrink: 0;
+  }
+  .s-recipe-hero-back {
+    position: absolute; top: 8px; right: 10px;
+    background: rgba(255,255,255,.8); border-radius: 999px;
+    padding: 3px 8px; font-size: 8px; font-weight: 700; color: #333;
+  }
+  .s-recipe-hero-fav {
+    position: absolute; top: 8px; left: 10px;
+    background: rgba(255,255,255,.8); border-radius: 999px;
+    width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+  }
+  .s-recipe-detail-body {
+    padding: 12px 14px; overflow-y: auto; flex: 1;
+  }
+  .s-recipe-meta {
+    display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .s-meta-chip {
+    background: #f4f0ea; border-radius: 999px; padding: 2px 8px;
+    font-size: 7.5px; color: #666; font-weight: 600;
+    display: flex; align-items: center; gap: 3px;
+  }
+  .s-recipe-detail-h1 { font-size: 14px; font-weight: 900; margin-bottom: 4px; line-height: 1.2; }
+  .s-recipe-desc { font-size: 8px; color: #888; margin-bottom: 10px; line-height: 1.5; }
+  .s-recipe-section-title { font-size: 9px; font-weight: 800; margin-bottom: 5px; color: #2d6a4f; }
+  .s-ingredient-row { font-size: 8px; color: #555; padding: 3px 0; border-bottom: 1px solid #f0ece4; display: flex; justify-content: space-between; }
+  .s-ingredient-row .s-amount { font-weight: 700; color: #333; }
+  .s-step { display: flex; gap: 8px; margin-bottom: 8px; }
+  .s-step-num { width: 18px; height: 18px; border-radius: 50%; background: #2d6a4f; color: #fff; font-size: 8px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .s-step-text { font-size: 8px; color: #555; line-height: 1.5; }
+  .s-cook-btn {
+    display: block; width: 100%;
+    background: #2d6a4f; color: #fff; border-radius: 20px;
+    padding: 9px; text-align: center; font-size: 9px; font-weight: 800;
+    margin-top: 10px;
+  }
+
+  /* ── SCREEN: COOK MODE ── */
+  .s-cook-screen { background: #1a1a1a; color: #f0f0f0; }
+  .s-cook-topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,.08);
+    flex-shrink: 0;
+  }
+  .s-cook-topbar span { font-size: 8px; color: rgba(255,255,255,.5); }
+  .s-cook-topbar strong { font-size: 9px; }
+  .s-cook-progress {
+    height: 3px; background: rgba(255,255,255,.1);
+    flex-shrink: 0;
+  }
+  .s-cook-progress-fill { height: 100%; background: #d97845; width: 40%; border-radius: 0 2px 2px 0; }
+  .s-cook-body { flex: 1; display: flex; flex-direction: column; padding: 14px; overflow-y: auto; }
+  .s-cook-step-label { font-size: 8px; color: rgba(255,255,255,.4); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+  .s-cook-step-title { font-size: 13px; font-weight: 800; margin-bottom: 8px; line-height: 1.25; }
+  .s-cook-step-text { font-size: 9px; color: rgba(255,255,255,.7); line-height: 1.6; flex: 1; }
+  .s-cook-timer {
+    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; padding: 10px; margin-top: 10px; text-align: center;
+    flex-shrink: 0;
+  }
+  .s-cook-timer-num { font-size: 28px; font-weight: 900; color: #d97845; letter-spacing: .05em; }
+  .s-cook-timer-label { font-size: 7px; color: rgba(255,255,255,.4); margin-top: 2px; }
+  .s-cook-timer-btn {
+    display: inline-block; background: #d97845; color: #fff; border-radius: 999px;
+    padding: 5px 16px; font-size: 8px; font-weight: 700; margin-top: 8px;
+  }
+  .s-cook-nav-btns {
+    display: flex; gap: 8px; padding: 8px 14px; flex-shrink: 0;
+    border-top: 1px solid rgba(255,255,255,.06);
+  }
+  .s-cook-nav-btn {
+    flex: 1; border-radius: 12px; padding: 8px;
+    text-align: center; font-size: 8px; font-weight: 700;
+    background: rgba(255,255,255,.07); color: rgba(255,255,255,.7);
+  }
+  .s-cook-nav-btn.next { background: #2d6a4f; color: #fff; }
+  .s-cook-ingredients {
+    background: rgba(255,255,255,.04); border-radius: 10px;
+    padding: 8px; margin-top: 8px; flex-shrink: 0;
+  }
+  .s-cook-ing-title { font-size: 7.5px; color: rgba(255,255,255,.4); font-weight: 700; letter-spacing: .06em; margin-bottom: 5px; text-transform: uppercase; }
+  .s-cook-ing-row { font-size: 8px; color: rgba(255,255,255,.65); padding: 2px 0; display: flex; justify-content: space-between; }
+
+  /* ── LEGEND ── */
+  .legend-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .legend-item {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 14px;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .legend-item .ico { font-size: 1.4rem; flex-shrink: 0; }
+  .legend-item h4 { font-size: .85rem; font-weight: 800; margin-bottom: 3px; }
+  .legend-item p { font-size: .75rem; color: var(--muted); line-height: 1.4; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
+  @media (max-width: 600px) {
+    .section { padding: 32px 20px; }
+    .page-header { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- PAGE HEADER -->
+<header class="page-header">
+  <div>
+    <h1>✿ מפת האפליקציה — המטבח של קרן <span class="badge">v2.0 spec</span></h1>
+    <p>כל טאב, כל מסך ומודל הנתונים — לפי האפיון המאושר</p>
+  </div>
+</header>
+
+<!-- ════════════════════════════════════════════
+     1. ניווט ראשי — הטאבים
+════════════════════════════════════════════ -->
+<section class="section">
+  <p class="section-title">1 — ניווט ראשי (5 טאבים)</p>
+  <div class="sitemap">
+
+    <div class="nav-tab primary">
+      <div class="nav-tab-icon">🏠</div>
+      <h3>בית</h3>
+      <div class="path">/</div>
+      <ul>
+        <li>חיפוש מהיר בראש המסך</li>
+        <li>פעולות מהירות (הוסיפי מתכון)</li>
+        <li>קטגוריות מהירות — צ'יפס</li>
+        <li>אחרונים ומועדפים — grid</li>
+        <li>כרטיסי מתכון עם תמונה</li>
+      </ul>
+    </div>
+
+    <div class="nav-tab">
+      <div class="nav-tab-icon">🔍</div>
+      <h3>המתכונים שלי</h3>
+      <div class="path">/recipes</div>
+      <ul>
+        <li>שורת חיפוש עם פילטרים</li>
+        <li>מיון: חדש, מועדף, זמן, קושי</li>
+        <li>תצוגת grid / רשימה</li>
+        <li>chips קטגוריה, זמן, דיאטה</li>
+        <li>Infinite scroll</li>
+      </ul>
+    </div>
+
+    <div class="nav-tab accent">
+      <div class="nav-tab-icon">＋</div>
+      <h3>הוספת מתכון</h3>
+      <div class="path">/import</div>
+      <ul>
+        <li>📷 צלמי מתכון (OCR)</li>
+        <li>🖼 גלריה / קובץ</li>
+        <li>🔗 ייבוא מקישור (URL)</li>
+        <li>✍ הזנה ידנית</li>
+        <li>מסך אימות לכל מקור</li>
+      </ul>
+    </div>
+
+    <div class="nav-tab">
+      <div class="nav-tab-icon">📅</div>
+      <h3>תכנון</h3>
+      <div class="path">/meal-plans</div>
+      <ul>
+        <li>לוח שבועי 7 עמודות</li>
+        <li>גרירה / הוספה של מתכון</li>
+        <li>רשימת קניות אוטומטית</li>
+        <li>מאוחד לפי מרכיבים</li>
+        <li>שיתוף עם המשפחה</li>
+      </ul>
+    </div>
+
+    <div class="nav-tab">
+      <div class="nav-tab-icon">👤</div>
+      <h3>פרופיל</h3>
+      <div class="path">/profile</div>
+      <ul>
+        <li>תמונה, שם ומייל</li>
+        <li>סטטיסטיקות מתכונים</li>
+        <li>ניהול household משפחתי</li>
+        <li>העדפות ועיצוב</li>
+        <li>ייצוא, פרטיות, מחיקה</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     2. מסכים משניים
+════════════════════════════════════════════ -->
+<section class="section">
+  <p class="section-title">2 — מסכים משניים</p>
+  <div class="sitemap">
+
+    <div class="nav-tab">
+      <div class="nav-tab-icon">📖</div>
+      <h3>פרטי מתכון</h3>
+      <div class="path">/recipes/[id]</div>
+      <ul>
+        <li>תמונה ראשית גדולה</li>
+        <li>מטא: זמן, מנות, קושי, דיאטה</li>
+        <li>מרכיבים בקבוצות</li>
+        <li>שלבי הכנה ממוספרים</li>
+        <li>כפתור "התחילי לבשל"</li>
+        <li>גרסאות ומקור</li>
+      </ul>
+    </div>
+
+    <div class="nav-tab">
+      <div class="nav-tab-icon">🍳</div>
+      <h3>מצב בישול</h3>
+      <div class="path">/recipes/[id]/cook</div>
+      <ul>
+        <li>מסך כהה, טקסט גדול</li>
+        <li>שלב נוכחי + ניווט</li>
+        <li>טיימר אינטראקטיבי</li>
+        <li>Wake Lock — מסך לא נכבה</li>
+        <li>מרכיבים רלוונטיים</li>
+        <li>התאמת מנות בזמן אמת</li>
+      </ul>
+    </div>
+
+    <div class="nav-tab">
+      <div class="nav-tab-icon">✏️</div>
+      <h3>עורך מתכון</h3>
+      <div class="path">/recipes/[id]/edit<br/>/recipes/new</div>
+      <ul>
+        <li>autosave ל-IndexedDB</li>
+        <li>עריכת מרכיבים בקבוצות</li>
+        <li>גרירה/סידור שלבים</li>
+        <li>העלאת תמונות</li>
+        <li>שדות אישיים מותאמים</li>
+        <li>היסטוריית גרסאות</li>
+      </ul>
+    </div>
+
+    <div class="nav-tab">
+      <div class="nav-tab-icon">🔍</div>
+      <h3>OCR Review</h3>
+      <div class="path">/import/photo</div>
+      <ul>
+        <li>תמונה מקורית vs חילוץ</li>
+        <li>confidence indicator לשדות</li>
+        <li>תיקון ידני לפני שמירה</li>
+        <li>בחירת ספק OCR</li>
+        <li>שמירת הטיוטה בין ניסיונות</li>
+      </ul>
+    </div>
+
+    <div class="nav-tab">
+      <div class="nav-tab-icon">🗂</div>
+      <h3>אוספים</h3>
+      <div class="path">/collections</div>
+      <ul>
+        <li>אוספים מותאמים אישית</li>
+        <li>גרור מתכון לאוסף</li>
+        <li>שיתוף אוסף עם household</li>
+      </ul>
+    </div>
+
+    <div class="nav-tab">
+      <div class="nav-tab-icon">🛒</div>
+      <h3>רשימת קניות</h3>
+      <div class="path">/meal-plans → קניות</div>
+      <ul>
+        <li>מרכיבים מתוך תכנון שבועי</li>
+        <li>מיון לפי קטגוריה בחנות</li>
+        <li>סימון ✔ ל-done</li>
+        <li>שיתוף בזמן אמת</li>
+      </ul>
+    </div>
+
+    <div class="nav-tab">
+      <div class="nav-tab-icon">👨‍👩‍👧</div>
+      <h3>Household משפחתי</h3>
+      <div class="path">/profile/connections</div>
+      <ul>
+        <li>הזמנה במייל</li>
+        <li>תפקידים: owner / editor / viewer</li>
+        <li>ספר מתכונים משותף</li>
+      </ul>
+    </div>
+
+    <div class="nav-tab">
+      <div class="nav-tab-icon">🔐</div>
+      <h3>Auth</h3>
+      <div class="path">/login /register<br/>/forgot-password</div>
+      <ul>
+        <li>הרשמה עם שם + מייל + סיסמה</li>
+        <li>אימות דוא"ל</li>
+        <li>איפוס סיסמה</li>
+        <li>זכור אותי (30 יום)</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     3. מוקאפים — מסכי טלפון
+════════════════════════════════════════════ -->
+<section class="section">
+  <p class="section-title">3 — מוקאפי מסכים (iPhone 375×812)</p>
+  <div class="phones-row">
+
+    <!-- ── TAB 1: HOME ── -->
+    <div class="phone-wrap">
+      <div class="phone-label">🏠 בית</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:41</span><span>●●●●  ⬛</span></div>
+          <div class="screen-scroll">
+            <!-- topbar -->
+            <div class="s-topbar">
+              <div class="s-brand">✿ המטבח של קרן</div>
+              <div class="s-search">🔍 חיפוש מתכון…</div>
+              <div class="s-add-btn">+ הוספה</div>
+            </div>
+            <!-- hero -->
+            <div class="s-hero">
+              <div class="s-eyebrow">מועדפי הבית</div>
+              <h2>ארוחת ערב<br>שמרגישה כמו בית</h2>
+              <p>המתכונים האהובים, לאנשים שאני אוהבת.</p>
+              <div class="s-hero-btn">למתכונים שלי ←</div>
+            </div>
+            <!-- chips -->
+            <div class="s-chips">
+              <div class="s-chip active">כל המתכונים</div>
+              <div class="s-chip">מהיר</div>
+              <div class="s-chip">צמחוני</div>
+              <div class="s-chip">מתוקים</div>
+              <div class="s-chip">ללא גלוטן</div>
+            </div>
+            <!-- section -->
+            <div class="s-section-head"><h3>נבחרו בשבילך</h3><a>הכל</a></div>
+            <!-- grid -->
+            <div class="s-recipe-grid">
+              <div class="s-recipe-card">
+                <div class="s-recipe-img card-green">🍝<div class="s-fav">♡</div></div>
+                <div class="s-recipe-info"><h4>פסטה ברוטב עגבניות</h4><span>⏱ 25 דק׳</span></div>
+              </div>
+              <div class="s-recipe-card">
+                <div class="s-recipe-img card-yellow">🍰<div class="s-fav">♡</div></div>
+                <div class="s-recipe-info"><h4>עוגת גבינה</h4><span>⏱ 60 דק׳</span></div>
+              </div>
+              <div class="s-recipe-card">
+                <div class="s-recipe-img card-orange">🍲<div class="s-fav">♡</div></div>
+                <div class="s-recipe-info"><h4>קציצות אמא</h4><span>⏱ 45 דק׳</span></div>
+              </div>
+              <div class="s-recipe-card">
+                <div class="s-recipe-img card-purple">🥗<div class="s-fav">♡</div></div>
+                <div class="s-recipe-info"><h4>סלט ים תיכוני</h4><span>⏱ 15 דק׳</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- BOTTOM NAV -->
+          <div class="bottom-nav">
+            <div class="bnav-item active"><div class="bnav-icon">🏠</div>בית</div>
+            <div class="bnav-item"><div class="bnav-icon">🔍</div>מתכונים</div>
+            <div class="bnav-add"><div class="bnav-add-btn">＋</div></div>
+            <div class="bnav-item"><div class="bnav-icon">📅</div>תכנון</div>
+            <div class="bnav-item"><div class="bnav-icon">👤</div>פרופיל</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB 2: RECIPES ── -->
+    <div class="phone-wrap">
+      <div class="phone-label">🔍 המתכונים שלי</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:41</span><span>●●●●  ⬛</span></div>
+          <div class="screen-scroll">
+            <div class="s-search-bar">
+              <div class="s-search-input">🔍 שם, מרכיב, קטגוריה…</div>
+            </div>
+            <div class="s-filter-row">
+              <div class="s-filter on">🥦 צמחוני</div>
+              <div class="s-filter">⏱ עד 30 דק׳</div>
+              <div class="s-filter">🔥 קל</div>
+              <div class="s-filter">⭐ מועדפים</div>
+              <div class="s-filter">📁 אוספים</div>
+            </div>
+            <div class="s-section-head" style="margin-top:4px"><h3>24 מתכונים</h3><a>מיון ▾</a></div>
+            <div class="s-recipe-list">
+              <div class="s-list-card">
+                <div class="s-list-thumb card-green">🥦</div>
+                <div class="s-list-info">
+                  <h4>קרם כרוביות</h4>
+                  <div class="s-list-meta"><span>⏱ 35 דק׳</span><span>👥 4 מנות</span></div>
+                  <div class="s-list-badge badge-veg">צמחוני</div>
+                </div>
+              </div>
+              <div class="s-list-card">
+                <div class="s-list-thumb card-orange">🍗</div>
+                <div class="s-list-info">
+                  <h4>עוף מרוקאי עם לימון כבוש</h4>
+                  <div class="s-list-meta"><span>⏱ 55 דק׳</span><span>👥 6 מנות</span></div>
+                  <div class="s-list-badge badge-meat">בשרי</div>
+                </div>
+              </div>
+              <div class="s-list-card">
+                <div class="s-list-thumb card-yellow">🍳</div>
+                <div class="s-list-info">
+                  <h4>ביצת שחשוקה</h4>
+                  <div class="s-list-meta"><span>⏱ 20 דק׳</span><span>👥 2 מנות</span></div>
+                  <div class="s-list-badge badge-pareve">פרווה</div>
+                </div>
+              </div>
+              <div class="s-list-card">
+                <div class="s-list-thumb card-purple">🥗</div>
+                <div class="s-list-info">
+                  <h4>סלט קינואה ותפוח עץ</h4>
+                  <div class="s-list-meta"><span>⏱ 15 דק׳</span><span>👥 4 מנות</span></div>
+                  <div class="s-list-badge badge-veg">צמחוני</div>
+                </div>
+              </div>
+              <div class="s-list-card">
+                <div class="s-list-thumb card-green">🍝</div>
+                <div class="s-list-info">
+                  <h4>פסטה ברוטב עגבניות</h4>
+                  <div class="s-list-meta"><span>⏱ 25 דק׳</span><span>👥 4 מנות</span></div>
+                  <div class="s-list-badge badge-pareve">פרווה</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="bnav-item"><div class="bnav-icon">🏠</div>בית</div>
+            <div class="bnav-item active"><div class="bnav-icon">🔍</div>מתכונים</div>
+            <div class="bnav-add"><div class="bnav-add-btn">＋</div></div>
+            <div class="bnav-item"><div class="bnav-icon">📅</div>תכנון</div>
+            <div class="bnav-item"><div class="bnav-icon">👤</div>פרופיל</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB 3: IMPORT ── -->
+    <div class="phone-wrap">
+      <div class="phone-label">＋ הוספת מתכון</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:41</span><span>●●●●  ⬛</span></div>
+          <div class="screen-scroll">
+            <div class="s-import-header">
+              <div class="s-back">← חזרה</div>
+              <h2>הוספת מתכון</h2>
+              <p>בחרי את הדרך הנוחה לך</p>
+            </div>
+            <div class="s-import-options">
+              <div class="s-import-card primary-card" style="border-color:#2d6a4f;background:#e8f4ee">
+                <div class="ico">📷</div>
+                <div>
+                  <h4>צלמי מתכון</h4>
+                  <p>OCR חכם יחלץ את כל הפרטים מהתמונה</p>
+                </div>
+              </div>
+              <div class="s-import-card">
+                <div class="ico">🖼</div>
+                <h4>מהגלריה</h4>
+                <p>העלאה מהגלריה</p>
+              </div>
+              <div class="s-import-card">
+                <div class="ico">🔗</div>
+                <h4>מקישור</h4>
+                <p>הדביקי URL מכל אתר</p>
+              </div>
+              <div class="s-import-card" style="grid-column: 1 / -1">
+                <div class="ico">✍</div>
+                <div>
+                  <h4>הזנה ידנית</h4>
+                  <p>כתבי מתכון חדש מאפס עם עורך מלא</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="bnav-item"><div class="bnav-icon">🏠</div>בית</div>
+            <div class="bnav-item"><div class="bnav-icon">🔍</div>מתכונים</div>
+            <div class="bnav-add"><div class="bnav-add-btn" style="background:#d97845">＋</div></div>
+            <div class="bnav-item"><div class="bnav-icon">📅</div>תכנון</div>
+            <div class="bnav-item"><div class="bnav-icon">👤</div>פרופיל</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB 4: MEAL PLAN ── -->
+    <div class="phone-wrap">
+      <div class="phone-label">📅 תכנון ארוחות</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:41</span><span>●●●●  ⬛</span></div>
+          <div class="screen-scroll">
+            <div class="s-week-header">
+              <div class="s-week-nav">‹</div>
+              <div class="s-week-title">1–7 בספטמבר 2026</div>
+              <div class="s-week-nav">›</div>
+            </div>
+            <div class="s-week-days">
+              <div class="s-day-head">א׳</div>
+              <div class="s-day-head today">ב׳</div>
+              <div class="s-day-head">ג׳</div>
+              <div class="s-day-head">ד׳</div>
+              <div class="s-day-head">ה׳</div>
+              <div class="s-day-head">ו׳</div>
+              <div class="s-day-head">ש׳</div>
+            </div>
+            <!-- breakfast row -->
+            <div style="padding:3px 10px 0;font-size:7px;color:#aaa;font-weight:700;letter-spacing:.06em;">בוקר</div>
+            <div class="s-meal-grid">
+              <div class="s-meal-slot filled">דייסת שיבולת שועל</div>
+              <div class="s-meal-slot filled accent-fill">יוגורט & פרות</div>
+              <div class="s-meal-slot">+</div>
+              <div class="s-meal-slot filled">ביצים</div>
+              <div class="s-meal-slot">+</div>
+              <div class="s-meal-slot filled">פנקייקים</div>
+              <div class="s-meal-slot">+</div>
+            </div>
+            <!-- lunch row -->
+            <div style="padding:3px 10px 0;font-size:7px;color:#aaa;font-weight:700;letter-spacing:.06em;">צהריים</div>
+            <div class="s-meal-grid">
+              <div class="s-meal-slot filled accent-fill">עוף מרוקאי</div>
+              <div class="s-meal-slot filled">פסטה</div>
+              <div class="s-meal-slot filled">קרם כרוביות</div>
+              <div class="s-meal-slot">+</div>
+              <div class="s-meal-slot filled">שחשוקה</div>
+              <div class="s-meal-slot filled accent-fill">קציצות</div>
+              <div class="s-meal-slot filled">סבא</div>
+            </div>
+            <!-- shopping preview -->
+            <div class="s-shopping-preview">
+              <h4>🛒 רשימת קניות — 12 פריטים</h4>
+              <div class="s-shop-item"><div class="s-shop-check done"></div>עגבניות × 6</div>
+              <div class="s-shop-item"><div class="s-shop-check done"></div>פסטה 500גר</div>
+              <div class="s-shop-item"><div class="s-shop-check"></div>עוף שלם</div>
+              <div class="s-shop-item"><div class="s-shop-check"></div>לימון כבוש</div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="bnav-item"><div class="bnav-icon">🏠</div>בית</div>
+            <div class="bnav-item"><div class="bnav-icon">🔍</div>מתכונים</div>
+            <div class="bnav-add"><div class="bnav-add-btn">＋</div></div>
+            <div class="bnav-item active"><div class="bnav-icon">📅</div>תכנון</div>
+            <div class="bnav-item"><div class="bnav-icon">👤</div>פרופיל</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB 5: PROFILE ── -->
+    <div class="phone-wrap">
+      <div class="phone-label">👤 פרופיל</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:41</span><span>●●●●  ⬛</span></div>
+          <div class="screen-scroll">
+            <div class="s-profile-header">
+              <div class="s-avatar">ק</div>
+              <div class="s-profile-name">קרן כהן</div>
+              <div class="s-profile-email">keren@example.com</div>
+              <div class="s-profile-stats">
+                <div class="s-stat"><div class="s-stat-num">47</div><div class="s-stat-label">מתכונים</div></div>
+                <div class="s-stat"><div class="s-stat-num">12</div><div class="s-stat-label">מועדפים</div></div>
+                <div class="s-stat"><div class="s-stat-num">3</div><div class="s-stat-label">אוספים</div></div>
+              </div>
+            </div>
+            <div class="s-profile-menu">
+              <div class="s-menu-section">ניהול ספר המתכונים</div>
+              <div class="s-menu-item">👨‍👩‍👧 Household משפחתי<span class="s-arrow">›</span></div>
+              <div class="s-menu-item">🗂 האוספים שלי<span class="s-arrow">›</span></div>
+              <div class="s-menu-item">📤 ייצוא מתכונים<span class="s-arrow">›</span></div>
+              <div class="s-menu-section">הגדרות</div>
+              <div class="s-menu-item">🎨 עיצוב ותמה<span class="s-arrow">›</span></div>
+              <div class="s-menu-item">🤖 ספק AI / OCR<span class="s-arrow">›</span></div>
+              <div class="s-menu-item">🔔 התראות<span class="s-arrow">›</span></div>
+              <div class="s-menu-section">אבטחה ופרטיות</div>
+              <div class="s-menu-item">🔑 שינוי סיסמה<span class="s-arrow">›</span></div>
+              <div class="s-menu-item">🛡 פרטיות ונתונים<span class="s-arrow">›</span></div>
+              <div class="s-menu-item danger">🗑 מחיקת חשבון<span class="s-arrow" style="color:#c64242">›</span></div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="bnav-item"><div class="bnav-icon">🏠</div>בית</div>
+            <div class="bnav-item"><div class="bnav-icon">🔍</div>מתכונים</div>
+            <div class="bnav-add"><div class="bnav-add-btn">＋</div></div>
+            <div class="bnav-item"><div class="bnav-icon">📅</div>תכנון</div>
+            <div class="bnav-item active"><div class="bnav-icon">👤</div>פרופיל</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     4. מסכים פנימיים
+════════════════════════════════════════════ -->
+<section class="section">
+  <p class="section-title">4 — מסכים פנימיים</p>
+  <div class="phones-row">
+
+    <!-- RECIPE DETAIL -->
+    <div class="phone-wrap">
+      <div class="phone-label">📖 פרטי מתכון</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar" style="position:absolute;top:0;width:100%;z-index:2;color:#fff;"><span>9:41</span><span>●●●●  ⬛</span></div>
+          <div class="screen-scroll">
+            <div class="s-recipe-hero">
+              🍝
+              <div class="s-recipe-hero-back">← חזרה</div>
+              <div class="s-recipe-hero-fav">♡</div>
+            </div>
+            <div class="s-recipe-detail-body">
+              <div class="s-recipe-meta">
+                <div class="s-meta-chip">⏱ 25 דק׳</div>
+                <div class="s-meta-chip">👥 4 מנות</div>
+                <div class="s-meta-chip">🔥 קל</div>
+                <div class="s-meta-chip" style="background:#e8f4ee;color:#2d6a4f">פרווה</div>
+              </div>
+              <div class="s-recipe-detail-h1">פסטה ברוטב עגבניות של אמא</div>
+              <div class="s-recipe-desc">המתכון הכי קלאסי שיש — פשוט, מהיר וטעים להפליא. מתאים לכל ארוחת ערב.</div>
+
+              <div class="s-recipe-section-title">מרכיבים</div>
+              <div class="s-ingredient-row"><span>פסטה</span><span class="s-amount">500 גר׳</span></div>
+              <div class="s-ingredient-row"><span>עגבניות מרוסקות</span><span class="s-amount">1 קופסה</span></div>
+              <div class="s-ingredient-row"><span>שום</span><span class="s-amount">3 שיני</span></div>
+              <div class="s-ingredient-row"><span>שמן זית</span><span class="s-amount">3 כפות</span></div>
+              <div class="s-ingredient-row"><span>בזיליקום טרי</span><span class="s-amount">חופן</span></div>
+
+              <div class="s-recipe-section-title" style="margin-top:10px">הכנה</div>
+              <div class="s-step"><div class="s-step-num">1</div><div class="s-step-text">מבשלים פסטה במים מומלחים לפי הוראות היצרן.</div></div>
+              <div class="s-step"><div class="s-step-num">2</div><div class="s-step-text">מטגנים שום בשמן זית 1 דקה, מוסיפים עגבניות וממלחים.</div></div>
+              <div class="s-step"><div class="s-step-num">3</div><div class="s-step-text">מבשלים הרוטב 10 דקות, מערבבים עם הפסטה.</div></div>
+
+              <div class="s-cook-btn">🍳 התחילי לבשל</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COOK MODE -->
+    <div class="phone-wrap">
+      <div class="phone-label">🍳 מצב בישול</div>
+      <div class="phone">
+        <div class="phone-screen s-cook-screen">
+          <div class="status-bar" style="color:rgba(255,255,255,.4)"><span>9:41</span><span>●●●●  ⬛</span></div>
+          <div class="s-cook-topbar">
+            <span>פסטה עגבניות</span>
+            <strong>שלב 2 מתוך 3</strong>
+            <span>⏱ 35 דק׳</span>
+          </div>
+          <div class="s-cook-progress"><div class="s-cook-progress-fill"></div></div>
+          <div class="s-cook-body">
+            <div class="s-cook-step-label">שלב נוכחי</div>
+            <div class="s-cook-step-title">מכינים את הרוטב</div>
+            <div class="s-cook-step-text">מטגנים שום קצוץ בשמן זית חם כ-1 דקה עד שמזהיב. מוסיפים עגבניות מרוסקות, מלח ופלפל ומבשלים על אש בינונית.</div>
+
+            <div class="s-cook-ingredients">
+              <div class="s-cook-ing-title">מרכיבים לשלב זה</div>
+              <div class="s-cook-ing-row"><span>עגבניות מרוסקות</span><span>1 קופסה</span></div>
+              <div class="s-cook-ing-row"><span>שום</span><span>3 שיני</span></div>
+              <div class="s-cook-ing-row"><span>שמן זית</span><span>3 כפות</span></div>
+            </div>
+
+            <div class="s-cook-timer">
+              <div class="s-cook-timer-num">08:32</div>
+              <div class="s-cook-timer-label">זמן בישול רוטב</div>
+              <div class="s-cook-timer-btn">▶ הפעלי טיימר</div>
+            </div>
+          </div>
+          <div class="s-cook-nav-btns">
+            <div class="s-cook-nav-btn">← הקודם</div>
+            <div class="s-cook-nav-btn next">הבא ←</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECIPE EDITOR -->
+    <div class="phone-wrap">
+      <div class="phone-label">✏️ עורך מתכון</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:41</span><span>●●●●  ⬛</span></div>
+          <div class="screen-scroll">
+            <div class="s-import-header">
+              <div class="s-back">← ביטול</div>
+              <h2>עריכת מתכון</h2>
+              <p style="color:#2d6a4f;font-size:8px">✓ נשמר אוטומטית</p>
+            </div>
+            <div style="padding:10px 14px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px">
+              <!-- title -->
+              <div>
+                <div style="font-size:8px;font-weight:700;color:#888;margin-bottom:3px">שם המתכון</div>
+                <div style="background:#f4f0ea;border-radius:10px;padding:8px 10px;font-size:10px;font-weight:800">פסטה ברוטב עגבניות של אמא</div>
+              </div>
+              <!-- meta row -->
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+                <div style="background:#f4f0ea;border-radius:8px;padding:6px;text-align:center">
+                  <div style="font-size:7px;color:#aaa">הכנה</div>
+                  <div style="font-size:10px;font-weight:800">15 דק׳</div>
+                </div>
+                <div style="background:#f4f0ea;border-radius:8px;padding:6px;text-align:center">
+                  <div style="font-size:7px;color:#aaa">בישול</div>
+                  <div style="font-size:10px;font-weight:800">10 דק׳</div>
+                </div>
+                <div style="background:#f4f0ea;border-radius:8px;padding:6px;text-align:center">
+                  <div style="font-size:7px;color:#aaa">מנות</div>
+                  <div style="font-size:10px;font-weight:800">4</div>
+                </div>
+              </div>
+              <!-- ingredients -->
+              <div>
+                <div style="font-size:8px;font-weight:800;color:#2d6a4f;margin-bottom:5px">מרכיבים</div>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                  <div style="background:#fff;border-radius:8px;padding:6px 10px;font-size:8px;display:flex;justify-content:space-between;align-items:center">
+                    <span>פסטה</span><span style="color:#2d6a4f;font-weight:700">500 גר׳</span>
+                  </div>
+                  <div style="background:#fff;border-radius:8px;padding:6px 10px;font-size:8px;display:flex;justify-content:space-between;align-items:center">
+                    <span>עגבניות מרוסקות</span><span style="color:#2d6a4f;font-weight:700">1 קופסה</span>
+                  </div>
+                  <div style="border:1.5px dashed #d0c8be;border-radius:8px;padding:6px 10px;font-size:8px;color:#aaa;text-align:center">+ הוסיפי מרכיב</div>
+                </div>
+              </div>
+              <!-- steps -->
+              <div>
+                <div style="font-size:8px;font-weight:800;color:#2d6a4f;margin-bottom:5px">שלבי הכנה</div>
+                <div style="background:#fff;border-radius:8px;padding:8px;display:flex;gap:6px;font-size:8px">
+                  <div style="width:16px;height:16px;border-radius:50%;background:#2d6a4f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:900;flex-shrink:0">1</div>
+                  <div style="color:#555;flex:1">מבשלים פסטה במים מומלחים לפי הוראות היצרן.</div>
+                </div>
+              </div>
+              <!-- save -->
+              <div style="background:#2d6a4f;color:#fff;border-radius:20px;padding:9px;text-align:center;font-size:9px;font-weight:800;margin-top:auto">שמירה ✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OCR REVIEW -->
+    <div class="phone-wrap">
+      <div class="phone-label">🔬 בדיקת OCR</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:41</span><span>●●●●  ⬛</span></div>
+          <div class="screen-scroll">
+            <div class="s-import-header">
+              <div class="s-back">← הוספת מתכון</div>
+              <h2>בדיקת חילוץ</h2>
+              <p>ודאי שהפרטים נכונים לפני השמירה</p>
+            </div>
+            <div style="padding:10px 14px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
+              <!-- image preview -->
+              <div style="background:#f0ece4;border-radius:10px;height:70px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:9px">📷 תמונת המקור</div>
+              <!-- confidence indicator -->
+              <div style="background:#e8f4ee;border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px">
+                <div style="font-size:16px">✅</div>
+                <div>
+                  <div style="font-size:9px;font-weight:800;color:#2d6a4f">אמינות גבוהה — 94%</div>
+                  <div style="font-size:7.5px;color:#666">רוב השדות חולצו בהצלחה</div>
+                </div>
+              </div>
+              <!-- fields -->
+              <div>
+                <div style="font-size:7.5px;font-weight:800;color:#888;margin-bottom:3px">שם המתכון <span style="color:#2d6a4f">✓ בטוח</span></div>
+                <div style="background:#fff;border-radius:8px;padding:7px 10px;font-size:9px;font-weight:700;border:1px solid #e0d8d0">עוגיות שוקולד צ'יפס</div>
+              </div>
+              <div>
+                <div style="font-size:7.5px;font-weight:800;color:#888;margin-bottom:3px">מנות <span style="color:#d97845">⚠ לא ברור</span></div>
+                <div style="background:#fdf0e8;border:1px solid #f5c4a0;border-radius:8px;padding:7px 10px;font-size:9px;color:#c0621a">24 — בדקי ואשרי</div>
+              </div>
+              <div>
+                <div style="font-size:7.5px;font-weight:800;color:#888;margin-bottom:3px">זמן אפייה</div>
+                <div style="background:#fff;border-radius:8px;padding:7px 10px;font-size:9px;border:1px solid #e0d8d0">12–15 דקות ב-180°C</div>
+              </div>
+              <div style="display:flex;gap:6px;margin-top:4px">
+                <div style="flex:1;background:#2d6a4f;color:#fff;border-radius:14px;padding:8px;text-align:center;font-size:8px;font-weight:800">שמירת מתכון ✓</div>
+                <div style="background:#f4f0ea;color:#555;border-radius:14px;padding:8px;text-align:center;font-size:8px;font-weight:700">הרצה מחדש</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     5. מודל נתונים
+════════════════════════════════════════════ -->
+<section class="section">
+  <p class="section-title">5 — מודל הנתונים (Supabase PostgreSQL)</p>
+  <div class="tables-grid">
+    <div class="table-chip done"><span class="table-name">profiles</span><span class="table-desc">✅ קיים — משתמש והעדפות</span></div>
+    <div class="table-chip done"><span class="table-name">recipes</span><span class="table-desc">✅ קיים — נתוני בסיס</span></div>
+    <div class="table-chip done"><span class="table-name">ingredient_groups</span><span class="table-desc">✅ קיים — קבוצות מרכיבים</span></div>
+    <div class="table-chip done"><span class="table-name">ingredients</span><span class="table-desc">✅ קיים — מרכיבים</span></div>
+    <div class="table-chip done"><span class="table-name">recipe_steps</span><span class="table-desc">✅ קיים — שלבי הכנה</span></div>
+    <div class="table-chip done"><span class="table-name">recipe_images</span><span class="table-desc">✅ קיים — תמונות</span></div>
+    <div class="table-chip"><span class="table-name">households</span><span class="table-desc">🔜 ספר משפחתי</span></div>
+    <div class="table-chip"><span class="table-name">household_members</span><span class="table-desc">🔜 חברים ותפקידים</span></div>
+    <div class="table-chip"><span class="table-name">recipe_versions</span><span class="table-desc">🔜 היסטוריית גרסאות</span></div>
+    <div class="table-chip"><span class="table-name">favorites</span><span class="table-desc">🔜 מועדפים</span></div>
+    <div class="table-chip"><span class="table-name">collections</span><span class="table-desc">🔜 אוספים</span></div>
+    <div class="table-chip"><span class="table-name">categories / tags</span><span class="table-desc">🔜 קטגוריות ותגיות</span></div>
+    <div class="table-chip"><span class="table-name">import_jobs</span><span class="table-desc">🔜 OCR / URL jobs</span></div>
+    <div class="table-chip"><span class="table-name">meal_plans</span><span class="table-desc">🔜 תכנון ארוחות</span></div>
+    <div class="table-chip"><span class="table-name">shopping_lists</span><span class="table-desc">🔜 רשימת קניות</span></div>
+    <div class="table-chip"><span class="table-name">custom_fields</span><span class="table-desc">🔜 שדות אישיים</span></div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     6. אגדה — מצבי מסך
+════════════════════════════════════════════ -->
+<section class="section">
+  <p class="section-title">6 — מצבי מסך נדרשים (לפי האפיון)</p>
+  <div class="legend-grid">
+    <div class="legend-item"><span class="ico">⏳</span><div><h4>Loading</h4><p>Skeleton loaders לכרטיסים, רשימות ותמונות</p></div></div>
+    <div class="legend-item"><span class="ico">📭</span><div><h4>Empty State</h4><p>הנחיה ברורה להוספת מתכון ראשון</p></div></div>
+    <div class="legend-item"><span class="ico">🔍</span><div><h4>No Results</h4><p>הצעות חיפוש חלופי ומחיקת פילטרים</p></div></div>
+    <div class="legend-item"><span class="ico">📵</span><div><h4>Offline</h4><p>בנר + גישה לתוכן שנשמר מקומית</p></div></div>
+    <div class="legend-item"><span class="ico">🚫</span><div><h4>Server Error</h4><p>הודעה ידידותית + כפתור ניסיון חוזר</p></div></div>
+    <div class="legend-item"><span class="ico">🔐</span><div><h4>Session Expired</h4><p>Redirect לכניסה עם שמירת טיוטה</p></div></div>
+    <div class="legend-item"><span class="ico">⚠️</span><div><h4>Conflict</h4><p>השוואת גרסאות וברירת המשתמש</p></div></div>
+    <div class="legend-item"><span class="ico">💾</span><div><h4>Unsaved</h4><p>חיווי autosave ואינדיקטור "נשמר מקומית"</p></div></div>
+  </div>
+</section>
+
+</body>
+</html>

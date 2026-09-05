@@ -30,6 +30,7 @@ export function ResetPasswordForm() {
         }
       })
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setExchangeError('קישור לאיפוס סיסמה לא נמצא. בקש קישור חדש.')
     }
   }, [])

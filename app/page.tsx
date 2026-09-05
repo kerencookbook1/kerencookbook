@@ -6,9 +6,9 @@ export const metadata = { title: 'המטבח של קרן' }
 
 // קטגוריות מהירות — מוצגות כצ'יפס מתחת להירו
 const QUICK_FILTERS = [
-  { label: 'מהיר', href: '/recipes?filter=quick' },
-  { label: 'צמחוני', href: '/recipes?filter=vegetarian' },
-  { label: 'מתוקים', href: '/recipes?filter=sweet' },
+  { label: 'מהיר', icon: '🔥', href: '/recipes?filter=quick' },
+  { label: 'צמחוני', icon: '🥦', href: '/recipes?filter=vegetarian' },
+  { label: 'מתוקים', icon: '🍰', href: '/recipes?filter=sweet' },
 ] as const
 
 // ערכות צבע לכרטיסי מתכון — מחזוריות לפי אינדקס
@@ -91,6 +91,7 @@ export default async function HomePage() {
             href={filter.href}
             className="category-chip"
           >
+            <span aria-hidden="true">{filter.icon}</span>
             {filter.label}
           </Link>
         ))}
