@@ -58,7 +58,7 @@ export default async function HomePage() {
         </Link>
 
         {/* כפתור הוספה — שמאל */}
-        <Link href="/recipes/new" className="add-button" aria-label="הוספת מתכון חדש">
+        <Link href="/import" className="add-button" aria-label="הוספת מתכון חדש">
           <span aria-hidden="true">+</span>
           <span>הוספת מתכון</span>
         </Link>

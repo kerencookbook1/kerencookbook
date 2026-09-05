@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls ~/.supabase/ 2>/dev/null || echo \"no supabase config dir\")",
+      "Read(//c/Users/user/.supabase/**)"
+    ]
+  }
+}

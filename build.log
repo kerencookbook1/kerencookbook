@@ -1,0 +1,47 @@
+
+> kerencookbook-web@0.1.0 build
+> next build
+
+▲ Next.js 16.3.4 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.ts took 199ms
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
+
+  To migrate automatically, run:
+  npx @next/codemod@canary middleware-to-proxy .
+
+  Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 47s
+  Running TypeScript ...
+  Finished TypeScript in 4.2s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/16) ...
+  Generating static pages using 7 workers (4/16) 
+  Generating static pages using 7 workers (8/16) 
+  Generating static pages using 7 workers (12/16) 
+✓ Generating static pages using 7 workers (16/16) in 893ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /forgot-password
+├ ○ /import/photo
+├ ○ /login
+├ ○ /manifest.webmanifest
+├ ○ /meal-plans
+├ ○ /profile
+├ ○ /profile/connections
+├ ○ /recipes
+├ ○ /recipes/1/cook
+├ ○ /recipes/new
+├ ○ /register
+└ ○ /reset-password
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)  prerendered as static content
+
