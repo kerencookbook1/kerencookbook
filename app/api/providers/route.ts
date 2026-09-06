@@ -44,8 +44,10 @@ export async function POST(request: Request) {
     const result = await listStatuses()
     return NextResponse.json({ ok: true, ...result })
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[api/providers POST] failed:', message, err)
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : String(err) },
+      { error: message, userId: user.id },
       { status: 500 }
     )
   }
