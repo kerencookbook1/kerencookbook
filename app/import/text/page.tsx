@@ -1,0 +1,214 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { createRecipe } from "@/lib/actions/recipes";
+
+type ExtractedRecipe = {
+  title: string;
+  description?: string | null;
+  servings?: number | null;
+  prep_minutes?: number | null;
+  cook_minutes?: number | null;
+  ingredients: string[];
+  steps: string[];
+  provider?: string;
+};
+
+export default function ImportTextPage() {
+  const [text, setText] = useState("");
+  const [stage, setStage] = useState<"input" | "loading" | "review">("input");
+  const [error, setError] = useState<string | null>(null);
+  const [recipe, setRecipe] = useState<ExtractedRecipe | null>(null);
+  const [title, setTitle] = useState("");
+  const [ingredients, setIngredients] = useState("");
+  const [steps, setSteps] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  async function handleExtract(e: React.FormEvent) {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setError(null);
+    setStage("loading");
+    try {
+      const res = await fetch("/api/import-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `שגיאה ${res.status}`);
+      const extracted = data as ExtractedRecipe;
+      setRecipe(extracted);
+      setTitle(extracted.title || "");
+      setIngredients((extracted.ingredients || []).join("\n"));
+      setSteps((extracted.steps || []).map((s, i) => `${i + 1}. ${s}`).join("\n"));
+      setStage("review");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setStage("input");
+    }
+  }
+
+  function reset() {
+    setRecipe(null);
+    setError(null);
+    setSaveError(null);
+    setStage("input");
+  }
+
+  async function handleSave() {
+    setSaveError(null);
+    setSaving(true);
+    try {
+      const ingredientItems = ingredients
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((line) => ({ name: line, amount: "", unit: "" }));
+
+      const stepItems = steps
+        .split("\n")
+        .map((l) => l.trim().replace(/^\d+[\.\)]\s*/, ""))
+        .filter(Boolean)
+        .map((body) => ({ title: "", body, durationSeconds: null }));
+
+      const fd = new FormData();
+      fd.append("title", title);
+      fd.append("description", recipe?.description ?? "");
+      if (recipe?.prep_minutes != null) fd.append("prepTime", String(recipe.prep_minutes));
+      if (recipe?.cook_minutes != null) fd.append("cookTime", String(recipe.cook_minutes));
+      if (recipe?.servings != null) fd.append("servings", String(recipe.servings));
+      fd.append("ingredientsJson", JSON.stringify(ingredientItems));
+      fd.append("stepsJson", JSON.stringify(stepItems));
+
+      const result = await createRecipe(null, fd);
+      if (result?.error) setSaveError(result.error);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes("NEXT_REDIRECT")) setSaveError(msg);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <main className="screen-shell">
+      <header className="screen-header">
+        <Link href="/import" className="back-link">← הוספת מתכון</Link>
+        <p className="eyebrow">הדבקת טקסט</p>
+        <h1>הדבקת מתכון חופשי</h1>
+        <p>הדביקי טקסט של מתכון (מווצאפ, מייל, מסמך) — ה־AI יזהה ויסדר את המרכיבים והשלבים.</p>
+      </header>
+
+      {stage === "input" && (
+        <div className="import-layout">
+          <div className="upload-panel">
+            <form onSubmit={handleExtract} style={{ display: "grid", gap: 14 }}>
+              <label htmlFor="recipe-text" style={{ fontWeight: 800 }}>
+                טקסט המתכון
+                <textarea
+                  id="recipe-text"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder={"למשל:\nעוגת שוקולד\n\nמצרכים:\n2 ביצים\n1 כוס סוכר\n1/2 כוס קקאו\n...\n\nהוראות:\n1. מערבבים ביצים וסוכר\n2. מוסיפים קקאו\n..."}
+                  rows={14}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    marginTop: 8,
+                    border: "1px solid #cfbfae",
+                    borderRadius: 12,
+                    padding: "12px 14px",
+                    background: "#fffdfa",
+                    fontSize: ".95rem",
+                    fontFamily: "inherit",
+                    lineHeight: 1.6,
+                    resize: "vertical",
+                  }}
+                />
+              </label>
+              {error && (
+                <div role="alert" style={{ padding: 12, borderRadius: 12, background: "#fdecea", color: "#8a1c14", fontSize: ".9rem" }}>
+                  {error}
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                <button type="submit" className="primary-button" disabled={!text.trim()}>חילוץ מתכון</button>
+                <Link href="/import" className="outline-button">ביטול</Link>
+              </div>
+            </form>
+          </div>
+
+          <aside className="provider-card">
+            <div style={{ minHeight: 180, border: "2px dashed #cfbfae", borderRadius: 16, display: "grid", placeItems: "center", color: "var(--muted)", background: "#fdf9f4" }}>
+              <span style={{ textAlign: "center", fontSize: ".9rem" }}>תצוגה מקדימה<br />תופיע כאן</span>
+            </div>
+            <h2 style={{ marginTop: 20 }}>איך זה עובד</h2>
+            <p>ה־AI קורא את הטקסט, מזהה שם, מרכיבים ושלבים, ובונה טיוטה מסודרת שאפשר לערוך לפני השמירה.</p>
+            <p className="privacy-note" style={{ marginTop: 12 }}>הטקסט נשלח לספק ה־AI הפעיל בהגדרות ה־API.</p>
+          </aside>
+        </div>
+      )}
+
+      {stage === "loading" && (
+        <div className="import-layout">
+          <div className="upload-panel" style={{ textAlign: "center" }}>
+            <svg aria-hidden="true" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ display: "block", margin: "0 auto 10px", animation: "spin 1s linear infinite" }}>
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+            <h2>מנתח ומחלץ את המתכון…</h2>
+            <p style={{ color: "var(--muted)" }}>מזהה מרכיבים, שלבים וזמנים.</p>
+          </div>
+        </div>
+      )}
+
+      {stage === "review" && recipe && (
+        <section className="review-layout">
+          <div className="source-preview">
+            <div className="paper-preview" style={{ whiteSpace: "pre-wrap", direction: "rtl", fontSize: ".85rem", maxHeight: 320, overflowY: "auto" }}>
+              {text.slice(0, 800)}{text.length > 800 ? "…" : ""}
+            </div>
+            <p>הטקסט שהודבק</p>
+          </div>
+
+          <form className="review-form" onSubmit={(e) => e.preventDefault()}>
+            <div className="review-status">
+              <span>טיוטה מוכנה לבדיקה</span>
+              {recipe.provider && <small>עובד עם {recipe.provider}</small>}
+            </div>
+            <label>שם המתכון
+              <input value={title} onChange={(e) => setTitle(e.target.value)} />
+            </label>
+            {(recipe.prep_minutes != null || recipe.cook_minutes != null || recipe.servings != null) && (
+              <p style={{ margin: 0, fontSize: ".85rem", color: "var(--muted)" }}>
+                {recipe.prep_minutes != null && <>הכנה: {recipe.prep_minutes} דק׳ · </>}
+                {recipe.cook_minutes != null && <>בישול: {recipe.cook_minutes} דק׳ · </>}
+                {recipe.servings != null && <>מנות: {recipe.servings}</>}
+              </p>
+            )}
+            <label>מרכיבים
+              <textarea rows={8} value={ingredients} onChange={(e) => setIngredients(e.target.value)} />
+            </label>
+            <label>שלבי הכנה
+              <textarea rows={8} value={steps} onChange={(e) => setSteps(e.target.value)} />
+            </label>
+            {saveError && (
+              <div role="alert" style={{ padding: 12, borderRadius: 12, background: "#fdecea", color: "#8a1c14", fontSize: ".9rem" }}>
+                {saveError}
+              </div>
+            )}
+            <div className="review-actions">
+              <button className="outline-button" type="button" onClick={reset} disabled={saving}>הדבקת טקסט אחר</button>
+              <button className="primary-button" type="button" onClick={handleSave} disabled={saving || !title.trim()}>
+                {saving ? "שומר…" : "אישור ושמירה"}
+              </button>
+            </div>
+            <p style={{ margin: 0, fontSize: ".8rem", color: "var(--muted)" }}>לאחר השמירה תועברי לעמוד המתכון, שם יש כפתור עריכה.</p>
+          </form>
+        </section>
+      )}
+    </main>
+  );
+}
