@@ -24,6 +24,36 @@ type ProvidersResponse = {
   providers: ProviderStatus[]
 }
 
+const HOW_TO: Record<ProviderId, { steps: string[]; note?: string; buttonLabel: string }> = {
+  anthropic: {
+    buttonLabel: 'פתח דף המפתחות של Anthropic',
+    steps: [
+      'לחצי על הכפתור למטה — נפתח דף חדש ב־Anthropic Console.',
+      'התחברי (Sign up אם אין חשבון) ולחצי על "Create Key".',
+      'העתיקי את המפתח (מתחיל ב־sk-ant-…) והדביקי אותו כאן למטה.',
+    ],
+    note: 'איכות מעולה בעברית. יש קרדיט התחלתי חינם, אחר כך ~$0.003 למתכון.',
+  },
+  openai: {
+    buttonLabel: 'פתח דף המפתחות של OpenAI',
+    steps: [
+      'לחצי על הכפתור למטה — נפתח דף חדש של OpenAI Platform.',
+      'התחברי ולחצי על "Create new secret key".',
+      'העתיקי את המפתח (מתחיל ב־sk-…) והדביקי אותו כאן למטה.',
+    ],
+    note: 'תמיכה טובה בעברית. ~$0.005 למתכון.',
+  },
+  google: {
+    buttonLabel: 'פתח דף המפתחות של Google AI Studio',
+    steps: [
+      'לחצי על הכפתור למטה — נפתח דף חדש של Google AI Studio.',
+      'התחברי עם חשבון Google ולחצי על "Create API key".',
+      'העתיקי את המפתח (מתחיל ב־AIza…) והדביקי אותו כאן למטה.',
+    ],
+    note: 'חינם בגבולות שימוש רגילים. מהיר יחסית.',
+  },
+}
+
 export default function ConnectionsPage() {
   const [data, setData] = useState<ProvidersResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -177,6 +207,7 @@ export default function ConnectionsPage() {
                 testStatus === 'err' ? 'שגיאה בחיבור' :
                 testStatus === 'unknown' ? 'לא נבדק' : 'לא מוגדר'
 
+              const howTo = HOW_TO[p.id]
               return (
                 <section key={p.id} className={`prov-card is-${p.id}${p.isActive ? ' is-active' : ''}`}>
                   <header className="prov-head">
@@ -208,8 +239,26 @@ export default function ConnectionsPage() {
                     <p className="prov-error">שגיאה אחרונה: {p.lastTestError}</p>
                   )}
 
+                  {!hasKey && (
+                    <div className="prov-howto">
+                      <p className="prov-howto-title">איך להשיג מפתח?</p>
+                      <ol className="prov-howto-steps">
+                        {howTo.steps.map((s, i) => <li key={i}>{s}</li>)}
+                      </ol>
+                      <a
+                        href={p.docsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="prov-btn primary prov-getkey-btn"
+                      >
+                        🔑 {howTo.buttonLabel} ↗
+                      </a>
+                      {howTo.note && <p className="prov-howto-note">{howTo.note}</p>}
+                    </div>
+                  )}
+
                   <div className="prov-input-row">
-                    <label htmlFor={`k-${p.id}`}>{hasKey ? 'החלף מפתח:' : 'הוסף מפתח API:'}</label>
+                    <label htmlFor={`k-${p.id}`}>{hasKey ? 'החלף מפתח:' : 'הדביקי את המפתח כאן:'}</label>
                     <div className="prov-input-wrap">
                       <input
                         id={`k-${p.id}`}
