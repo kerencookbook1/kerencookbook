@@ -25,6 +25,24 @@ async function requireUserId(): Promise<string | null> {
   return user?.id ?? null
 }
 
+/**
+ * Ensure a profiles row exists for the current user before writing to any
+ * table that FKs to profiles.id. Signup does not auto-create a profile in
+ * this schema, so we upsert on first write.
+ */
+async function ensureProfileFor(userId: string): Promise<void> {
+  const supabase = await getSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  const displayName =
+    (user?.user_metadata?.full_name as string | undefined) ??
+    user?.email?.split('@')[0] ??
+    null
+  const { error } = await supabase
+    .from('profiles')
+    .upsert({ id: userId, display_name: displayName }, { onConflict: 'id' })
+  if (error) throw new Error(`יצירת פרופיל נכשלה: ${error.message}`)
+}
+
 /** List all provider rows for the current user (empty if not authed). */
 async function listRows(): Promise<ProviderRow[]> {
   const userId = await requireUserId()
@@ -68,6 +86,7 @@ export async function listStatuses(): Promise<{ active: ProviderId | null; provi
 export async function saveKey(provider: ProviderId, apiKey: string): Promise<void> {
   const userId = await requireUserId()
   if (!userId) throw new Error('לא מחובר')
+  await ensureProfileFor(userId)
   const supabase = await getSupabase()
   const { error } = await supabase.from('ai_providers').upsert(
     {

@@ -39,6 +39,16 @@ export async function createRecipe(
   const ingredients = parseJson<IngredientItem>(ingredientsJson)
   const steps = parseJson<StepItem>(stepsJson)
 
+  // Ensure a profile row exists (signup does not auto-create one)
+  const displayName =
+    (user.user_metadata?.full_name as string | undefined) ??
+    user.email?.split('@')[0] ??
+    null
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .upsert({ id: user.id, display_name: displayName }, { onConflict: 'id' })
+  if (profileError) return { error: `יצירת פרופיל נכשלה: ${profileError.message}` }
+
   const { data: recipe, error: recipeError } = await supabase
     .from('recipes')
     .insert({
