@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server'
-import { isValidProviderId, readStore, toStatus, writeStore, type ProviderId } from '@/lib/preview-providers'
+import { createClient } from '@/lib/supabase/server'
+import { getKeyFor, listStatuses, recordTestResult } from '@/lib/ai-providers'
+import { isValidProviderId } from '@/lib/preview-providers'
 import { testProvider } from '@/lib/provider-adapters'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
 
 export async function POST(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'לא מחובר' }, { status: 401 })
+
   let body: unknown
   try {
     body = await request.json()
@@ -20,32 +26,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'ספק לא תקין' }, { status: 400 })
   }
 
-  const store = await readStore()
-  const stored = store.providers[provider as ProviderId]
+  const stored = await getKeyFor(provider)
   const keyToUse = typeof overrideKey === 'string' && overrideKey.trim().length >= 10
     ? overrideKey.trim()
-    : stored?.key
+    : stored ?? undefined
 
   if (!keyToUse) {
     return NextResponse.json({ error: 'לא הוגדר מפתח לספק זה. שמור את המפתח ואז בדוק שוב.' }, { status: 400 })
   }
 
-  const result = await testProvider(provider as ProviderId, keyToUse)
+  const result = await testProvider(provider, keyToUse)
 
   // Persist last test outcome only if key was already saved
   if (stored) {
-    store.providers[provider as ProviderId] = {
-      ...stored,
-      lastTestedAt: new Date().toISOString(),
-      lastTestOk: result.ok,
-      lastTestError: result.ok ? undefined : result.error,
+    try {
+      await recordTestResult(provider, result.ok, result.ok ? undefined : result.error)
+    } catch {
+      // Non-fatal — the test result is still returned to the client
     }
-    await writeStore(store)
   }
 
-  return NextResponse.json({
-    result,
-    active: store.active ?? null,
-    providers: toStatus(store),
-  })
+  const statuses = await listStatuses()
+  return NextResponse.json({ result, ...statuses })
 }

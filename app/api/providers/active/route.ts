@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
-import { isValidProviderId, readStore, toStatus, writeStore, type ProviderId } from '@/lib/preview-providers'
+import { createClient } from '@/lib/supabase/server'
+import { listStatuses, setActive } from '@/lib/ai-providers'
+import { isValidProviderId } from '@/lib/preview-providers'
 
 export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'לא מחובר' }, { status: 401 })
+
   let body: unknown
   try {
     body = await request.json()
@@ -16,17 +22,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'ספק לא תקין' }, { status: 400 })
   }
 
-  const store = await readStore()
-
-  if (provider !== null && !store.providers[provider as ProviderId]) {
-    return NextResponse.json(
-      { error: 'לא ניתן להפוך לפעיל ספק שאין לו מפתח שמור' },
-      { status: 400 }
-    )
+  try {
+    await setActive(provider)
+    const result = await listStatuses()
+    return NextResponse.json({ ok: true, ...result })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    const status = msg.includes('אין לו מפתח') ? 400 : 500
+    return NextResponse.json({ error: msg }, { status })
   }
-
-  store.active = (provider ?? undefined) as ProviderId | undefined
-  await writeStore(store)
-
-  return NextResponse.json({ ok: true, active: store.active ?? null, providers: toStatus(store) })
 }

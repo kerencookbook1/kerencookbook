@@ -1,14 +1,27 @@
 import { NextResponse } from 'next/server'
-import { isValidProviderId, readStore, toStatus, writeStore, type ProviderId } from '@/lib/preview-providers'
+import { createClient } from '@/lib/supabase/server'
+import { deleteKey, listStatuses, saveKey } from '@/lib/ai-providers'
+import { isValidProviderId } from '@/lib/preview-providers'
 
 export const runtime = 'nodejs'
 
+async function requireAuth() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
+}
+
 export async function GET() {
-  const store = await readStore()
-  return NextResponse.json({ active: store.active ?? null, providers: toStatus(store) })
+  const user = await requireAuth()
+  if (!user) return NextResponse.json({ error: 'לא מחובר' }, { status: 401 })
+  const result = await listStatuses()
+  return NextResponse.json(result)
 }
 
 export async function POST(request: Request) {
+  const user = await requireAuth()
+  if (!user) return NextResponse.json({ error: 'לא מחובר' }, { status: 401 })
+
   let body: unknown
   try {
     body = await request.json()
@@ -26,30 +39,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'מפתח לא תקין (מינימום 10 תווים)' }, { status: 400 })
   }
 
-  const store = await readStore()
-  store.providers[provider as ProviderId] = {
-    key: apiKey.trim(),
-    savedAt: new Date().toISOString(),
-    // Reset test status on save
-    lastTestedAt: undefined,
-    lastTestOk: undefined,
-    lastTestError: undefined,
+  try {
+    await saveKey(provider, apiKey.trim())
+    const result = await listStatuses()
+    return NextResponse.json({ ok: true, ...result })
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : String(err) },
+      { status: 500 }
+    )
   }
-  await writeStore(store)
-
-  return NextResponse.json({ ok: true, active: store.active ?? null, providers: toStatus(store) })
 }
 
 export async function DELETE(request: Request) {
+  const user = await requireAuth()
+  if (!user) return NextResponse.json({ error: 'לא מחובר' }, { status: 401 })
+
   const provider = new URL(request.url).searchParams.get('provider')
   if (!isValidProviderId(provider)) {
     return NextResponse.json({ error: 'ספק לא תקין' }, { status: 400 })
   }
 
-  const store = await readStore()
-  delete store.providers[provider as ProviderId]
-  if (store.active === provider) store.active = undefined
-  await writeStore(store)
-
-  return NextResponse.json({ ok: true, active: store.active ?? null, providers: toStatus(store) })
+  try {
+    await deleteKey(provider)
+    const result = await listStatuses()
+    return NextResponse.json({ ok: true, ...result })
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : String(err) },
+      { status: 500 }
+    )
+  }
 }

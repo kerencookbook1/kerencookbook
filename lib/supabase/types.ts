@@ -9,6 +9,47 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ai_providers: {
+        Row: {
+          owner_id: string
+          provider: string
+          api_key: string
+          is_active: boolean
+          saved_at: string
+          last_tested_at: string | null
+          last_test_ok: boolean | null
+          last_test_error: string | null
+        }
+        Insert: {
+          owner_id: string
+          provider: string
+          api_key: string
+          is_active?: boolean
+          saved_at?: string
+          last_tested_at?: string | null
+          last_test_ok?: boolean | null
+          last_test_error?: string | null
+        }
+        Update: {
+          owner_id?: string
+          provider?: string
+          api_key?: string
+          is_active?: boolean
+          saved_at?: string
+          last_tested_at?: string | null
+          last_test_ok?: boolean | null
+          last_test_error?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_providers_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredient_groups: {
         Row: {
           id: string

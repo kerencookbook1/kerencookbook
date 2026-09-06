@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { readStore, type ProviderId } from '@/lib/preview-providers'
+import { createClient } from '@/lib/supabase/server'
+import { getKeyCandidates } from '@/lib/ai-providers'
 import { extractRecipeFromText } from '@/lib/provider-adapters'
 
 export const runtime = 'nodejs'
@@ -8,6 +9,10 @@ export const maxDuration = 60
 const MAX_TEXT_LENGTH = 50_000
 
 export async function POST(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'לא מחובר' }, { status: 401 })
+
   let body: unknown
   try {
     body = await request.json()
@@ -23,28 +28,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `הטקסט ארוך מדי (מקסימום ${MAX_TEXT_LENGTH} תווים)` }, { status: 413 })
   }
 
-  const store = await readStore()
-  const candidates: { id: ProviderId; key: string }[] = []
-
-  if (store.active && store.providers[store.active]?.key) {
-    candidates.push({ id: store.active, key: store.providers[store.active]!.key })
-  }
-  for (const id of ['anthropic', 'openai', 'google'] as ProviderId[]) {
-    const cfg = store.providers[id]
-    if (cfg?.key && !candidates.find((c) => c.id === id)) {
-      candidates.push({ id, key: cfg.key })
-    }
-  }
-  if (candidates.length === 0) {
-    const envMap: [ProviderId, string | undefined][] = [
-      ['anthropic', process.env.AI_PROVIDER_ANTHROPIC_API_KEY],
-      ['openai', process.env.AI_PROVIDER_OPENAI_API_KEY],
-      ['google', process.env.AI_PROVIDER_GOOGLE_API_KEY],
-    ]
-    for (const [id, key] of envMap) {
-      if (key) candidates.push({ id, key })
-    }
-  }
+  const candidates = await getKeyCandidates()
   if (candidates.length === 0) {
     return NextResponse.json(
       { error: 'לא הוגדר ספק AI. עברי להגדרות ה-API להוסיף מפתח.' },

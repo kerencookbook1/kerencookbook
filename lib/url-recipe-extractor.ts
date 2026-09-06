@@ -1,4 +1,4 @@
-import { readStore, type ProviderId } from './preview-providers'
+import type { ProviderId } from './preview-providers'
 import { extractRecipeFromText, type ExtractedRecipe } from './provider-adapters'
 
 export type ImportResult = ExtractedRecipe & {
@@ -287,7 +287,10 @@ export function stripHtml(html: string): string {
 /* ─────────────────────────────────────────────────────
    MAIN — try JSON-LD first, then AI fallback
    ───────────────────────────────────────────────────── */
-export async function importRecipeFromUrl(rawUrl: string): Promise<ImportResult> {
+export async function importRecipeFromUrl(
+  rawUrl: string,
+  candidates: { id: ProviderId; key: string }[]
+): Promise<ImportResult> {
   const validation = validateUrl(rawUrl)
   if (!validation.ok) throw new Error(validation.error)
   const url = validation.url
@@ -300,31 +303,6 @@ export async function importRecipeFromUrl(rawUrl: string): Promise<ImportResult>
     return { ...jsonLd, provider: 'schema.org/Recipe (JSON-LD)' }
   }
 
-  // Slow path — send text to AI
-  const store = await readStore()
-  const active = store.active && store.providers[store.active]?.key
-    ? { id: store.active as ProviderId, key: store.providers[store.active]!.key }
-    : null
-
-  // Fallback chain (same as scan)
-  const candidates: { id: ProviderId; key: string }[] = []
-  if (active) candidates.push(active)
-  for (const id of ['anthropic', 'openai', 'google'] as ProviderId[]) {
-    const cfg = store.providers[id]
-    if (cfg?.key && !candidates.find((c) => c.id === id)) {
-      candidates.push({ id, key: cfg.key })
-    }
-  }
-  if (candidates.length === 0) {
-    const envMap: [ProviderId, string | undefined][] = [
-      ['anthropic', process.env.AI_PROVIDER_ANTHROPIC_API_KEY],
-      ['openai', process.env.AI_PROVIDER_OPENAI_API_KEY],
-      ['google', process.env.AI_PROVIDER_GOOGLE_API_KEY],
-    ]
-    for (const [id, key] of envMap) {
-      if (key) candidates.push({ id, key })
-    }
-  }
   if (candidates.length === 0) {
     throw new Error(
       'הדף לא כולל מבנה מתכון סטנדרטי (schema.org). כדי להשלים ייבוא בעזרת AI — הגדירי מפתח בעמוד ההגדרות.'
