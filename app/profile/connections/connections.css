@@ -171,6 +171,17 @@
   text-align: left;
 }
 
+.prov-test-ok {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #d8ecc9;
+  color: #2f5a17;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 /* ===== HOW-TO PANEL (shown when no key saved yet) ===== */
 .prov-howto {
   margin-bottom: 16px;

@@ -61,6 +61,7 @@ export default function ConnectionsPage() {
   const [error, setError] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [revealed, setRevealed] = useState<Record<string, boolean>>({})
+  const [testResults, setTestResults] = useState<Record<string, { ok: boolean; message: string }>>({})
 
   useEffect(() => {
     let cancelled = false
@@ -107,6 +108,7 @@ export default function ConnectionsPage() {
   async function testKey(id: ProviderId) {
     setBusy(`test:${id}`)
     setError(null)
+    setTestResults((t) => ({ ...t, [id]: { ok: false, message: 'בודק…' } }))
     try {
       const payload: { provider: string; apiKey?: string } = { provider: id }
       if (drafts[id] && drafts[id].trim().length >= 10) {
@@ -118,10 +120,22 @@ export default function ConnectionsPage() {
         body: JSON.stringify(payload),
       })
       const json = await r.json()
-      if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`)
-      setData({ active: json.active, providers: json.providers })
+      if (!r.ok) {
+        throw new Error(json.error || `HTTP ${r.status}`)
+      }
+      if (json.active !== undefined && json.providers) {
+        setData({ active: json.active, providers: json.providers })
+      }
+      const result = json.result as { ok: boolean; model?: string; error?: string } | undefined
+      if (result?.ok) {
+        setTestResults((t) => ({ ...t, [id]: { ok: true, message: `✓ מחובר ותקין (${result.model ?? 'זמין'})` } }))
+      } else {
+        setTestResults((t) => ({ ...t, [id]: { ok: false, message: `✕ ${result?.error ?? 'שגיאה לא ידועה'}` } }))
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'שגיאה בבדיקה')
+      const msg = err instanceof Error ? err.message : 'שגיאה בבדיקה'
+      setError(msg)
+      setTestResults((t) => ({ ...t, [id]: { ok: false, message: `✕ ${msg}` } }))
     } finally {
       setBusy(null)
     }
@@ -235,8 +249,14 @@ export default function ConnectionsPage() {
                     </div>
                   )}
 
-                  {p.lastTestError && (
+                  {p.lastTestError && !testResults[p.id] && (
                     <p className="prov-error">שגיאה אחרונה: {p.lastTestError}</p>
+                  )}
+
+                  {testResults[p.id] && (
+                    <p className={testResults[p.id].ok ? 'prov-test-ok' : 'prov-error'}>
+                      {testResults[p.id].message}
+                    </p>
                   )}
 
                   {!hasKey && (
