@@ -25,6 +25,7 @@ export default function ImportUrlPage() {
   const [error, setError] = useState<string | null>(null);
   const [recipe, setRecipe] = useState<ImportResult | null>(null);
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [ingredients, setIngredients] = useState("");
   const [steps, setSteps] = useState("");
   const [saving, setSaving] = useState(false);
@@ -50,6 +51,7 @@ export default function ImportUrlPage() {
       const extracted = data as ImportResult;
       setRecipe(extracted);
       setTitle(extracted.title || "");
+      setDescription(extracted.description || "");
       setIngredients((extracted.ingredients || []).join("\n"));
       setSteps((extracted.steps || []).map((s, i) => `${i + 1}. ${s}`).join("\n"));
       setStage("review");
@@ -81,10 +83,6 @@ export default function ImportUrlPage() {
         .map((l) => l.trim().replace(/^\d+[\.\)]\s*/, ""))
         .filter(Boolean)
         .map((body) => ({ title: "", body, durationSeconds: null }));
-
-      const description = [recipe?.description, recipe?.source_url ? `מקור: ${recipe.source_url}` : ""]
-        .filter(Boolean)
-        .join("\n\n");
 
       const fd = new FormData();
       fd.append("title", title);
@@ -205,6 +203,14 @@ export default function ImportUrlPage() {
             </div>
             <label>שם המתכון
               <input value={title} onChange={(e) => setTitle(e.target.value)} />
+            </label>
+            <label>תיאור (אפשר להשאיר ריק)
+              <textarea
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="תיאור קצר של המתכון…"
+              />
             </label>
             {(recipe.prep_minutes != null || recipe.cook_minutes != null || recipe.servings != null) && (
               <p style={{ margin: 0, fontSize: ".85rem", color: "var(--muted)" }}>
