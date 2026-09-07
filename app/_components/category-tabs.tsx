@@ -28,6 +28,23 @@ const FALLBACK_IMAGES = [
   '/images/recipes/tomato-pasta-default.png',
 ]
 
+/** Colored circle bg per category — visually distinct without needing custom illustrations. */
+const CATEGORY_TILE_COLOR: Record<CategoryId, string> = {
+  'בשר':         '#f5dad2',
+  'עוף':         '#f7e2c0',
+  'דגים':        '#d4e6f1',
+  'חלבי':        '#f9f0d4',
+  'צמחוני':      '#dcecd0',
+  'פסטה':        '#f8e0d8',
+  'אורז ודגנים': '#f0e5d0',
+  'סלטים':       '#dceaca',
+  'מרקים':       '#f5d4b8',
+  'מאפים':       '#f0d9be',
+  'קינוחים':     '#f4d3d8',
+  'שתייה':       '#dfe4f0',
+  'אחר':         '#eee6db',
+}
+
 /** Effective category: use stored value if valid, else guess by keywords. */
 function effectiveCategory(r: RecipeCard): CategoryId {
   if (isCategoryId(r.category)) return r.category
@@ -36,8 +53,9 @@ function effectiveCategory(r: RecipeCard): CategoryId {
 
 export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
   const [activeId, setActiveId] = useState<'all' | CategoryId>('all')
+  const [showAll, setShowAll] = useState(false)
 
-  // Count recipes per category (using effective category for uncategorized rows)
+  // Count per category (using effective category for uncategorized rows)
   const countByCategory = useMemo(() => {
     const counts = new Map<CategoryId, number>()
     for (const r of recipes) {
@@ -55,38 +73,64 @@ export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
   const displayed = filtered.slice(0, 6)
   const activeLabel = activeId === 'all' ? 'הכל' : activeId
 
-  // Show only categories that have at least one recipe, plus "all"
-  const visibleCategories = CATEGORIES.filter((c) => (countByCategory.get(c.id) ?? 0) > 0)
+  // Show only categories that have at least one recipe (unless user opens "show all")
+  const nonEmpty = CATEGORIES.filter((c) => (countByCategory.get(c.id) ?? 0) > 0)
+  const visibleCategories = showAll ? CATEGORIES : nonEmpty
+  const canToggleShowAll = nonEmpty.length < CATEGORIES.length
 
   return (
     <>
-      <nav className="category-tabs" aria-label="קטגוריות">
-        <button
-          type="button"
-          className={`category-tab${activeId === 'all' ? ' is-active' : ''}`}
-          onClick={() => setActiveId('all')}
-          aria-pressed={activeId === 'all'}
-        >
-          <span aria-hidden="true">🍽️</span>
-          הכל ({recipes.length})
-        </button>
-        {visibleCategories.map((cat) => {
-          const isActive = cat.id === activeId
-          const count = countByCategory.get(cat.id) ?? 0
-          return (
+      <section aria-label="קטגוריות" style={{ marginBottom: 28 }}>
+        <div className="section-heading" style={{ marginBottom: 14 }}>
+          <h2>קטגוריות</h2>
+          {canToggleShowAll && (
             <button
-              key={cat.id}
               type="button"
-              className={`category-tab${isActive ? ' is-active' : ''}`}
-              onClick={() => setActiveId(cat.id)}
-              aria-pressed={isActive}
+              onClick={() => setShowAll((v) => !v)}
+              className="text-button"
+              style={{ background: 'none', cursor: 'pointer' }}
             >
-              <span aria-hidden="true">{cat.icon}</span>
-              {cat.id} ({count})
+              {showAll ? 'הצג רק פעילות ←' : 'הצג הכל ←'}
             </button>
-          )
-        })}
-      </nav>
+          )}
+        </div>
+
+        <div className="category-grid">
+          {/* "All" tile always first */}
+          <button
+            type="button"
+            className={`category-tile${activeId === 'all' ? ' is-active' : ''}`}
+            onClick={() => setActiveId('all')}
+            aria-pressed={activeId === 'all'}
+            style={{ '--tile-color': '#efe4d0' } as React.CSSProperties}
+          >
+            <span className="category-tile-icon" aria-hidden="true">🍽️</span>
+            <span className="category-tile-label">הכל</span>
+            <span className="category-tile-count">{recipes.length}</span>
+          </button>
+
+          {visibleCategories.map((cat) => {
+            const isActive = cat.id === activeId
+            const count = countByCategory.get(cat.id) ?? 0
+            const isEmpty = count === 0
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                className={`category-tile${isActive ? ' is-active' : ''}${isEmpty ? ' is-empty' : ''}`}
+                onClick={() => setActiveId(cat.id)}
+                aria-pressed={isActive}
+                disabled={isEmpty}
+                style={{ '--tile-color': CATEGORY_TILE_COLOR[cat.id] } as React.CSSProperties}
+              >
+                <span className="category-tile-icon" aria-hidden="true">{cat.icon}</span>
+                <span className="category-tile-label">{cat.id}</span>
+                <span className="category-tile-count">{count}</span>
+              </button>
+            )
+          })}
+        </div>
+      </section>
 
       <section className="recipe-section" aria-label={`מתכונים בקטגוריה ${activeLabel}`}>
         <div className="section-heading">
