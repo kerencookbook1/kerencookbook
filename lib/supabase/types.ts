@@ -9,6 +9,77 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      shopping_items: {
+        Row: {
+          id: string
+          owner_id: string
+          name: string
+          amount: string | null
+          unit: string | null
+          aisle: string | null
+          is_checked: boolean
+          source_recipe_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          owner_id: string
+          name: string
+          amount?: string | null
+          unit?: string | null
+          aisle?: string | null
+          is_checked?: boolean
+          source_recipe_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          owner_id?: string
+          name?: string
+          amount?: string | null
+          unit?: string | null
+          aisle?: string | null
+          is_checked?: boolean
+          source_recipe_id?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      meal_plans: {
+        Row: {
+          id: string
+          owner_id: string
+          date: string
+          meal_type: string
+          recipe_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          owner_id: string
+          date: string
+          meal_type: string
+          recipe_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          owner_id?: string
+          date?: string
+          meal_type?: string
+          recipe_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plans_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_providers: {
         Row: {
           owner_id: string

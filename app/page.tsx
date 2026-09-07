@@ -16,8 +16,9 @@ function greetingByHour(hour: number): string {
 const IMPORT_TILES = [
   { href: '/import/photo', label: 'צילום מתכון',    icon: '📷', hint: 'צלמי דף מודפס',      color: '#f4d3a7' },
   { href: '/import/url',   label: 'ייבוא מקישור',   icon: '🌐', hint: 'הדביקי כתובת אתר',    color: '#c7dbf4' },
-  { href: '/import/text',  label: 'הדבקת טקסט',     icon: '📝', hint: 'ווצאפ / מייל / מסמך', color: '#e0d4f0' },
   { href: '/pantry',       label: 'מה יש לי בבית?', icon: '🍳', hint: 'מרכיבים שיש לי',      color: '#d8ecc9' },
+  { href: '/shopping',     label: 'רשימת קניות',    icon: '🛒', hint: 'מקובצת לפי מעברים',   color: '#f4d3d8' },
+  { href: '/meals',        label: 'תכנון ארוחות',   icon: '📅', hint: 'תפריט שבועי',         color: '#dfe2f4' },
 ] as const
 
 const FAV_FALLBACK_IMAGES = [

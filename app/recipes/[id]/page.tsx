@@ -3,6 +3,7 @@ import { getRecipe, type IngredientRow } from '@/lib/repositories/recipes'
 import Link from 'next/link'
 import { FavoriteButton } from '../../_components/favorite-button'
 import { RecipeTabs } from '../../_components/recipe-tabs'
+import { AddToShoppingButton } from '../../_components/add-to-shopping-button'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -193,6 +194,7 @@ export default async function RecipePage({ params }: Props) {
             <Link href={`/recipes/${id}/cook`} className="primary-button" style={{ flex: 1, minWidth: 160 }}>
               התחל בישול
             </Link>
+            <AddToShoppingButton recipeId={id} />
             <Link href={`/recipes/${id}/edit`} className="outline-button" style={{ flex: 1, minWidth: 160 }}>
               עריכת מתכון
             </Link>
