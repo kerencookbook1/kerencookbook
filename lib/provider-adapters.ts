@@ -129,8 +129,50 @@ function extractApiMessage(body: string): string {
 }
 
 /* ─────────────────────────────────────────────────────
-   EXTRACT — full OCR + parsing to Recipe JSON
+   EXTRACT — TWO STAGES to avoid recipe hallucination:
+     1) OCR-only from the image (no recipe structuring)
+     2) Structure the raw OCR text into a recipe
+   If stage 1 returns very little text, stop and report failure
+   instead of letting stage 2 invent a recipe from nothing.
    ───────────────────────────────────────────────────── */
+
+const OCR_ONLY_PROMPT = `אתה מנוע OCR. תפקידך היחיד: להעתיק בדיוק את הטקסט שרואים בתמונה — מילה במילה, שורה־שורה, בסדר המקורי.
+
+כללים:
+1. אל תמצא, אל תפרש, אל תסכם. רק העתק.
+2. אם רואים כתב יד לא ברור — כתוב [לא ברור] במקום המילה. אל תנחש.
+3. אם התמונה ריקה, מטושטשת, לא מכילה טקסט קריא, או אינה של מתכון — החזר {"raw_text": "", "readable": false, "reason": "הסבר קצר"}.
+4. אין לך מושג מה נמצא בתמונה חוץ ממה שכתוב שם. אתה לא רואה תמונות של אוכל, רק טקסט.
+5. שמור על השפה המקורית.
+
+החזר JSON תקף בלבד:
+{
+  "raw_text": "כל הטקסט, שורה־שורה עם \\n בין שורות",
+  "readable": true | false,
+  "reason": "אם readable=false, למה"
+}`
+
+type OcrResult = { raw_text: string; readable: boolean; reason?: string | null }
+
+function parseOcrResult(text: string): OcrResult {
+  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
+  try {
+    const parsed = JSON.parse(cleaned)
+    return {
+      raw_text: typeof parsed.raw_text === 'string' ? parsed.raw_text : '',
+      readable: parsed.readable === true,
+      reason: typeof parsed.reason === 'string' ? parsed.reason : null,
+    }
+  } catch {
+    // Model returned plain text — treat as raw OCR
+    return { raw_text: text.trim(), readable: text.trim().length > 15 }
+  }
+}
+
+function isTooSparseToBeARecipe(rawText: string): boolean {
+  const chars = rawText.replace(/\s/g, '').length
+  return chars < 30  // clearly not enough to be a recipe
+}
 
 export async function extractRecipe(
   id: ProviderId,
@@ -138,17 +180,49 @@ export async function extractRecipe(
   imageBase64: string,
   mimeType: string
 ): Promise<ExtractedRecipe> {
-  switch (id) {
-    case 'openai':
-      return extractWithOpenAI(key, imageBase64, mimeType)
-    case 'anthropic':
-      return extractWithAnthropic(key, imageBase64, mimeType)
-    case 'google':
-      return extractWithGoogle(key, imageBase64, mimeType)
+  // ─── Stage 1: pure OCR ───
+  const ocr = await ocrImageWithProvider(id, key, imageBase64, mimeType)
+
+  if (!ocr.readable || isTooSparseToBeARecipe(ocr.raw_text)) {
+    return {
+      title: 'זיהוי נכשל',
+      description: null,
+      category: null,
+      servings: null,
+      prep_minutes: null,
+      cook_minutes: null,
+      ingredients: [],
+      steps: [],
+      raw_text: ocr.raw_text || '',
+      recognition_failed: true,
+      reason: ocr.reason ?? 'לא זוהה טקסט מספק בתמונה. נסי לצלם שוב עם תאורה טובה יותר וזווית ישרה.',
+      provider: `${id}:ocr-only`,
+    }
+  }
+
+  // ─── Stage 2: structure the OCR text into a recipe ───
+  // Reuses extractRecipeFromText, which cannot see the image and works
+  // only on the OCR output — so it cannot invent based on food appearance.
+  const structured = await extractRecipeFromText(id, key, ocr.raw_text, '')
+
+  return {
+    ...structured,
+    raw_text: ocr.raw_text,
+    recognition_failed: false,
+    reason: null,
+    provider: `${id}:two-stage`,
   }
 }
 
-async function extractWithAnthropic(key: string, imageBase64: string, mimeType: string): Promise<ExtractedRecipe> {
+async function ocrImageWithProvider(id: ProviderId, key: string, imageBase64: string, mimeType: string): Promise<OcrResult> {
+  switch (id) {
+    case 'anthropic': return ocrWithAnthropic(key, imageBase64, mimeType)
+    case 'openai':    return ocrWithOpenAI(key, imageBase64, mimeType)
+    case 'google':    return ocrWithGoogle(key, imageBase64, mimeType)
+  }
+}
+
+async function ocrWithAnthropic(key: string, imageBase64: string, mimeType: string): Promise<OcrResult> {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -157,15 +231,49 @@ async function extractWithAnthropic(key: string, imageBase64: string, mimeType: 
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-opus-4-7',  // strongest available — better handwriting recognition
       max_tokens: 4096,
-      system: SYSTEM_PROMPT,
+      temperature: 0,
+      system: OCR_ONLY_PROMPT,
       messages: [
         {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageBase64 } },
-            { type: 'text', text: 'חלץ את המתכון מהתמונה והחזר JSON תקף.' },
+            { type: 'text', text: 'העתק את הטקסט מהתמונה. אל תפרש, אל תמציא.' },
+          ],
+        },
+      ],
+    }),
+  })
+  if (!r.ok) {
+    // If Opus is not available for this key, fall back to Sonnet
+    if (r.status === 404 || r.status === 400) {
+      return ocrWithAnthropicFallback(key, imageBase64, mimeType)
+    }
+    throw new Error(`Anthropic ${r.status}: ${extractApiMessage(await r.text().catch(() => ''))}`)
+  }
+  const data = await r.json()
+  const content = data.content?.[0]?.text
+  if (!content) throw new Error('Empty OCR response from Anthropic')
+  return parseOcrResult(content)
+}
+
+async function ocrWithAnthropicFallback(key: string, imageBase64: string, mimeType: string): Promise<OcrResult> {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4096,
+      temperature: 0,
+      system: OCR_ONLY_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageBase64 } },
+            { type: 'text', text: 'העתק את הטקסט מהתמונה. אל תפרש, אל תמציא.' },
           ],
         },
       ],
@@ -174,24 +282,25 @@ async function extractWithAnthropic(key: string, imageBase64: string, mimeType: 
   if (!r.ok) throw new Error(`Anthropic ${r.status}: ${extractApiMessage(await r.text().catch(() => ''))}`)
   const data = await r.json()
   const content = data.content?.[0]?.text
-  if (!content) throw new Error('Empty response from Anthropic')
-  return { ...parseJsonFromModelText(content), provider: 'anthropic:claude-sonnet-4-6' }
+  if (!content) throw new Error('Empty OCR response from Anthropic')
+  return parseOcrResult(content)
 }
 
-async function extractWithOpenAI(key: string, imageBase64: string, mimeType: string): Promise<ExtractedRecipe> {
+async function ocrWithOpenAI(key: string, imageBase64: string, mimeType: string): Promise<OcrResult> {
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
       model: 'gpt-4o',
+      temperature: 0,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: OCR_ONLY_PROMPT },
         {
           role: 'user',
           content: [
-            { type: 'text', text: 'חלץ את המתכון מהתמונה והחזר JSON תקף.' },
-            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+            { type: 'text', text: 'העתק את הטקסט מהתמונה. אל תפרש, אל תמציא. החזר JSON תקף.' },
+            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}`, detail: 'high' } },
           ],
         },
       ],
@@ -200,34 +309,34 @@ async function extractWithOpenAI(key: string, imageBase64: string, mimeType: str
   if (!r.ok) throw new Error(`OpenAI ${r.status}: ${extractApiMessage(await r.text().catch(() => ''))}`)
   const data = await r.json()
   const content = data.choices?.[0]?.message?.content
-  if (!content) throw new Error('Empty response from OpenAI')
-  return { ...parseJsonFromModelText(content), provider: 'openai:gpt-4o' }
+  if (!content) throw new Error('Empty OCR response from OpenAI')
+  return parseOcrResult(content)
 }
 
-async function extractWithGoogle(key: string, imageBase64: string, mimeType: string): Promise<ExtractedRecipe> {
+async function ocrWithGoogle(key: string, imageBase64: string, mimeType: string): Promise<OcrResult> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(key)}`
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      systemInstruction: { parts: [{ text: OCR_ONLY_PROMPT }] },
       contents: [
         {
           role: 'user',
           parts: [
             { inlineData: { mimeType, data: imageBase64 } },
-            { text: 'חלץ את המתכון מהתמונה והחזר JSON תקף.' },
+            { text: 'העתק את הטקסט מהתמונה. אל תפרש, אל תמציא. החזר JSON תקף.' },
           ],
         },
       ],
-      generationConfig: { responseMimeType: 'application/json' },
+      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
     }),
   })
   if (!r.ok) throw new Error(`Google ${r.status}: ${extractApiMessage(await r.text().catch(() => ''))}`)
   const data = await r.json()
   const content = data.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!content) throw new Error('Empty response from Google')
-  return { ...parseJsonFromModelText(content), provider: 'google:gemini-3.6-flash' }
+  if (!content) throw new Error('Empty OCR response from Google')
+  return parseOcrResult(content)
 }
 
 /* ─────────────────────────────────────────────────────
@@ -279,6 +388,7 @@ async function extractTextWithAnthropic(key: string, userMsg: string): Promise<E
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
+      temperature: 0,
       system: TEXT_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMsg }],
     }),
@@ -296,6 +406,7 @@ async function extractTextWithOpenAI(key: string, userMsg: string): Promise<Extr
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
       model: 'gpt-4o',
+      temperature: 0,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: TEXT_SYSTEM_PROMPT },
@@ -318,7 +429,7 @@ async function extractTextWithGoogle(key: string, userMsg: string): Promise<Extr
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: TEXT_SYSTEM_PROMPT }] },
       contents: [{ role: 'user', parts: [{ text: userMsg }] }],
-      generationConfig: { responseMimeType: 'application/json' },
+      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
     }),
   })
   if (!r.ok) throw new Error(`Google ${r.status}: ${extractApiMessage(await r.text().catch(() => ''))}`)
