@@ -86,7 +86,7 @@ async function testAnthropic(key: string): Promise<TestResult> {
 async function testGoogle(key: string): Promise<TestResult> {
   // Use the actual generateContent endpoint — /v1beta/models accepts some invalid
   // keys, so listing models is not a strict enough check.
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(key)}`
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -96,7 +96,7 @@ async function testGoogle(key: string): Promise<TestResult> {
     }),
   })
   if (r.ok) {
-    return { ok: true, model: 'gemini-2.0-flash (vision)' }
+    return { ok: true, model: 'gemini-3.6-flash (vision)' }
   }
   const body = await r.text().catch(() => '')
   return { ok: false, error: `HTTP ${r.status}: ${extractApiMessage(body) || 'לא מורשה'}` }
@@ -188,7 +188,7 @@ async function extractWithOpenAI(key: string, imageBase64: string, mimeType: str
 }
 
 async function extractWithGoogle(key: string, imageBase64: string, mimeType: string): Promise<ExtractedRecipe> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(key)}`
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -210,7 +210,7 @@ async function extractWithGoogle(key: string, imageBase64: string, mimeType: str
   const data = await r.json()
   const content = data.candidates?.[0]?.content?.parts?.[0]?.text
   if (!content) throw new Error('Empty response from Google')
-  return { ...parseJsonFromModelText(content), provider: 'google:gemini-2.0-flash' }
+  return { ...parseJsonFromModelText(content), provider: 'google:gemini-3.6-flash' }
 }
 
 /* ─────────────────────────────────────────────────────
@@ -292,7 +292,7 @@ async function extractTextWithOpenAI(key: string, userMsg: string): Promise<Extr
 }
 
 async function extractTextWithGoogle(key: string, userMsg: string): Promise<ExtractedRecipe> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(key)}`
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -306,7 +306,7 @@ async function extractTextWithGoogle(key: string, userMsg: string): Promise<Extr
   const data = await r.json()
   const content = data.candidates?.[0]?.content?.parts?.[0]?.text
   if (!content) throw new Error('Empty response from Google')
-  return { ...parseJsonFromModelText(content), provider: 'google:gemini-2.0-flash' }
+  return { ...parseJsonFromModelText(content), provider: 'google:gemini-3.6-flash' }
 }
 
 function parseJsonFromModelText(text: string): Omit<ExtractedRecipe, 'provider'> {
