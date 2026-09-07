@@ -17,7 +17,7 @@ const IMPORT_TILES = [
   { href: '/import/photo', label: 'צילום מתכון',    icon: '📷', hint: 'צלמי דף מודפס',      color: '#f4d3a7' },
   { href: '/import/url',   label: 'ייבוא מקישור',   icon: '🌐', hint: 'הדביקי כתובת אתר',    color: '#c7dbf4' },
   { href: '/import/text',  label: 'הדבקת טקסט',     icon: '📝', hint: 'ווצאפ / מייל / מסמך', color: '#e0d4f0' },
-  { href: '/recipes/new',  label: 'מתכון חדש',      icon: '✏️', hint: 'הזנה ידנית',          color: '#f4c7c7' },
+  { href: '/pantry',       label: 'מה יש לי בבית?', icon: '🍳', hint: 'מרכיבים שיש לי',      color: '#d8ecc9' },
 ] as const
 
 const FAV_FALLBACK_IMAGES = [

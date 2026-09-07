@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { getRecipe, type IngredientRow } from '@/lib/repositories/recipes'
 import Link from 'next/link'
 import { FavoriteButton } from '../../_components/favorite-button'
+import { RecipeTabs } from '../../_components/recipe-tabs'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -25,9 +26,13 @@ function pickTheme(title: string, ingredients: IngredientRow[], fallbackKey: str
   for (const [theme, keywords] of Object.entries(THEME_KEYWORDS)) {
     if (keywords.some((k) => haystack.includes(k.toLowerCase()))) return theme
   }
-  // Deterministic fallback by ID hash so a given recipe always looks the same
   const idx = Math.abs(fallbackKey.charCodeAt(0) + fallbackKey.charCodeAt(fallbackKey.length - 1)) % CARD_THEMES.length
   return CARD_THEMES[idx]
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleDateString('he-IL', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
 export default async function RecipePage({ params }: Props) {
@@ -45,6 +50,81 @@ export default async function RecipePage({ params }: Props) {
       : null
 
   const theme = pickTheme(recipe.title, ingredients, id)
+
+  const overviewPanel = (
+    <>
+      {(totalTime > 0 || recipe.servings) && (
+        <div style={{ marginBottom: 28 }}>
+          <div className="detail-meta">
+            {recipe.prep_time ? <span>הכנה: {recipe.prep_time} דק׳</span> : null}
+            {recipe.cook_time ? <span>בישול: {recipe.cook_time} דק׳</span> : null}
+            {totalTime > 0 ? <span>סה״כ: {totalTime} דק׳</span> : null}
+            {recipe.servings ? <span>{recipe.servings} מנות</span> : null}
+          </div>
+        </div>
+      )}
+      {ingredients.length > 0 ? (
+        <section>
+          <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '1.5rem', marginBottom: 14 }}>מרכיבים</h2>
+          <ul style={{ display: 'grid', gap: 10, margin: 0, padding: 0, listStyle: 'none' }}>
+            {ingredients.map((ing) => (
+              <li key={ing.id}
+                style={{ display: 'flex', gap: 8, paddingBottom: 10, borderBottom: '1px solid var(--line)', color: '#51473e' }}>
+                {ing.amount && (
+                  <span style={{ minWidth: 40, fontWeight: 800, color: 'var(--terracotta-dark)' }}>{ing.amount}</span>
+                )}
+                {ing.unit && <span style={{ color: 'var(--muted)' }}>{ing.unit}</span>}
+                <span>{ing.name}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : (
+        <p style={{ color: 'var(--muted)' }}>אין מרכיבים רשומים.</p>
+      )}
+    </>
+  )
+
+  const stepsPanel = steps.length > 0 ? (
+    <ol style={{ display: 'grid', gap: 20, margin: 0, paddingRight: 22 }}>
+      {steps.map((step, i) => (
+        <li key={step.id} style={{ lineHeight: 1.65 }}>
+          {step.title && (
+            <strong style={{ display: 'block', marginBottom: 4, color: 'var(--ink)' }}>
+              שלב {i + 1}: {step.title}
+            </strong>
+          )}
+          <p style={{ margin: 0, color: '#51473e' }}>{step.body}</p>
+        </li>
+      ))}
+    </ol>
+  ) : (
+    <p style={{ color: 'var(--muted)' }}>אין הוראות רשומות.</p>
+  )
+
+  const notesPanel = recipe.notes ? (
+    <div style={{ padding: 18, borderRadius: 16, background: '#fef8ea', border: '1px dashed #d5c9b8' }}>
+      <p style={{ margin: 0, whiteSpace: 'pre-wrap', color: '#51473e', lineHeight: 1.7, fontSize: '1rem' }}>{recipe.notes}</p>
+    </div>
+  ) : (
+    <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', border: '1px dashed var(--line)', borderRadius: 16 }}>
+      <p style={{ margin: '0 0 12px' }}>עדיין אין הערות אישיות למתכון הזה.</p>
+      <Link href={`/recipes/${id}/edit`} className="outline-button">הוסיפי הערה</Link>
+    </div>
+  )
+
+  const infoPanel = (
+    <div style={{ display: 'grid', gap: 10, color: '#51473e', lineHeight: 1.7 }}>
+      {recipe.category && <p style={{ margin: 0 }}><strong>קטגוריה:</strong> {recipe.category}</p>}
+      {recipe.difficulty && <p style={{ margin: 0 }}><strong>רמת קושי:</strong> {recipe.difficulty}</p>}
+      {recipe.rating != null && <p style={{ margin: 0 }}><strong>דירוג:</strong> {recipe.rating} מתוך 5</p>}
+      {recipe.prep_time != null && <p style={{ margin: 0 }}><strong>זמן הכנה:</strong> {recipe.prep_time} דק׳</p>}
+      {recipe.cook_time != null && <p style={{ margin: 0 }}><strong>זמן בישול:</strong> {recipe.cook_time} דק׳</p>}
+      {recipe.servings != null && <p style={{ margin: 0 }}><strong>מנות:</strong> {recipe.servings}</p>}
+      <p style={{ margin: '8px 0 0', color: 'var(--muted)', fontSize: '.9rem' }}>נוסף: {formatDate(recipe.created_at)}</p>
+      <p style={{ margin: 0, color: 'var(--muted)', fontSize: '.9rem' }}>עודכן: {formatDate(recipe.updated_at)}</p>
+    </div>
+  )
 
   return (
     <div className="library-shell">
@@ -83,17 +163,16 @@ export default async function RecipePage({ params }: Props) {
 
       <div className="library-workspace">
         <article>
-          {/* Visual — real image if available, else themed illustration */}
           {externalImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={externalImageUrl}
               alt={recipe.title}
-              style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 20, marginBottom: 28, display: 'block' }}
+              style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 20, marginBottom: 22, display: 'block' }}
             />
           ) : (
             <div className={`recipe-visual${theme ? ` ${theme}` : ''}`}
-              style={{ height: 280, borderRadius: 20, marginBottom: 28, overflow: 'hidden', isolation: 'isolate' }}>
+              style={{ height: 280, borderRadius: 20, marginBottom: 22, overflow: 'hidden', isolation: 'isolate' }}>
               <div className="plate" />
               <span className="ingredient ingredient-one" />
               <span className="ingredient ingredient-two" />
@@ -101,61 +180,16 @@ export default async function RecipePage({ params }: Props) {
             </div>
           )}
 
-          {(totalTime > 0 || recipe.servings) && (
-            <div style={{ marginBottom: 28 }}>
-              <div className="detail-meta">
-                {recipe.prep_time ? <span>הכנה: {recipe.prep_time} דק׳</span> : null}
-                {recipe.cook_time ? <span>בישול: {recipe.cook_time} דק׳</span> : null}
-                {totalTime > 0 ? <span>סה״כ: {totalTime} דק׳</span> : null}
-                {recipe.servings ? <span>{recipe.servings} מנות</span> : null}
-              </div>
-            </div>
-          )}
+          <RecipeTabs
+            tabs={[
+              { id: 'overview',   label: 'סקירה',        icon: '📋', content: overviewPanel },
+              { id: 'steps',      label: 'הוראות הכנה',  icon: '👩‍🍳', content: stepsPanel },
+              { id: 'notes',      label: 'הערות',        icon: '📝', content: notesPanel },
+              { id: 'info',       label: 'מידע נוסף',    icon: 'ℹ️', content: infoPanel },
+            ]}
+          />
 
-          {ingredients.length > 0 && (
-            <section style={{ marginBottom: 32 }}>
-              <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '1.5rem', marginBottom: 14 }}>מרכיבים</h2>
-              <ul style={{ display: 'grid', gap: 10, margin: 0, padding: 0, listStyle: 'none' }}>
-                {ingredients.map((ing) => (
-                  <li key={ing.id}
-                    style={{ display: 'flex', gap: 8, paddingBottom: 10, borderBottom: '1px solid var(--line)', color: '#51473e' }}>
-                    {ing.amount && (
-                      <span style={{ minWidth: 40, fontWeight: 800, color: 'var(--terracotta-dark)' }}>{ing.amount}</span>
-                    )}
-                    {ing.unit && <span style={{ color: 'var(--muted)' }}>{ing.unit}</span>}
-                    <span>{ing.name}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {recipe.notes && (
-            <section style={{ marginBottom: 32, padding: 18, borderRadius: 16, background: '#fef8ea', border: '1px dashed #d5c9b8' }}>
-              <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '1.25rem', marginBottom: 8 }}>📝 הערות אישיות</h2>
-              <p style={{ margin: 0, whiteSpace: 'pre-wrap', color: '#51473e', lineHeight: 1.65 }}>{recipe.notes}</p>
-            </section>
-          )}
-
-          {steps.length > 0 && (
-            <section style={{ marginBottom: 40 }}>
-              <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '1.5rem', marginBottom: 14 }}>הוראות הכנה</h2>
-              <ol style={{ display: 'grid', gap: 20, margin: 0, paddingRight: 22 }}>
-                {steps.map((step, i) => (
-                  <li key={step.id} style={{ lineHeight: 1.65 }}>
-                    {step.title && (
-                      <strong style={{ display: 'block', marginBottom: 4, color: 'var(--ink)' }}>
-                        שלב {i + 1}: {step.title}
-                      </strong>
-                    )}
-                    <p style={{ margin: 0, color: '#51473e' }}>{step.body}</p>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
-
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 28 }}>
             <Link href={`/recipes/${id}/cook`} className="primary-button" style={{ flex: 1, minWidth: 160 }}>
               התחל בישול
             </Link>

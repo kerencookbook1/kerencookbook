@@ -3,6 +3,35 @@
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 
+type WakeLockSentinel = {
+  released: boolean;
+  release: () => Promise<void>;
+  addEventListener: (event: 'release', listener: () => void) => void;
+};
+type NavigatorWithWakeLock = Navigator & {
+  wakeLock?: { request: (type: 'screen') => Promise<WakeLockSentinel> };
+};
+
+function playAlertBeep() {
+  try {
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.9);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 1.0);
+    setTimeout(() => ctx.close(), 1200);
+  } catch { /* audio might be blocked — silent fallback */ }
+  try { navigator.vibrate?.([220, 90, 220]); } catch { /* not available */ }
+}
+
 type Ingredient = { id: string; name: string; amount: string | null; unit: string | null }
 type Step = { id: string; title: string | null; body: string; duration_seconds: number | null }
 
@@ -19,7 +48,44 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
   const [servings, setServings] = useState(defaultServings || 4)
   const [timerActive, setTimerActive] = useState(false)
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
+  const [wakeLockOn, setWakeLockOn] = useState(false)
+  const [timerFinished, setTimerFinished] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+  const finishedRef = useRef(false)
+
+  // Keep screen on for the whole cook session
+  useEffect(() => {
+    const nav = navigator as NavigatorWithWakeLock
+    if (!nav.wakeLock) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const lock = await nav.wakeLock!.request('screen')
+        if (cancelled) { await lock.release(); return }
+        wakeLockRef.current = lock
+        setWakeLockOn(true)
+        lock.addEventListener('release', () => setWakeLockOn(false))
+      } catch { /* permission denied or not supported */ }
+    })()
+    // Re-acquire when tab becomes visible again
+    const onVisibility = async () => {
+      if (document.visibilityState !== 'visible' || wakeLockRef.current) return
+      try {
+        const lock = await nav.wakeLock!.request('screen')
+        wakeLockRef.current = lock
+        setWakeLockOn(true)
+        lock.addEventListener('release', () => setWakeLockOn(false))
+      } catch { /* ignore */ }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisibility)
+      wakeLockRef.current?.release().catch(() => {})
+      wakeLockRef.current = null
+    }
+  }, [])
 
   const currentStep = steps[current]
   const stepDuration = currentStep?.duration_seconds ?? null
@@ -29,6 +95,8 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
     setTimerActive(false)
     if (intervalRef.current) clearInterval(intervalRef.current)
     setTimeLeft(stepDuration)
+    setTimerFinished(false)
+    finishedRef.current = false
   }, [current, stepDuration])
 
   useEffect(() => {
@@ -39,7 +107,12 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current)
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (timerActive && timeLeft === 0) setTimerActive(false)
+      if (timerActive && timeLeft === 0 && !finishedRef.current) {
+        finishedRef.current = true
+        setTimerActive(false)
+        setTimerFinished(true)
+        playAlertBeep()
+      }
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [timerActive, timeLeft])
@@ -61,16 +134,23 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
     <main className="cook-shell">
       <header className="cook-header">
         <Link className="back-link" href={`/recipes/${recipeId}`}>← {recipeTitle}</Link>
-        {stepDuration !== null && (
-          <button
-            type="button"
-            className="timer-toggle"
-            aria-pressed={timerActive}
-            onClick={() => timerActive ? setTimerActive(false) : startTimer()}
-          >
-            {timerActive ? `${formatTime(timeLeft ?? stepDuration)} ⏸` : 'הפעלת טיימר'}
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {wakeLockOn && (
+            <span title="המסך יישאר דלוק" style={{ fontSize: '.75rem', color: '#a8dea8', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              💡 מסך דלוק
+            </span>
+          )}
+          {stepDuration !== null && (
+            <button
+              type="button"
+              className="timer-toggle"
+              aria-pressed={timerActive}
+              onClick={() => timerActive ? setTimerActive(false) : startTimer()}
+            >
+              {timerActive ? `${formatTime(timeLeft ?? stepDuration)} ⏸` : 'הפעלת טיימר'}
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Progress bar */}
@@ -100,6 +180,40 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
           <p style={{ fontSize: '1rem', color: '#c8b8a5', fontFamily: 'sans-serif', margin: '8px 0 0' }}>
             טיימר פועל
           </p>
+        </div>
+      )}
+
+      {/* Timer finished banner */}
+      {timerFinished && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+            marginBottom: 24, padding: '14px 20px', borderRadius: 14,
+            background: '#3b6035', border: '2px solid #7bbf6a', color: '#fffaf2',
+          }}
+        >
+          <span style={{ fontWeight: 800 }}>🔔 הטיימר של השלב הסתיים!</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              className="outline-button"
+              style={{ borderColor: '#a8dea8', color: '#fffaf2', minHeight: 36 }}
+              onClick={() => setTimerFinished(false)}
+            >
+              הבנתי
+            </button>
+            {current < steps.length - 1 && (
+              <button
+                type="button"
+                className="primary-button"
+                style={{ minHeight: 36 }}
+                onClick={() => { setTimerFinished(false); setCurrent((v) => v + 1) }}
+              >
+                לשלב הבא ←
+              </button>
+            )}
+          </div>
         </div>
       )}
 
