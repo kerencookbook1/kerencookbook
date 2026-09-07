@@ -42,7 +42,11 @@ export default function ImportUrlPage() {
         body: JSON.stringify({ url }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `שגיאה ${res.status}`);
+      if (!res.ok) {
+        console.error('[import-url response]', res.status, data);
+        const details = data.candidateIds ? ` (ספקים שנוסו: ${data.candidateIds.join(", ")})` : "";
+        throw new Error((data.error || `שגיאה ${res.status}`) + details);
+      }
       const extracted = data as ImportResult;
       setRecipe(extracted);
       setTitle(extracted.title || "");
@@ -138,8 +142,16 @@ export default function ImportUrlPage() {
                 />
               </label>
               {error && (
-                <div role="alert" style={{ padding: 12, borderRadius: 12, background: "#fdecea", color: "#8a1c14", fontSize: ".9rem" }}>
+                <div role="alert" style={{ padding: 14, borderRadius: 12, background: "#fdecea", color: "#8a1c14", fontSize: ".9rem", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+                  <strong style={{ display: "block", marginBottom: 6 }}>הייבוא נכשל:</strong>
                   {error}
+                  <button
+                    type="button"
+                    onClick={() => { navigator.clipboard.writeText(error); }}
+                    style={{ marginTop: 10, padding: "6px 12px", fontSize: ".8rem", borderRadius: 8, border: "1px solid #8a1c14", background: "transparent", color: "#8a1c14", cursor: "pointer" }}
+                  >
+                    העתק הודעת שגיאה
+                  </button>
                 </div>
               )}
               <div style={{ display: "flex", gap: 10, marginTop: 4 }}>

@@ -35,7 +35,14 @@ export async function POST(request: Request) {
     return NextResponse.json(recipe)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error('[import-url] failed:', msg)
-    return NextResponse.json({ error: msg }, { status: 502 })
+    console.error('[import-url] failed:', msg, err)
+    return NextResponse.json(
+      {
+        error: msg,
+        candidateCount: candidates.length,
+        candidateIds: candidates.map((c) => `${c.id}:${c.source}`),
+      },
+      { status: 502 }
+    )
   }
 }
