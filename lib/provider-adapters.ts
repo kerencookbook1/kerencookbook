@@ -84,8 +84,17 @@ async function testAnthropic(key: string): Promise<TestResult> {
 }
 
 async function testGoogle(key: string): Promise<TestResult> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`
-  const r = await fetch(url)
+  // Use the actual generateContent endpoint — /v1beta/models accepts some invalid
+  // keys, so listing models is not a strict enough check.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: 'ping' }] }],
+      generationConfig: { maxOutputTokens: 8 },
+    }),
+  })
   if (r.ok) {
     return { ok: true, model: 'gemini-2.0-flash (vision)' }
   }
