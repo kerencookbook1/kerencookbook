@@ -10,7 +10,17 @@ export default async function ProfilePage() {
   const { data: { user } } = await supabase.auth.getUser()
   const recipes = user ? await getRecipes(user.id) : []
 
-  const displayName = user?.user_metadata?.full_name as string | undefined
+  // Prefer the profile row (updated via /profile/edit), fall back to signup
+  // metadata, then to the email prefix
+  const { data: profile } = user
+    ? await supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle()
+    : { data: null }
+
+  const displayName =
+    profile?.display_name ??
+    (user?.user_metadata?.full_name as string | undefined) ??
+    user?.email?.split('@')[0]
+
   const initials = displayName
     ? displayName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
     : 'כ'
@@ -33,7 +43,7 @@ export default async function ProfilePage() {
           {user?.email && (
             <p style={{ fontSize: '.85rem', color: 'var(--muted)', marginTop: -8 }}>{user.email}</p>
           )}
-          <button className="outline-button" type="button" style={{ marginTop: 16 }}>עריכת פרופיל</button>
+          <Link href="/profile/edit" className="outline-button" style={{ marginTop: 16, display: 'inline-flex' }}>עריכת פרופיל</Link>
         </article>
 
         {/* Stats card */}
