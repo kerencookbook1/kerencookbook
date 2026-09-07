@@ -264,6 +264,30 @@ function safeHostname(url: string): string | undefined {
 }
 
 /* ─────────────────────────────────────────────────────
+   Open Graph / Twitter image extraction (AI-path fallback)
+   ───────────────────────────────────────────────────── */
+function extractOgImage(html: string, baseUrl: string): string | undefined {
+  const patterns = [
+    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
+    /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i,
+  ]
+  for (const re of patterns) {
+    const m = html.match(re)
+    if (m?.[1]) {
+      try {
+        // Resolve relative URLs against the page
+        return new URL(m[1], baseUrl).toString()
+      } catch {
+        return m[1]
+      }
+    }
+  }
+  return undefined
+}
+
+/* ─────────────────────────────────────────────────────
    HTML → plain text (for AI fallback)
    ───────────────────────────────────────────────────── */
 export function stripHtml(html: string): string {
@@ -300,7 +324,11 @@ export async function importRecipeFromUrl(
   // Fast path — structured Recipe schema
   const jsonLd = extractFromJsonLd(html, url.toString())
   if (jsonLd && (jsonLd.ingredients.length > 0 || jsonLd.steps.length > 0)) {
-    return { ...jsonLd, provider: 'schema.org/Recipe (JSON-LD)' }
+    return {
+      ...jsonLd,
+      image_url: jsonLd.image_url ?? extractOgImage(html, url.toString()),
+      provider: 'schema.org/Recipe (JSON-LD)',
+    }
   }
 
   if (candidates.length === 0) {
@@ -310,6 +338,7 @@ export async function importRecipeFromUrl(
   }
 
   const text = stripHtml(html).slice(0, 50_000)
+  const ogImage = extractOgImage(html, url.toString())
   const errors: string[] = []
   for (const { id, key } of candidates) {
     try {
@@ -318,6 +347,7 @@ export async function importRecipeFromUrl(
         ...recipe,
         source_url: url.toString(),
         source_site: safeHostname(url.toString()),
+        image_url: ogImage,
         method: 'ai',
       }
     } catch (err) {
