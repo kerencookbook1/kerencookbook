@@ -1,79 +1,85 @@
 import { createClient } from '@/lib/supabase/server'
-import { getRecipes } from '@/lib/repositories/recipes'
 import Link from 'next/link'
+import { CategoryTabs } from './_components/category-tabs'
 
 export const metadata = { title: 'המטבח של קרן' }
 
-// קטגוריות מהירות — מוצגות כצ'יפס מתחת להירו
-const QUICK_FILTERS = [
-  { label: 'מהיר', icon: '🔥', href: '/recipes?filter=quick' },
-  { label: 'צמחוני', icon: '🥦', href: '/recipes?filter=vegetarian' },
-  { label: 'מתוקים', icon: '🍰', href: '/recipes?filter=sweet' },
-] as const
+type HomeRecipe = {
+  id: string
+  title: string
+  prep_time: number | null
+  cook_time: number | null
+  image_url: string | null
+  ingredientNames: string[]
+}
 
-const FOOD_IMAGES = [
-  '/images/recipes/shakshuka-default.png',
-  '/images/recipes/cauliflower-tahini-default.png',
-  '/images/recipes/lemon-cake-default.png',
-  '/images/recipes/creamy-pasta-default.png',
-  '/images/recipes/meatballs-default.png',
-  '/images/recipes/pumpkin-soup-default.png',
-  '/images/recipes/salmon-default.png',
-  '/images/recipes/herb-salad-default.png',
-  '/images/recipes/tomato-pasta-default.png',
-] as const
+async function getHomeRecipes(userId: string): Promise<HomeRecipe[]> {
+  const supabase = await createClient()
+  const { data: recipes } = await supabase
+    .from('recipes')
+    .select('id, title, prep_time, cook_time')
+    .eq('owner_id', userId)
+    .order('updated_at', { ascending: false })
 
-// אייקון לב למועדפים
-function HeartIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  )
+  if (!recipes || recipes.length === 0) return []
+
+  const ids = recipes.map((r) => r.id)
+  const [imagesRes, ingredientsRes] = await Promise.all([
+    supabase.from('recipe_images').select('recipe_id, storage_path, is_primary, position').in('recipe_id', ids),
+    supabase.from('ingredients').select('recipe_id, name').in('recipe_id', ids),
+  ])
+
+  const imagesByRecipe = new Map<string, string>()
+  for (const img of imagesRes.data ?? []) {
+    const url = /^https?:\/\//i.test(img.storage_path) ? img.storage_path : null
+    if (!url) continue
+    // Prefer primary; keep first hit otherwise
+    if (img.is_primary || !imagesByRecipe.has(img.recipe_id)) {
+      imagesByRecipe.set(img.recipe_id, url)
+    }
+  }
+
+  const ingredientsByRecipe = new Map<string, string[]>()
+  for (const ing of ingredientsRes.data ?? []) {
+    const arr = ingredientsByRecipe.get(ing.recipe_id) ?? []
+    arr.push(ing.name)
+    ingredientsByRecipe.set(ing.recipe_id, arr)
+  }
+
+  return recipes.map((r) => ({
+    id: r.id,
+    title: r.title,
+    prep_time: r.prep_time,
+    cook_time: r.cook_time,
+    image_url: imagesByRecipe.get(r.id) ?? null,
+    ingredientNames: ingredientsByRecipe.get(r.id) ?? [],
+  }))
 }
 
 export default async function HomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const allRecipes = user ? await getRecipes(user.id) : []
-  const displayed = allRecipes.slice(0, 6)
+  const recipes = user ? await getHomeRecipes(user.id) : []
 
   return (
     <main className="app-shell">
       <a href="#main-content" className="skip-link">דלג לתוכן</a>
 
-      {/* ===== סרגל עליון ===== */}
       <header className="topbar">
-        {/* שם האתר — ימין */}
         <Link href="/" className="brand">
           <span className="brand-mark" aria-hidden="true">✿</span>
           המטבח של קרן
         </Link>
-
-        {/* שורת חיפוש — מרכז */}
         <Link href="/recipes" className="search-box" aria-label="חפשי מתכון">
           חיפוש מתכון, מרכיב, קטגוריה...
         </Link>
-
-        {/* כפתור הוספה — שמאל */}
         <Link href="/import" className="add-button" aria-label="הוספת מתכון חדש">
           <span aria-hidden="true">+</span>
           <span>הוספת מתכון</span>
         </Link>
       </header>
 
-      {/* ===== הירו ===== */}
       <section className="hero" aria-label="ברוכה הבאה">
         <div className="hero-copy">
           <p className="eyebrow">מועדפי הבית</p>
@@ -88,90 +94,13 @@ export default async function HomePage() {
 
         <div className="hero-image-wrap" aria-hidden="true">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/images/recipes/shakshuka-default.png"
-            alt=""
-            className="hero-image"
-          />
+          <img src="/images/recipes/shakshuka-default.png" alt="" className="hero-image" />
         </div>
       </section>
 
-      {/* ===== צ'יפסים מהירים ===== */}
-      <nav className="quick-actions" aria-label="סינון מהיר">
-        {QUICK_FILTERS.map((filter) => (
-          <Link
-            key={filter.href}
-            href={filter.href}
-            className="category-chip"
-          >
-            <span aria-hidden="true">{filter.icon}</span>
-            {filter.label}
-          </Link>
-        ))}
-      </nav>
-
-      {/* ===== רשת מתכונים ===== */}
-      <section id="main-content" className="recipe-section" aria-label="מתכונים נבחרים">
-        <div className="section-heading">
-          <h2>נבחרו בשבילך</h2>
-          <Link href="/recipes" className="text-button">
-            הכל
-          </Link>
-        </div>
-
-        {displayed.length > 0 ? (
-          <div className="recipe-grid">
-            {displayed.map((recipe, index) => {
-              const totalMinutes =
-                (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0)
-
-              const imgSrc = (recipe as { image_url?: string | null }).image_url || FOOD_IMAGES[index % FOOD_IMAGES.length]
-            return (
-                <article key={recipe.id} className="recipe-card">
-                  <Link
-                    href={`/recipes/${recipe.id}`}
-                    className="recipe-visual"
-                    tabIndex={-1}
-                    aria-hidden="true"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imgSrc} alt="" className="recipe-photo" loading="lazy" />
-                  </Link>
-
-                  {/* כפתור מועדפים */}
-                  <button
-                    type="button"
-                    className="favorite-button"
-                    aria-label={`הוסיפי לרשימת המועדפים: ${recipe.title}`}
-                  >
-                    <HeartIcon />
-                  </button>
-
-                  {/* מידע על המתכון */}
-                  <div className="recipe-info">
-                    <Link href={`/recipes/${recipe.id}`}>
-                      <h3>{recipe.title}</h3>
-                    </Link>
-                    {totalMinutes > 0 && (
-                      <span aria-label={`זמן הכנה: ${totalMinutes} דקות`}>
-                        {totalMinutes} דק׳
-                      </span>
-                    )}
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-        ) : (
-          /* מצב ריק */
-          <div className="empty-state" role="status">
-            <p>עדיין אין מתכונים. הוסיפי את הראשון!</p>
-            <Link href="/recipes/new" className="primary-button">
-              + מתכון חדש
-            </Link>
-          </div>
-        )}
-      </section>
+      <div id="main-content">
+        <CategoryTabs recipes={recipes} />
+      </div>
     </main>
   )
 }
