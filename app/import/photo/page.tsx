@@ -14,6 +14,9 @@ type ExtractedRecipe = {
   ingredients: string[];
   steps: string[];
   provider?: string;
+  raw_text?: string | null;
+  recognition_failed?: boolean;
+  reason?: string | null;
 };
 
 export default function PhotoImportPage() {
@@ -180,10 +183,49 @@ export default function PhotoImportPage() {
               <div className="paper-preview"><span>תמונה לא זמינה</span></div>
             )}
             <p>מקור שהועלה</p>
+            {recipe.raw_text && (
+              <details style={{ marginTop: 14 }}>
+                <summary style={{ cursor: "pointer", fontWeight: 700, color: "var(--muted)", fontSize: ".9rem" }}>
+                  👁 מה שה־AI קרא בפועל
+                </summary>
+                <pre style={{
+                  marginTop: 10, padding: 12, borderRadius: 10,
+                  background: "#f4efe2", color: "#3f352b", fontSize: ".85rem",
+                  fontFamily: "inherit", whiteSpace: "pre-wrap", lineHeight: 1.6,
+                  maxHeight: 220, overflow: "auto",
+                }}>
+                  {recipe.raw_text || "(האי־איי לא זיהה טקסט)"}
+                </pre>
+              </details>
+            )}
           </div>
           <form className="review-form" onSubmit={(e) => e.preventDefault()}>
+            {(recipe.recognition_failed || (recipe.ingredients.length === 0 && recipe.steps.length === 0)) && (
+              <div role="alert" style={{
+                padding: 14, borderRadius: 12,
+                background: "#fef3d4", border: "1.5px solid #d4a01a", color: "#5a4200",
+                fontSize: ".92rem", lineHeight: 1.5,
+              }}>
+                <strong style={{ display: "block", marginBottom: 4 }}>⚠️ הזיהוי לא הצליח באופן מלא</strong>
+                {recipe.reason || "ה־AI לא הצליח לקרוא את הטקסט בבירור. נסי שוב עם:"}
+                <ul style={{ margin: "8px 0 0", paddingRight: 20 }}>
+                  <li>תאורה טובה יותר (בלי צל על הדף)</li>
+                  <li>הצבת המצלמה ישרה מעל הדף (לא בזווית)</li>
+                  <li>תמונה חדה, בלי טשטוש</li>
+                  <li>קירוב לאזור עם הטקסט</li>
+                </ul>
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="outline-button"
+                  style={{ marginTop: 12, minHeight: 38 }}
+                >
+                  📷 צילום מחדש
+                </button>
+              </div>
+            )}
             <div className="review-status">
-              <span>טיוטה מוכנה לבדיקה</span>
+              <span>{recipe.recognition_failed ? "זיהוי חלקי" : "טיוטה מוכנה לבדיקה"}</span>
               {recipe.provider && <small>עובד עם {recipe.provider}</small>}
             </div>
             <label>שם המתכון

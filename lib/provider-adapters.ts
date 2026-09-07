@@ -2,25 +2,34 @@ import type { ProviderId } from './preview-providers'
 
 const CATEGORY_LIST = 'בשר, עוף, דגים, חלבי, צמחוני, פסטה, אורז ודגנים, סלטים, מרקים, מאפים, קינוחים, שתייה, אחר'
 
-const SYSTEM_PROMPT = `אתה מומחה בזיהוי מתכונים מתמונות של דפי כרטיסייה, מחברות ומקורות אינטרנט.
-המשתמש מעלה תמונה עם טקסט מתכון בעברית או אנגלית. תפקידך:
+const SYSTEM_PROMPT = `אתה מומחה OCR ומחלץ מתכונים מתמונות. התמונה יכולה להיות כרטיסייה מודפסת, דף מחברת בכתב יד, צילום מסך של אתר, או תמונה של מתכון בכל פורמט אחר, בעברית או באנגלית.
 
-1. חלץ את כל הטקסט מהתמונה במדויק.
-2. נתח אותו למבנה מתכון מסודר.
-3. שמור על השפה המקורית (בדרך כלל עברית).
-4. אם משהו לא ברור בתמונה — עדיף להשמיט מאשר להמציא.
-5. בחר קטגוריה אחת מהרשימה הבאה בלבד: ${CATEGORY_LIST}. אם לא ברור — בחר "אחר".
+**כללי ברזל — עקוב אחריהם בקפדנות:**
 
-החזר JSON תקף בלבד במבנה הבא, ללא טקסט לפני או אחרי:
+1. **קרא את מה שכתוב בפועל בתמונה, מילה במילה.** התייחס לתמונה כמו OCR: העתק בדיוק את הטקסט הנראה, גם אם הוא בכתב יד לא ברור, גם אם יש שגיאות כתיב, גם אם הפורמט מבולגן.
+
+2. **אסור להמציא כלום.** אם לא ברור לך מה כתוב במקום מסוים — כתוב "[לא ברור]" באותו מקום. **אל תשלים ניחושים מהראש שלך על סמך המראה של המאכל.** אם אתה רואה תמונה של עוגת שוקולד אבל אין טקסט קריא — אל תמציא מתכון לעוגת שוקולד.
+
+3. **כתב יד בעברית:** קרא בזהירות רבה. בעברית קל להתבלבל בין: ד/ר, ה/ח, כ/ב, ל/ן, ו/ז, י/נ, ם/ס, ץ/ץ סופית. אם אינך בטוח באות ספציפית, סמן את המילה כ־[לא ברור].
+
+4. **אם אינך מזהה טקסט משמעותי בכלל בתמונה** (תמונה מטושטשת, ריקה, לא של מתכון, כתב לא קריא לחלוטין) — החזר: {"title": null, "raw_text": "מה שראית או ריק", "recognition_failed": true, "reason": "הסבר קצר למה"}. אל תמציא מתכון.
+
+5. שמור על השפה המקורית של הכתוב (בדרך כלל עברית).
+
+6. בחר קטגוריה אחת מהרשימה הבאה בלבד: ${CATEGORY_LIST}. אם לא ברור — בחר "אחר".
+
+**מבנה החזרה — JSON תקף בלבד, ללא טקסט לפני או אחרי:**
 {
-  "title": "שם המתכון (חובה)",
+  "raw_text": "העתקה מדויקת של כל הטקסט שראית בתמונה, כפי שכתוב, שורה־שורה. השדה הזה חובה תמיד — הוא מאפשר למשתמש לוודא שקראת נכון.",
+  "recognition_failed": false,
+  "title": "שם המתכון או null אם לא זוהה",
   "description": "תיאור קצר או null",
-  "category": "אחד מהערכים הבאים בדיוק: ${CATEGORY_LIST}",
+  "category": "אחד מהערכים בדיוק: ${CATEGORY_LIST} — או null אם לא זוהה",
   "servings": מספר מנות או null,
   "prep_minutes": דקות הכנה או null,
   "cook_minutes": דקות בישול או null,
-  "ingredients": ["מרכיב עם כמות ויחידה", ...],
-  "steps": ["שלב 1", "שלב 2", ...]
+  "ingredients": ["מרכיב שכתוב בתמונה", ...],
+  "steps": ["שלב שכתוב בתמונה", ...]
 }`
 
 export type ExtractedRecipe = {
@@ -33,6 +42,9 @@ export type ExtractedRecipe = {
   ingredients: string[]
   steps: string[]
   provider?: string
+  raw_text?: string | null
+  recognition_failed?: boolean
+  reason?: string | null
 }
 
 /* ─────────────────────────────────────────────────────
@@ -146,7 +158,7 @@ async function extractWithAnthropic(key: string, imageBase64: string, mimeType: 
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [
         {
@@ -266,7 +278,7 @@ async function extractTextWithAnthropic(key: string, userMsg: string): Promise<E
     headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: TEXT_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMsg }],
     }),
@@ -322,8 +334,9 @@ function parseJsonFromModelText(text: string): Omit<ExtractedRecipe, 'provider'>
     .replace(/\s*```\s*$/i, '')
     .trim()
   const parsed = JSON.parse(cleaned)
+  const rawTitle = typeof parsed.title === 'string' && parsed.title.trim() ? parsed.title.trim() : null
   return {
-    title: String(parsed.title ?? 'מתכון ללא שם'),
+    title: rawTitle ?? 'מתכון ללא שם',
     description: parsed.description ?? null,
     category: typeof parsed.category === 'string' ? parsed.category : null,
     servings: typeof parsed.servings === 'number' ? parsed.servings : null,
@@ -331,5 +344,8 @@ function parseJsonFromModelText(text: string): Omit<ExtractedRecipe, 'provider'>
     cook_minutes: typeof parsed.cook_minutes === 'number' ? parsed.cook_minutes : null,
     ingredients: Array.isArray(parsed.ingredients) ? parsed.ingredients.map(String) : [],
     steps: Array.isArray(parsed.steps) ? parsed.steps.map(String) : [],
+    raw_text: typeof parsed.raw_text === 'string' ? parsed.raw_text : null,
+    recognition_failed: parsed.recognition_failed === true || rawTitle === null,
+    reason: typeof parsed.reason === 'string' ? parsed.reason : null,
   }
 }
