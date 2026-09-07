@@ -4,6 +4,38 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { createRecipe } from "@/lib/actions/recipes";
 
+/**
+ * Normalize an image before sending: apply EXIF orientation so vision
+ * models don't have to mentally rotate the paper, cap the long edge at
+ * 2400px to save bandwidth, and re-encode as JPEG.
+ * Also returns a rotation control so the user can nudge orientation if
+ * the auto-fix guessed wrong.
+ */
+async function normalizeImage(file: File, extraRotationDeg = 0): Promise<Blob> {
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+  const MAX = 2400
+  let w = bitmap.width
+  let h = bitmap.height
+  if (Math.max(w, h) > MAX) {
+    const s = MAX / Math.max(w, h)
+    w = Math.round(w * s)
+    h = Math.round(h * s)
+  }
+  const rot = ((extraRotationDeg % 360) + 360) % 360
+  const swap = rot === 90 || rot === 270
+  const canvas = document.createElement('canvas')
+  canvas.width = swap ? h : w
+  canvas.height = swap ? w : h
+  const ctx = canvas.getContext('2d')!
+  ctx.translate(canvas.width / 2, canvas.height / 2)
+  ctx.rotate((rot * Math.PI) / 180)
+  ctx.drawImage(bitmap, -w / 2, -h / 2, w, h)
+  bitmap.close?.()
+  return await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('canvas.toBlob failed'))), 'image/jpeg', 0.92)
+  })
+}
+
 type ExtractedRecipe = {
   title: string;
   description?: string | null;
@@ -20,8 +52,10 @@ type ExtractedRecipe = {
 };
 
 export default function PhotoImportPage() {
-  const [stage, setStage] = useState<"upload" | "loading" | "review">("upload");
+  const [stage, setStage] = useState<"upload" | "preview" | "loading" | "review">("upload");
   const [error, setError] = useState<string | null>(null);
+  const [rawFile, setRawFile] = useState<File | null>(null);
+  const [rotation, setRotation] = useState<number>(0);  // extra rotation user applied
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [recipe, setRecipe] = useState<ExtractedRecipe | null>(null);
   const [title, setTitle] = useState("");
@@ -33,16 +67,40 @@ export default function PhotoImportPage() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
+  async function refreshPreview(file: File, rot: number) {
+    const normalized = await normalizeImage(file, rot)
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(URL.createObjectURL(normalized))
+  }
+
   async function handleFile(file: File) {
     setError(null);
-    setStage("loading");
-
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl(URL.createObjectURL(file));
-
+    setRawFile(file);
+    setRotation(0);
     try {
+      await refreshPreview(file, 0);
+      setStage("preview");
+    } catch (err) {
+      setError('לא ניתן לקרוא את התמונה: ' + (err instanceof Error ? err.message : String(err)));
+      setStage("upload");
+    }
+  }
+
+  async function handleRotate(deltaDeg: number) {
+    if (!rawFile) return
+    const next = ((rotation + deltaDeg) % 360 + 360) % 360
+    setRotation(next)
+    await refreshPreview(rawFile, next)
+  }
+
+  async function handleAnalyze() {
+    if (!rawFile) return;
+    setError(null);
+    setStage("loading");
+    try {
+      const normalized = await normalizeImage(rawFile, rotation);
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", new File([normalized], "recipe.jpg", { type: "image/jpeg" }));
       const res = await fetch("/api/scan", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) {
@@ -57,11 +115,13 @@ export default function PhotoImportPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
-      setStage("upload");
+      setStage("preview");
     }
   }
 
   function reset() {
+    setRawFile(null);
+    setRotation(0);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setRecipe(null);
@@ -157,6 +217,40 @@ export default function PhotoImportPage() {
         </section>
       )}
 
+      {stage === "preview" && previewUrl && (
+        <section className="import-layout">
+          <div className="upload-panel" style={{ textAlign: "center" }}>
+            <h2 style={{ marginTop: 0 }}>וודאי שהתמונה מיושרת</h2>
+            <p style={{ marginBottom: 16 }}>הטקסט צריך להיות בכיוון הקריאה הרגיל (מלמעלה למטה). אם צריך, סובבי:</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewUrl} alt="תצוגה מקדימה" style={{ maxWidth: "100%", maxHeight: 380, borderRadius: 12, marginBottom: 16, objectFit: "contain", background: "#f4efe2" }} />
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
+              <button type="button" className="outline-button" onClick={() => handleRotate(-90)}>↺ סובבי שמאלה 90°</button>
+              <button type="button" className="outline-button" onClick={() => handleRotate(90)}>סובבי ימינה 90° ↻</button>
+              <button type="button" className="outline-button" onClick={() => handleRotate(180)}>הפכי 180°</button>
+            </div>
+            {error && (
+              <div role="alert" style={{ margin: "0 0 12px", padding: 12, borderRadius: 12, background: "#fdecea", color: "#8a1c14", fontSize: ".9rem" }}>
+                {error}
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+              <button type="button" className="outline-button" onClick={reset}>בחירת תמונה אחרת</button>
+              <button type="button" className="primary-button" onClick={handleAnalyze}>המשך לניתוח ←</button>
+            </div>
+          </div>
+          <aside className="provider-card">
+            <p className="eyebrow">טיפים לזיהוי טוב</p>
+            <ul style={{ paddingRight: 20, lineHeight: 1.8, color: "var(--muted)" }}>
+              <li>שהטקסט יהיה בכיוון הקריאה הנכון</li>
+              <li>תאורה טובה, בלי צל על הדף</li>
+              <li>המצלמה ישרה מעל הדף (לא בזווית)</li>
+              <li>הטקסט חד וממלא את המסגרת</li>
+            </ul>
+          </aside>
+        </section>
+      )}
+
       {stage === "loading" && (
         <section className="import-layout">
           <div className="upload-panel" style={{ textAlign: "center" }}>
@@ -168,7 +262,7 @@ export default function PhotoImportPage() {
               <path d="M21 12a9 9 0 1 1-6.219-8.56" />
             </svg>
             <h2>מחלץ מתכון…</h2>
-            <p>העיבוד יכול לקחת עד דקה, תלוי בגודל התמונה ובאיכות הכתב.</p>
+            <p>שלב 1: קורא את הטקסט מהתמונה · שלב 2: מארגן למבנה מתכון.</p>
           </div>
         </section>
       )}
