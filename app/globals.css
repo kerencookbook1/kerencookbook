@@ -324,7 +324,7 @@ a, [role="button"] { cursor: pointer; }
     box-shadow: 0 -6px 20px rgb(72 50 30 / 7%);
     backdrop-filter: blur(12px);
   }
-  .sidebar-brand, .navigation-sections, .sidebar-logout { display: none; }
+  .sidebar-brand, .navigation-sections, .sidebar-logout, .sidebar-bottom { display: none; }
   .navigation-items {
     display: flex; width: 100%; align-items: stretch; justify-content: space-around; gap: 2px;
   }

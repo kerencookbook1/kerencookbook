@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/lib/actions/auth";
+import { ThemeToggle } from "./theme-toggle";
 
 type IconName = "home" | "book" | "add" | "chef" | "cart" | "calendar" | "user";
 
@@ -138,8 +139,9 @@ export function AppNavigation() {
         })}
       </div>
 
-      {/* Desktop sidebar: profile + logout at bottom */}
+      {/* Desktop sidebar: theme toggle + profile + logout at bottom */}
       <div className="sidebar-bottom">
+        <ThemeToggle />
         {desktopBottomItems.map((item) => {
           const active = isActive(pathname, item);
           return (

@@ -4,6 +4,12 @@ import { useEffect, useState } from 'react'
 
 type Theme = 'modern' | 'editorial'
 
+/**
+ * Sidebar-styled theme toggle. Placed inside AppNavigation's bottom
+ * area (above the profile link). Only visible on desktop where the
+ * sidebar is shown; on mobile it collapses into the icon-only mode
+ * used by the bottom nav.
+ */
 export function ThemeToggle() {
   const [{ mounted, theme }, setState] = useState<{ mounted: boolean; theme: Theme }>({
     mounted: false,
@@ -23,39 +29,36 @@ export function ThemeToggle() {
     document.documentElement.setAttribute('data-theme', next)
   }
 
-  if (!mounted) return null
+  const label = theme === 'modern' ? 'עיצוב כהה' : 'עיצוב בהיר'
 
   return (
     <button
+      type="button"
       onClick={toggle}
       aria-label={theme === 'modern' ? 'עבור לעיצוב כהה' : 'עבור לעיצוב בהיר'}
-      style={{
-        position: 'fixed',
-        bottom: 'calc(80px + env(safe-area-inset-bottom))',
-        left: 16,
-        zIndex: 50,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 7,
-        border: 'none',
-        borderRadius: 999,
-        minHeight: 44,
-        padding: '0 14px 0 10px',
-        background: theme === 'modern' ? '#0a0a0a' : '#f8f8f6',
-        color: theme === 'modern' ? '#f8f8f6' : '#0a0a0a',
-        fontSize: '.75rem',
-        fontWeight: 700,
-        fontFamily: 'inherit',
-        cursor: 'pointer',
-        boxShadow: '0 4px 20px rgba(0,0,0,.25)',
-        transition: 'background .25s, color .25s',
-        letterSpacing: '.02em',
-      }}
+      className="sidebar-link theme-toggle-link"
+      suppressHydrationWarning
     >
-      <span style={{ fontSize: '1rem', lineHeight: 1 }}>
-        {theme === 'modern' ? '◑' : '○'}
-      </span>
-      {theme === 'modern' ? 'עיצוב כהה' : 'עיצוב בהיר'}
+      <svg width={21} height={21} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        {mounted && theme === 'modern' ? (
+          // Moon icon — click to go dark
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        ) : (
+          // Sun icon — click to go light
+          <>
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2" />
+            <path d="M12 20v2" />
+            <path d="m4.93 4.93 1.41 1.41" />
+            <path d="m17.66 17.66 1.41 1.41" />
+            <path d="M2 12h2" />
+            <path d="M20 12h2" />
+            <path d="m4.93 19.07 1.41-1.41" />
+            <path d="m17.66 6.34 1.41-1.41" />
+          </>
+        )}
+      </svg>
+      <span suppressHydrationWarning>{mounted ? label : 'עיצוב כהה'}</span>
     </button>
   )
 }

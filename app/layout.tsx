@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AppNavigation } from "../components/app-navigation";
-import { ThemeToggle } from "../components/theme-toggle";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,7 +25,6 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           <AppNavigation />
           <div className="app-page">{children}</div>
         </div>
-        <ThemeToggle />
       </body>
     </html>
   );
