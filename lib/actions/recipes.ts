@@ -28,6 +28,9 @@ export async function createRecipe(
     title: formData.get('title'),
     description: formData.get('description') || '',
     category: formData.get('category') || null,
+    difficulty: formData.get('difficulty') || null,
+    rating: formData.get('rating') || null,
+    notes: formData.get('notes') || '',
     prepTime: formData.get('prepTime') || null,
     cookTime: formData.get('cookTime') || null,
     servings: formData.get('servings') || null,
@@ -36,7 +39,7 @@ export async function createRecipe(
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { title, description, category, prepTime, cookTime, servings, ingredientsJson, stepsJson } = parsed.data
+  const { title, description, category, difficulty, rating, notes, prepTime, cookTime, servings, ingredientsJson, stepsJson } = parsed.data
   const ingredients = parseJson<IngredientItem>(ingredientsJson)
   const steps = parseJson<StepItem>(stepsJson)
 
@@ -57,6 +60,9 @@ export async function createRecipe(
       title,
       description: description || null,
       category: category || null,
+      difficulty: difficulty || null,
+      rating: rating ?? null,
+      notes: notes || null,
       prep_time: prepTime ?? null,
       cook_time: cookTime ?? null,
       servings: servings ?? null,
@@ -122,6 +128,9 @@ export async function updateRecipe(
     title: formData.get('title'),
     description: formData.get('description') || '',
     category: formData.get('category') || null,
+    difficulty: formData.get('difficulty') || null,
+    rating: formData.get('rating') || null,
+    notes: formData.get('notes') || '',
     prepTime: formData.get('prepTime') || null,
     cookTime: formData.get('cookTime') || null,
     servings: formData.get('servings') || null,
@@ -130,7 +139,7 @@ export async function updateRecipe(
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { title, description, category, prepTime, cookTime, servings, ingredientsJson, stepsJson } = parsed.data
+  const { title, description, category, difficulty, rating, notes, prepTime, cookTime, servings, ingredientsJson, stepsJson } = parsed.data
   const ingredients = parseJson<IngredientItem>(ingredientsJson)
   const steps = parseJson<StepItem>(stepsJson)
 
@@ -140,6 +149,9 @@ export async function updateRecipe(
       title,
       description: description || null,
       category: category || null,
+      difficulty: difficulty || null,
+      rating: rating ?? null,
+      notes: notes || null,
       prep_time: prepTime ?? null,
       cook_time: cookTime ?? null,
       servings: servings ?? null,
@@ -187,4 +199,19 @@ export async function deleteRecipe(recipeId: string): Promise<void> {
   const supabase = await createClient()
   await supabase.from('recipes').delete().eq('id', recipeId)
   redirect('/recipes')
+}
+
+export async function toggleFavorite(recipeId: string, next: boolean): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'לא מחובר' }
+
+  const { error } = await supabase
+    .from('recipes')
+    .update({ is_favorite: next })
+    .eq('id', recipeId)
+    .eq('owner_id', user.id)
+
+  if (error) return { ok: false, error: error.message }
+  return { ok: true }
 }

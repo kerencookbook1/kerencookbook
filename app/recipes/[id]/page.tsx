@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getRecipe, type IngredientRow } from '@/lib/repositories/recipes'
 import Link from 'next/link'
+import { FavoriteButton } from '../../_components/favorite-button'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -53,11 +54,26 @@ export default async function RecipePage({ params }: Props) {
           <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(2.2rem,4vw,3.8rem)', letterSpacing: '-.03em', margin: 0 }}>
             {recipe.title}
           </h1>
-          <Link href={`/recipes/${id}/edit`} className="outline-button">עריכה</Link>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <div style={{ position: 'relative', width: 46, height: 46 }}>
+              <FavoriteButton recipeId={id} initial={recipe.is_favorite} title={recipe.title} />
+            </div>
+            <Link href={`/recipes/${id}/edit`} className="outline-button">עריכה</Link>
+          </div>
         </div>
-        {recipe.category && (
-          <span className="recipe-tag" style={{ marginTop: 14, marginRight: 0 }}>{recipe.category}</span>
-        )}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 14 }}>
+          {recipe.category && <span className="recipe-tag">{recipe.category}</span>}
+          {recipe.difficulty && (
+            <span className="recipe-tag" style={{ background: '#efe4d0', color: '#7a5a1a' }}>
+              {recipe.difficulty === 'קל' ? '🟢' : recipe.difficulty === 'בינוני' ? '🟡' : '🔴'} {recipe.difficulty}
+            </span>
+          )}
+          {recipe.rating != null && (
+            <span style={{ display: 'inline-flex', gap: 2, color: '#d4a01a', fontSize: '1rem' }} aria-label={`דירוג: ${recipe.rating} מתוך 5`}>
+              {'★'.repeat(recipe.rating)}<span style={{ color: '#ddd' }}>{'★'.repeat(5 - recipe.rating)}</span>
+            </span>
+          )}
+        </div>
         {recipe.description && (
           <p style={{ margin: '14px 0 0', color: 'var(--muted)', fontSize: '1.08rem', lineHeight: 1.65 }}>
             {recipe.description}
@@ -111,6 +127,13 @@ export default async function RecipePage({ params }: Props) {
                   </li>
                 ))}
               </ul>
+            </section>
+          )}
+
+          {recipe.notes && (
+            <section style={{ marginBottom: 32, padding: 18, borderRadius: 16, background: '#fef8ea', border: '1px dashed #d5c9b8' }}>
+              <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '1.25rem', marginBottom: 8 }}>📝 הערות אישיות</h2>
+              <p style={{ margin: 0, whiteSpace: 'pre-wrap', color: '#51473e', lineHeight: 1.65 }}>{recipe.notes}</p>
             </section>
           )}
 

@@ -12,6 +12,9 @@ type RecipeFormInitial = {
   title?: string
   description?: string
   category?: string | null
+  difficulty?: string | null
+  rating?: number | null
+  notes?: string | null
   prepTime?: number | null
   cookTime?: number | null
   servings?: number | null
@@ -84,6 +87,30 @@ export function RecipeForm({ action, initial = {} }: Props) {
 
         <div className="time-servings-row">
           <label>
+            רמת קושי
+            <select name="difficulty" defaultValue={initial.difficulty ?? ''}>
+              <option value="">לא מוגדר</option>
+              <option value="קל">🟢 קל</option>
+              <option value="בינוני">🟡 בינוני</option>
+              <option value="קשה">🔴 קשה</option>
+            </select>
+          </label>
+          <label>
+            דירוג (1-5 ⭐)
+            <input
+              type="number"
+              name="rating"
+              min="1"
+              max="5"
+              step="1"
+              defaultValue={initial.rating ?? ''}
+              placeholder="—"
+            />
+          </label>
+        </div>
+
+        <div className="time-servings-row">
+          <label>
             זמן הכנה (דק׳)
             <input
               type="number"
@@ -114,6 +141,18 @@ export function RecipeForm({ action, initial = {} }: Props) {
             />
           </label>
         </div>
+      </section>
+
+      <section className="form-section">
+        <label>
+          הערות אישיות
+          <textarea
+            name="notes"
+            defaultValue={initial.notes ?? ''}
+            rows={3}
+            placeholder="שינויים, טיפים, מה עבד ומה לא בפעם האחרונה…"
+          />
+        </label>
       </section>
 
       <section className="form-section">

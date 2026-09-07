@@ -221,9 +221,13 @@ export type Database = {
           cook_time: number | null
           created_at: string
           description: string | null
+          difficulty: string | null
           id: string
+          is_favorite: boolean
+          notes: string | null
           owner_id: string
           prep_time: number | null
+          rating: number | null
           servings: number | null
           status: string
           title: string
@@ -234,9 +238,13 @@ export type Database = {
           cook_time?: number | null
           created_at?: string
           description?: string | null
+          difficulty?: string | null
           id?: string
+          is_favorite?: boolean
+          notes?: string | null
           owner_id: string
           prep_time?: number | null
+          rating?: number | null
           servings?: number | null
           status?: string
           title: string
@@ -247,9 +255,13 @@ export type Database = {
           cook_time?: number | null
           created_at?: string
           description?: string | null
+          difficulty?: string | null
           id?: string
+          is_favorite?: boolean
+          notes?: string | null
           owner_id?: string
           prep_time?: number | null
+          rating?: number | null
           servings?: number | null
           status?: string
           title?: string
