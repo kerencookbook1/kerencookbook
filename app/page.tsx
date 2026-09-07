@@ -97,16 +97,14 @@ export default async function HomePage() {
               const imgSrc = recipe.image_url || FAV_FALLBACK_IMAGES[i % FAV_FALLBACK_IMAGES.length]
               return (
                 <article key={recipe.id} className="favorite-card">
-                  <Link href={`/recipes/${recipe.id}`} className="recipe-visual" tabIndex={-1} aria-hidden="true">
+                  <Link href={`/recipes/${recipe.id}`} className="recipe-visual has-title-overlay" tabIndex={-1}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imgSrc} alt="" className="recipe-photo" loading="lazy" />
+                    <div className="recipe-title-overlay">
+                      <h3>{recipe.title}</h3>
+                    </div>
                   </Link>
                   <FavoriteButton recipeId={recipe.id} initial={true} title={recipe.title} />
-                  <div className="recipe-info">
-                    <Link href={`/recipes/${recipe.id}`}>
-                      <h3>{recipe.title}</h3>
-                    </Link>
-                  </div>
                 </article>
               )
             })}

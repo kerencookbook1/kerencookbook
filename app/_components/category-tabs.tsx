@@ -148,15 +148,15 @@ export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
               const catLabel = effectiveCategory(recipe)
               return (
                 <article key={recipe.id} className="recipe-card">
-                  <Link href={`/recipes/${recipe.id}`} className="recipe-visual" tabIndex={-1} aria-hidden="true">
+                  <Link href={`/recipes/${recipe.id}`} className="recipe-visual has-title-overlay" tabIndex={-1}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imgSrc} alt="" className="recipe-photo" loading="lazy" />
+                    <div className="recipe-title-overlay">
+                      <h3>{recipe.title}</h3>
+                    </div>
                   </Link>
                   <FavoriteButton recipeId={recipe.id} initial={!!recipe.is_favorite} title={recipe.title} />
                   <div className="recipe-info">
-                    <Link href={`/recipes/${recipe.id}`}>
-                      <h3>{recipe.title}</h3>
-                    </Link>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                       <span className="recipe-tag">{catLabel}</span>
                       {totalMinutes > 0 && (

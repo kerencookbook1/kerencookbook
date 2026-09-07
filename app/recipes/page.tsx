@@ -83,12 +83,14 @@ export default async function RecipesPage({
               const imgSrc = recipe.image_url || FOOD_IMAGES[index % FOOD_IMAGES.length]
               return (
                 <Link key={recipe.id} href={`/recipes/${recipe.id}`} className="library-card">
-                  <div className="library-visual">
+                  <div className="library-visual has-title-overlay">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imgSrc} alt={recipe.title} className="recipe-photo" loading="lazy" />
+                    <div className="recipe-title-overlay">
+                      <h3>{recipe.title}</h3>
+                    </div>
                   </div>
                   <div className="library-card-body">
-                    <h3>{recipe.title}</h3>
                     <p>
                       {totalMinutes > 0 ? `${totalMinutes} דק׳` : 'ללא זמן'}
                       {recipe.servings ? ` · ${recipe.servings} מנות` : ''}
