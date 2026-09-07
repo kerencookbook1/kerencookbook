@@ -62,6 +62,8 @@ button { cursor: pointer; }
 .add-button:hover, .primary-button:hover { background: var(--terracotta-dark); box-shadow: 0 12px 28px rgba(212,83,30,.38); }.add-button:active, .primary-button:active { transform: scale(.98); box-shadow: 0 4px 12px rgba(212,83,30,.25); }
 
 .hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); overflow: hidden; min-height: 200px; margin-top: 14px; border-radius: 22px; background: #f8ead8; box-shadow: 0 6px 20px rgba(73,49,31,.08); }
+.hero.hero-compact { grid-template-columns: 1fr; min-height: unset; }
+.hero.hero-compact .hero-copy { padding: 22px 28px; background: linear-gradient(135deg, #fce8d4 0%, #f8d4b8 100%); }
 .hero-copy { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: clamp(20px, 3vw, 32px); background: radial-gradient(circle at 10% 10%, rgba(255,255,255,.85), transparent 55%), linear-gradient(135deg, #fce8d4 0%, #f8d4b8 100%); }
 .eyebrow { margin: 0 0 6px; color: var(--sage); font-size: .78rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .hero h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.5rem, 2.4vw, 2.1rem); line-height: 1.15; letter-spacing: -.02em; font-weight: 900; }

@@ -54,7 +54,7 @@ export default async function HomePage() {
         </Link>
       </header>
 
-      <section className="hero" aria-label="ברוכה הבאה">
+      <section className="hero hero-compact" aria-label="ברוכה הבאה">
         <div className="hero-copy">
           <p className="eyebrow">היי 👋</p>
           <h1>{greeting}</h1>
@@ -64,11 +64,6 @@ export default async function HomePage() {
           <Link href="/recipes" className="primary-button">
             למתכונים שלי
           </Link>
-        </div>
-
-        <div className="hero-image-wrap" aria-hidden="true">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/recipes/shakshuka-default.png" alt="" className="hero-image" />
         </div>
       </section>
 
