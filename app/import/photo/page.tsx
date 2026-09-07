@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { createRecipe } from "@/lib/actions/recipes";
+import { ImageCropper } from "../../_components/image-cropper";
 
 /**
  * Normalize an image before sending: apply EXIF orientation so vision
@@ -57,6 +58,7 @@ export default function PhotoImportPage() {
   const [rawFile, setRawFile] = useState<File | null>(null);
   const [rotation, setRotation] = useState<number>(0);  // extra rotation user applied
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [cropMode, setCropMode] = useState<boolean>(false);
   const [recipe, setRecipe] = useState<ExtractedRecipe | null>(null);
   const [title, setTitle] = useState("");
   const [ingredients, setIngredients] = useState("");
@@ -91,6 +93,16 @@ export default function PhotoImportPage() {
     const next = ((rotation + deltaDeg) % 360 + 360) % 360
     setRotation(next)
     await refreshPreview(rawFile, next)
+  }
+
+  async function handleCropApplied(cropped: Blob) {
+    // Replace rawFile with the cropped result and reset rotation
+    const file = new File([cropped], "cropped.jpg", { type: "image/jpeg" })
+    setRawFile(file)
+    setRotation(0)
+    setCropMode(false)
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(URL.createObjectURL(cropped))
   }
 
   async function handleAnalyze() {
@@ -220,24 +232,34 @@ export default function PhotoImportPage() {
       {stage === "preview" && previewUrl && (
         <section className="import-layout">
           <div className="upload-panel" style={{ textAlign: "center" }}>
-            <h2 style={{ marginTop: 0 }}>וודאי שהתמונה מיושרת</h2>
-            <p style={{ marginBottom: 16 }}>הטקסט צריך להיות בכיוון הקריאה הרגיל (מלמעלה למטה). אם צריך, סובבי:</p>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={previewUrl} alt="תצוגה מקדימה" style={{ maxWidth: "100%", maxHeight: 380, borderRadius: 12, marginBottom: 16, objectFit: "contain", background: "#f4efe2" }} />
-            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
-              <button type="button" className="outline-button" onClick={() => handleRotate(-90)}>↺ סובבי שמאלה 90°</button>
-              <button type="button" className="outline-button" onClick={() => handleRotate(90)}>סובבי ימינה 90° ↻</button>
-              <button type="button" className="outline-button" onClick={() => handleRotate(180)}>הפכי 180°</button>
-            </div>
-            {error && (
-              <div role="alert" style={{ margin: "0 0 12px", padding: 12, borderRadius: 12, background: "#fdecea", color: "#8a1c14", fontSize: ".9rem" }}>
-                {error}
-              </div>
+            {cropMode ? (
+              <>
+                <h2 style={{ marginTop: 0 }}>חיתוך התמונה</h2>
+                <ImageCropper src={previewUrl} onApply={handleCropApplied} onCancel={() => setCropMode(false)} />
+              </>
+            ) : (
+              <>
+                <h2 style={{ marginTop: 0 }}>וודאי שהתמונה מיושרת</h2>
+                <p style={{ marginBottom: 16 }}>הטקסט צריך להיות בכיוון הקריאה הרגיל. אם צריך, סובבי או חתכי אזור קטן יותר לזיהוי טוב יותר:</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={previewUrl} alt="תצוגה מקדימה" style={{ maxWidth: "100%", maxHeight: 380, borderRadius: 12, marginBottom: 16, objectFit: "contain", background: "#f4efe2" }} />
+                <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                  <button type="button" className="outline-button" onClick={() => handleRotate(-90)}>↺ סובבי שמאלה 90°</button>
+                  <button type="button" className="outline-button" onClick={() => handleRotate(90)}>סובבי ימינה 90° ↻</button>
+                  <button type="button" className="outline-button" onClick={() => handleRotate(180)}>הפכי 180°</button>
+                  <button type="button" className="outline-button" onClick={() => setCropMode(true)}>✂️ חיתוך</button>
+                </div>
+                {error && (
+                  <div role="alert" style={{ margin: "0 0 12px", padding: 12, borderRadius: 12, background: "#fdecea", color: "#8a1c14", fontSize: ".9rem" }}>
+                    {error}
+                  </div>
+                )}
+                <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+                  <button type="button" className="outline-button" onClick={reset}>בחירת תמונה אחרת</button>
+                  <button type="button" className="primary-button" onClick={handleAnalyze}>המשך לניתוח ←</button>
+                </div>
+              </>
             )}
-            <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
-              <button type="button" className="outline-button" onClick={reset}>בחירת תמונה אחרת</button>
-              <button type="button" className="primary-button" onClick={handleAnalyze}>המשך לניתוח ←</button>
-            </div>
           </div>
           <aside className="provider-card">
             <p className="eyebrow">טיפים לזיהוי טוב</p>
@@ -246,6 +268,7 @@ export default function PhotoImportPage() {
               <li>תאורה טובה, בלי צל על הדף</li>
               <li>המצלמה ישרה מעל הדף (לא בזווית)</li>
               <li>הטקסט חד וממלא את המסגרת</li>
+              <li>✂️ חתכי רק את אזור המתכון (בלי רקע / צלחת / מיקום מיותר)</li>
             </ul>
           </aside>
         </section>
