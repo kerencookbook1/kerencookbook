@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { createRecipe } from "@/lib/actions/recipes";
+import { CATEGORIES, isCategoryId, type CategoryId } from "@/lib/categories";
 
 type ImportResult = {
   title: string;
   description?: string | null;
+  category?: string | null;
   servings?: number | null;
   prep_minutes?: number | null;
   cook_minutes?: number | null;
@@ -26,6 +28,7 @@ export default function ImportUrlPage() {
   const [recipe, setRecipe] = useState<ImportResult | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<CategoryId | "">("");
   const [ingredients, setIngredients] = useState("");
   const [steps, setSteps] = useState("");
   const [saving, setSaving] = useState(false);
@@ -52,6 +55,7 @@ export default function ImportUrlPage() {
       setRecipe(extracted);
       setTitle(extracted.title || "");
       setDescription(extracted.description || "");
+      setCategory(isCategoryId(extracted.category) ? extracted.category : "");
       setIngredients((extracted.ingredients || []).join("\n"));
       setSteps((extracted.steps || []).map((s, i) => `${i + 1}. ${s}`).join("\n"));
       setStage("review");
@@ -87,6 +91,7 @@ export default function ImportUrlPage() {
       const fd = new FormData();
       fd.append("title", title);
       fd.append("description", description);
+      if (category) fd.append("category", category);
       if (recipe?.prep_minutes != null) fd.append("prepTime", String(recipe.prep_minutes));
       if (recipe?.cook_minutes != null) fd.append("cookTime", String(recipe.cook_minutes));
       if (recipe?.servings != null) fd.append("servings", String(recipe.servings));
@@ -212,6 +217,14 @@ export default function ImportUrlPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="תיאור קצר של המתכון…"
               />
+            </label>
+            <label>קטגוריה
+              <select value={category} onChange={(e) => setCategory(e.target.value as CategoryId | "")}>
+                <option value="">בחרי קטגוריה…</option>
+                {CATEGORIES.map((c) => (
+                  <option key={c.id} value={c.id}>{c.icon} {c.id}</option>
+                ))}
+              </select>
             </label>
             {(recipe.prep_minutes != null || recipe.cook_minutes != null || recipe.servings != null) && (
               <p style={{ margin: 0, fontSize: ".85rem", color: "var(--muted)" }}>

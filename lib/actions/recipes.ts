@@ -27,6 +27,7 @@ export async function createRecipe(
   const parsed = recipeFormSchema.safeParse({
     title: formData.get('title'),
     description: formData.get('description') || '',
+    category: formData.get('category') || null,
     prepTime: formData.get('prepTime') || null,
     cookTime: formData.get('cookTime') || null,
     servings: formData.get('servings') || null,
@@ -35,7 +36,7 @@ export async function createRecipe(
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { title, description, prepTime, cookTime, servings, ingredientsJson, stepsJson } = parsed.data
+  const { title, description, category, prepTime, cookTime, servings, ingredientsJson, stepsJson } = parsed.data
   const ingredients = parseJson<IngredientItem>(ingredientsJson)
   const steps = parseJson<StepItem>(stepsJson)
 
@@ -55,6 +56,7 @@ export async function createRecipe(
       owner_id: user.id,
       title,
       description: description || null,
+      category: category || null,
       prep_time: prepTime ?? null,
       cook_time: cookTime ?? null,
       servings: servings ?? null,
@@ -119,6 +121,7 @@ export async function updateRecipe(
   const parsed = recipeFormSchema.safeParse({
     title: formData.get('title'),
     description: formData.get('description') || '',
+    category: formData.get('category') || null,
     prepTime: formData.get('prepTime') || null,
     cookTime: formData.get('cookTime') || null,
     servings: formData.get('servings') || null,
@@ -127,7 +130,7 @@ export async function updateRecipe(
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { title, description, prepTime, cookTime, servings, ingredientsJson, stepsJson } = parsed.data
+  const { title, description, category, prepTime, cookTime, servings, ingredientsJson, stepsJson } = parsed.data
   const ingredients = parseJson<IngredientItem>(ingredientsJson)
   const steps = parseJson<StepItem>(stepsJson)
 
@@ -136,6 +139,7 @@ export async function updateRecipe(
     .update({
       title,
       description: description || null,
+      category: category || null,
       prep_time: prepTime ?? null,
       cook_time: cookTime ?? null,
       servings: servings ?? null,

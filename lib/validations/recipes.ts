@@ -15,6 +15,7 @@ export const stepItemSchema = z.object({
 export const recipeFormSchema = z.object({
   title: z.string().min(1, 'שם המתכון הוא שדה חובה'),
   description: z.string().optional().default(''),
+  category: z.string().nullable().optional(),
   prepTime: z.coerce.number().int().min(0).nullable().optional(),
   cookTime: z.coerce.number().int().min(0).nullable().optional(),
   servings: z.coerce.number().int().min(1).nullable().optional(),

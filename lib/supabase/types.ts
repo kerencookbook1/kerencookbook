@@ -217,6 +217,7 @@ export type Database = {
       }
       recipes: {
         Row: {
+          category: string | null
           cook_time: number | null
           created_at: string
           description: string | null
@@ -229,6 +230,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category?: string | null
           cook_time?: number | null
           created_at?: string
           description?: string | null
@@ -241,6 +243,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category?: string | null
           cook_time?: number | null
           created_at?: string
           description?: string | null

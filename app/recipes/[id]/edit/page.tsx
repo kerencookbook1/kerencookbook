@@ -31,6 +31,7 @@ export default async function EditRecipePage({ params }: Props) {
           recipeId: id,
           title: recipe.title,
           description: recipe.description ?? '',
+          category: recipe.category ?? null,
           prepTime: recipe.prep_time,
           cookTime: recipe.cook_time,
           servings: recipe.servings,

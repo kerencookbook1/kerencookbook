@@ -55,6 +55,9 @@ export default async function RecipePage({ params }: Props) {
           </h1>
           <Link href={`/recipes/${id}/edit`} className="outline-button">עריכה</Link>
         </div>
+        {recipe.category && (
+          <span className="recipe-tag" style={{ marginTop: 14, marginRight: 0 }}>{recipe.category}</span>
+        )}
         {recipe.description && (
           <p style={{ margin: '14px 0 0', color: 'var(--muted)', fontSize: '1.08rem', lineHeight: 1.65 }}>
             {recipe.description}

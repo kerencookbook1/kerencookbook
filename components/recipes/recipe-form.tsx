@@ -5,11 +5,13 @@ import { IngredientFields } from './ingredient-fields'
 import { StepFields } from './step-fields'
 import type { RecipeActionState } from '@/lib/actions/recipes'
 import type { IngredientItem, StepItem } from '@/lib/validations/recipes'
+import { CATEGORIES } from '@/lib/categories'
 
 type RecipeFormInitial = {
   recipeId?: string
   title?: string
   description?: string
+  category?: string | null
   prepTime?: number | null
   cookTime?: number | null
   servings?: number | null
@@ -68,6 +70,16 @@ export function RecipeForm({ action, initial = {} }: Props) {
             rows={3}
             placeholder="מה מיוחד במתכון הזה?"
           />
+        </label>
+
+        <label>
+          קטגוריה
+          <select name="category" defaultValue={initial.category ?? ''}>
+            <option value="">בלי קטגוריה</option>
+            {CATEGORIES.map((c) => (
+              <option key={c.id} value={c.id}>{c.icon} {c.id}</option>
+            ))}
+          </select>
         </label>
 
         <div className="time-servings-row">

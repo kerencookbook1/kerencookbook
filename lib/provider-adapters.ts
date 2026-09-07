@@ -1,5 +1,7 @@
 import type { ProviderId } from './preview-providers'
 
+const CATEGORY_LIST = 'בשר, עוף, דגים, חלבי, צמחוני, פסטה, אורז ודגנים, סלטים, מרקים, מאפים, קינוחים, שתייה, אחר'
+
 const SYSTEM_PROMPT = `אתה מומחה בזיהוי מתכונים מתמונות של דפי כרטיסייה, מחברות ומקורות אינטרנט.
 המשתמש מעלה תמונה עם טקסט מתכון בעברית או אנגלית. תפקידך:
 
@@ -7,11 +9,13 @@ const SYSTEM_PROMPT = `אתה מומחה בזיהוי מתכונים מתמונ�
 2. נתח אותו למבנה מתכון מסודר.
 3. שמור על השפה המקורית (בדרך כלל עברית).
 4. אם משהו לא ברור בתמונה — עדיף להשמיט מאשר להמציא.
+5. בחר קטגוריה אחת מהרשימה הבאה בלבד: ${CATEGORY_LIST}. אם לא ברור — בחר "אחר".
 
 החזר JSON תקף בלבד במבנה הבא, ללא טקסט לפני או אחרי:
 {
   "title": "שם המתכון (חובה)",
   "description": "תיאור קצר או null",
+  "category": "אחד מהערכים הבאים בדיוק: ${CATEGORY_LIST}",
   "servings": מספר מנות או null,
   "prep_minutes": דקות הכנה או null,
   "cook_minutes": דקות בישול או null,
@@ -22,6 +26,7 @@ const SYSTEM_PROMPT = `אתה מומחה בזיהוי מתכונים מתמונ�
 export type ExtractedRecipe = {
   title: string
   description?: string | null
+  category?: string | null
   servings?: number | null
   prep_minutes?: number | null
   cook_minutes?: number | null
@@ -224,11 +229,13 @@ const TEXT_SYSTEM_PROMPT = `אתה מומחה בזיהוי מתכונים מטק
 2. חלץ אותו למבנה מסודר.
 3. שמור על השפה המקורית (עברית או אנגלית).
 4. אם משהו לא ברור — עדיף להשמיט מאשר להמציא.
+5. בחר קטגוריה אחת מהרשימה הבאה בלבד: ${CATEGORY_LIST}. אם לא ברור — בחר "אחר".
 
 החזר JSON תקף בלבד במבנה הבא, ללא טקסט לפני או אחרי:
 {
   "title": "שם המתכון (חובה)",
   "description": "תיאור קצר או null",
+  "category": "אחד מהערכים הבאים בדיוק: ${CATEGORY_LIST}",
   "servings": מספר מנות או null,
   "prep_minutes": דקות הכנה או null,
   "cook_minutes": דקות בישול או null,
@@ -318,6 +325,7 @@ function parseJsonFromModelText(text: string): Omit<ExtractedRecipe, 'provider'>
   return {
     title: String(parsed.title ?? 'מתכון ללא שם'),
     description: parsed.description ?? null,
+    category: typeof parsed.category === 'string' ? parsed.category : null,
     servings: typeof parsed.servings === 'number' ? parsed.servings : null,
     prep_minutes: typeof parsed.prep_minutes === 'number' ? parsed.prep_minutes : null,
     cook_minutes: typeof parsed.cook_minutes === 'number' ? parsed.cook_minutes : null,

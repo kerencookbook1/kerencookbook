@@ -2,33 +2,17 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { CATEGORIES, guessCategory, isCategoryId, type CategoryId } from '@/lib/categories'
 
 type RecipeCard = {
   id: string
   title: string
   prep_time: number | null
   cook_time: number | null
+  category: string | null
   image_url?: string | null
   ingredientNames?: string[]
 }
-
-type Category = {
-  id: string
-  label: string
-  icon: string
-  keywords?: string[]  // undefined = "all"
-}
-
-const CATEGORIES: Category[] = [
-  { id: 'all',       label: 'הכל',       icon: '🍽️' },
-  { id: 'starters',  label: 'ראשונות',   icon: '🥗', keywords: ['סלט', 'ממרח', 'חומוס', 'טחינה', 'קרפצ׳יו', 'קרפצ\'יו', 'starter', 'salad'] },
-  { id: 'soups',     label: 'מרקים',     icon: '🍲', keywords: ['מרק', 'ציר', 'שקשוקה', 'soup', 'broth'] },
-  { id: 'mains',     label: 'עיקריות',   icon: '🍛', keywords: ['עוף', 'בשר', 'דג', 'סלמון', 'טונה', 'שניצל', 'פסטה', 'אורז', 'קוסקוס', 'מקלובה', 'סטייק', 'המבורגר', 'chicken', 'beef', 'fish', 'pasta', 'rice'] },
-  { id: 'sides',     label: 'תוספות',     icon: '🥦', keywords: ['ירק', 'קישוא', 'חציל', 'בטטה', 'תפוד', 'תפוח אדמה', 'כרובית', 'ברוקולי', 'תוספת', 'side'] },
-  { id: 'baking',    label: 'מאפים',     icon: '🥐', keywords: ['לחם', 'חלה', 'מאפה', 'בורקס', 'פיצה', 'קרואסון', 'ג\'חנון', 'bread', 'pastry', 'pizza'] },
-  { id: 'sweets',    label: 'מתוקים',    icon: '🍰', keywords: ['עוגה', 'עוגיות', 'קינוח', 'שוקולד', 'קרם', 'פאי', 'מוס', 'גלידה', 'cake', 'cookie', 'dessert', 'chocolate'] },
-  { id: 'drinks',    label: 'שתייה',     icon: '🥤', keywords: ['שייק', 'סמות׳י', 'לימונדה', 'קפה', 'תה', 'משקה', 'shake', 'smoothie', 'drink'] },
-]
 
 const FALLBACK_IMAGES = [
   '/images/recipes/shakshuka-default.png',
@@ -50,28 +34,51 @@ function HeartIcon() {
   )
 }
 
-function matchesCategory(recipe: RecipeCard, cat: Category): boolean {
-  if (!cat.keywords) return true
-  const haystack = [recipe.title, ...(recipe.ingredientNames ?? [])].join(' ').toLowerCase()
-  return cat.keywords.some((k) => haystack.includes(k.toLowerCase()))
+/** Effective category: use stored value if valid, else guess by keywords. */
+function effectiveCategory(r: RecipeCard): CategoryId {
+  if (isCategoryId(r.category)) return r.category
+  return guessCategory(r.title, r.ingredientNames)
 }
 
 export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
-  const [activeId, setActiveId] = useState<string>('all')
-  const active = CATEGORIES.find((c) => c.id === activeId) ?? CATEGORIES[0]
+  const [activeId, setActiveId] = useState<'all' | CategoryId>('all')
 
-  const filtered = useMemo(
-    () => recipes.filter((r) => matchesCategory(r, active)),
-    [recipes, active]
-  )
+  // Count recipes per category (using effective category for uncategorized rows)
+  const countByCategory = useMemo(() => {
+    const counts = new Map<CategoryId, number>()
+    for (const r of recipes) {
+      const cat = effectiveCategory(r)
+      counts.set(cat, (counts.get(cat) ?? 0) + 1)
+    }
+    return counts
+  }, [recipes])
+
+  const filtered = useMemo(() => {
+    if (activeId === 'all') return recipes
+    return recipes.filter((r) => effectiveCategory(r) === activeId)
+  }, [recipes, activeId])
 
   const displayed = filtered.slice(0, 6)
+  const activeLabel = activeId === 'all' ? 'הכל' : activeId
+
+  // Show only categories that have at least one recipe, plus "all"
+  const visibleCategories = CATEGORIES.filter((c) => (countByCategory.get(c.id) ?? 0) > 0)
 
   return (
     <>
       <nav className="category-tabs" aria-label="קטגוריות">
-        {CATEGORIES.map((cat) => {
+        <button
+          type="button"
+          className={`category-tab${activeId === 'all' ? ' is-active' : ''}`}
+          onClick={() => setActiveId('all')}
+          aria-pressed={activeId === 'all'}
+        >
+          <span aria-hidden="true">🍽️</span>
+          הכל ({recipes.length})
+        </button>
+        {visibleCategories.map((cat) => {
           const isActive = cat.id === activeId
+          const count = countByCategory.get(cat.id) ?? 0
           return (
             <button
               key={cat.id}
@@ -81,16 +88,16 @@ export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
               aria-pressed={isActive}
             >
               <span aria-hidden="true">{cat.icon}</span>
-              {cat.label}
+              {cat.id} ({count})
             </button>
           )
         })}
       </nav>
 
-      <section className="recipe-section" aria-label={`מתכונים בקטגוריה ${active.label}`}>
+      <section className="recipe-section" aria-label={`מתכונים בקטגוריה ${activeLabel}`}>
         <div className="section-heading">
-          <h2>{active.id === 'all' ? 'נבחרו בשבילך' : active.label}</h2>
-          <Link href={`/recipes${active.id !== 'all' ? `?cat=${active.id}` : ''}`} className="text-button">
+          <h2>{activeId === 'all' ? 'נבחרו בשבילך' : activeLabel}</h2>
+          <Link href={`/recipes${activeId !== 'all' ? `?category=${encodeURIComponent(activeId)}` : ''}`} className="text-button">
             הכל ({filtered.length})
           </Link>
         </div>
@@ -100,6 +107,7 @@ export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
             {displayed.map((recipe, index) => {
               const totalMinutes = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0)
               const imgSrc = recipe.image_url || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]
+              const catLabel = effectiveCategory(recipe)
               return (
                 <article key={recipe.id} className="recipe-card">
                   <Link href={`/recipes/${recipe.id}`} className="recipe-visual" tabIndex={-1} aria-hidden="true">
@@ -113,9 +121,12 @@ export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
                     <Link href={`/recipes/${recipe.id}`}>
                       <h3>{recipe.title}</h3>
                     </Link>
-                    {totalMinutes > 0 && (
-                      <span aria-label={`זמן הכנה: ${totalMinutes} דקות`}>{totalMinutes} דק׳</span>
-                    )}
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span className="recipe-tag">{catLabel}</span>
+                      {totalMinutes > 0 && (
+                        <span aria-label={`זמן הכנה: ${totalMinutes} דקות`}>{totalMinutes} דק׳</span>
+                      )}
+                    </div>
                   </div>
                 </article>
               )
@@ -123,7 +134,7 @@ export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
           </div>
         ) : (
           <div className="empty-state" role="status">
-            <p>{active.id === 'all' ? 'עדיין אין מתכונים. הוסיפי את הראשון!' : `אין עדיין מתכונים ב"${active.label}".`}</p>
+            <p>{activeId === 'all' ? 'עדיין אין מתכונים. הוסיפי את הראשון!' : `אין עדיין מתכונים ב"${activeLabel}".`}</p>
             <Link href="/recipes/new" className="primary-button">+ מתכון חדש</Link>
           </div>
         )}

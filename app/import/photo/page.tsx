@@ -7,6 +7,7 @@ import { createRecipe } from "@/lib/actions/recipes";
 type ExtractedRecipe = {
   title: string;
   description?: string | null;
+  category?: string | null;
   servings?: number | null;
   prep_minutes?: number | null;
   cook_minutes?: number | null;
@@ -85,6 +86,7 @@ export default function PhotoImportPage() {
       const fd = new FormData();
       fd.append("title", title);
       fd.append("description", recipe?.description ?? "");
+      if (recipe?.category) fd.append("category", recipe.category);
       if (recipe?.prep_minutes != null) fd.append("prepTime", String(recipe.prep_minutes));
       if (recipe?.cook_minutes != null) fd.append("cookTime", String(recipe.cook_minutes));
       if (recipe?.servings != null) fd.append("servings", String(recipe.servings));
