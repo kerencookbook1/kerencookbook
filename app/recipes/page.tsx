@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getRecipes } from '@/lib/repositories/recipes'
+import { getRecipeCards } from '@/lib/repositories/recipes'
 import Link from 'next/link'
 
 export const metadata = { title: 'המתכונים שלי — המטבח של קרן' }
@@ -25,7 +25,7 @@ export default async function RecipesPage({
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const recipes = user ? await getRecipes(user.id) : []
+  const recipes = user ? await getRecipeCards(user.id) : []
   const params = await searchParams
   const activeFilter = params.filter ?? 'הכל'
 
@@ -80,7 +80,7 @@ export default async function RecipesPage({
           <div className="library-grid">
             {recipes.map((recipe, index) => {
               const totalMinutes = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0)
-              const imgSrc = (recipe as { image_url?: string | null }).image_url || FOOD_IMAGES[index % FOOD_IMAGES.length]
+              const imgSrc = recipe.image_url || FOOD_IMAGES[index % FOOD_IMAGES.length]
               return (
                 <Link key={recipe.id} href={`/recipes/${recipe.id}`} className="library-card">
                   <div className="library-visual">
