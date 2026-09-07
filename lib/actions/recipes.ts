@@ -92,6 +92,16 @@ export async function createRecipe(
     )
   }
 
+  const imageUrl = formData.get('imageUrl')
+  if (typeof imageUrl === 'string' && /^https?:\/\//i.test(imageUrl.trim())) {
+    await supabase.from('recipe_images').insert({
+      recipe_id: recipe.id,
+      storage_path: imageUrl.trim(),
+      is_primary: true,
+      position: 0,
+    })
+  }
+
   redirect(`/recipes/${recipe.id}`)
 }
 

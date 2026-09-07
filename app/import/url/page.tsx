@@ -92,6 +92,7 @@ export default function ImportUrlPage() {
       if (recipe?.servings != null) fd.append("servings", String(recipe.servings));
       fd.append("ingredientsJson", JSON.stringify(ingredientItems));
       fd.append("stepsJson", JSON.stringify(stepItems));
+      if (recipe?.image_url) fd.append("imageUrl", recipe.image_url);
 
       const result = await createRecipe(null, fd);
       if (result?.error) setSaveError(result.error);

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getRecipe } from '@/lib/repositories/recipes'
+import { getRecipe, type IngredientRow } from '@/lib/repositories/recipes'
 import Link from 'next/link'
 
 type Props = { params: Promise<{ id: string }> }
@@ -12,15 +12,38 @@ export async function generateMetadata({ params }: Props) {
 
 const CARD_THEMES = ['', 'cauliflower', 'lemon', 'pumpkin', 'garden'] as const
 
+const THEME_KEYWORDS: Record<Exclude<(typeof CARD_THEMES)[number], ''>, string[]> = {
+  lemon:       ['לימון', 'הדר', 'תפוז', 'אשכולית', 'lemon', 'citrus'],
+  pumpkin:     ['בטטה', 'דלעת', 'גזר', 'כתום', 'pumpkin', 'sweet potato', 'squash'],
+  cauliflower: ['כרובית', 'כרוב', 'ברוקולי', 'לבן', 'cauliflower', 'broccoli'],
+  garden:      ['ירק', 'ירוק', 'חסה', 'סלט', 'עשב', 'בזיליקום', 'תרד', 'garden', 'salad', 'herb', 'basil', 'spinach'],
+}
+
+function pickTheme(title: string, ingredients: IngredientRow[], fallbackKey: string): string {
+  const haystack = [title, ...ingredients.map((i) => i.name)].join(' ').toLowerCase()
+  for (const [theme, keywords] of Object.entries(THEME_KEYWORDS)) {
+    if (keywords.some((k) => haystack.includes(k.toLowerCase()))) return theme
+  }
+  // Deterministic fallback by ID hash so a given recipe always looks the same
+  const idx = Math.abs(fallbackKey.charCodeAt(0) + fallbackKey.charCodeAt(fallbackKey.length - 1)) % CARD_THEMES.length
+  return CARD_THEMES[idx]
+}
+
 export default async function RecipePage({ params }: Props) {
   const { id } = await params
   const data = await getRecipe(id)
   if (!data) notFound()
 
-  const { recipe, ingredients, steps } = data
+  const { recipe, ingredients, steps, images } = data
   const totalTime = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0)
-  const themeIndex = Math.abs(id.charCodeAt(0) + id.charCodeAt(id.length - 1)) % CARD_THEMES.length
-  const theme = CARD_THEMES[themeIndex]
+
+  const primaryImage = images.find((img) => img.is_primary) ?? images[0]
+  const externalImageUrl =
+    primaryImage && /^https?:\/\//i.test(primaryImage.storage_path)
+      ? primaryImage.storage_path
+      : null
+
+  const theme = pickTheme(recipe.title, ingredients, id)
 
   return (
     <div className="library-shell">
@@ -32,28 +55,35 @@ export default async function RecipePage({ params }: Props) {
           </h1>
           <Link href={`/recipes/${id}/edit`} className="outline-button">עריכה</Link>
         </div>
+        {recipe.description && (
+          <p style={{ margin: '14px 0 0', color: 'var(--muted)', fontSize: '1.08rem', lineHeight: 1.65 }}>
+            {recipe.description}
+          </p>
+        )}
       </header>
 
       <div className="library-workspace">
-        {/* Main content */}
         <article>
-          {/* Visual */}
-          <div className={`recipe-visual${theme ? ` ${theme}` : ''}`}
-            style={{ height: 280, borderRadius: 20, marginBottom: 28, overflow: 'hidden', isolation: 'isolate' }}>
-            <div className="plate" />
-            <span className="ingredient ingredient-one" />
-            <span className="ingredient ingredient-two" />
-            <span className="ingredient ingredient-three" />
-          </div>
+          {/* Visual — real image if available, else themed illustration */}
+          {externalImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={externalImageUrl}
+              alt={recipe.title}
+              style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 20, marginBottom: 28, display: 'block' }}
+            />
+          ) : (
+            <div className={`recipe-visual${theme ? ` ${theme}` : ''}`}
+              style={{ height: 280, borderRadius: 20, marginBottom: 28, overflow: 'hidden', isolation: 'isolate' }}>
+              <div className="plate" />
+              <span className="ingredient ingredient-one" />
+              <span className="ingredient ingredient-two" />
+              <span className="ingredient ingredient-three" />
+            </div>
+          )}
 
-          {/* Meta */}
-          {(recipe.description || totalTime > 0 || recipe.servings) && (
+          {(totalTime > 0 || recipe.servings) && (
             <div style={{ marginBottom: 28 }}>
-              {recipe.description && (
-                <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: '1.08rem', lineHeight: 1.65 }}>
-                  {recipe.description}
-                </p>
-              )}
               <div className="detail-meta">
                 {recipe.prep_time ? <span>הכנה: {recipe.prep_time} דק׳</span> : null}
                 {recipe.cook_time ? <span>בישול: {recipe.cook_time} דק׳</span> : null}
@@ -63,7 +93,6 @@ export default async function RecipePage({ params }: Props) {
             </div>
           )}
 
-          {/* Ingredients */}
           {ingredients.length > 0 && (
             <section style={{ marginBottom: 32 }}>
               <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '1.5rem', marginBottom: 14 }}>מרכיבים</h2>
@@ -82,7 +111,6 @@ export default async function RecipePage({ params }: Props) {
             </section>
           )}
 
-          {/* Steps */}
           {steps.length > 0 && (
             <section style={{ marginBottom: 40 }}>
               <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '1.5rem', marginBottom: 14 }}>הוראות הכנה</h2>
@@ -101,7 +129,6 @@ export default async function RecipePage({ params }: Props) {
             </section>
           )}
 
-          {/* Footer actions */}
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <Link href={`/recipes/${id}/cook`} className="primary-button" style={{ flex: 1, minWidth: 160 }}>
               התחל בישול
@@ -112,14 +139,22 @@ export default async function RecipePage({ params }: Props) {
           </div>
         </article>
 
-        {/* Sticky preview panel — desktop only */}
         <aside className="recipe-detail-preview">
-          <div className={`detail-visual${theme ? ` ${theme}` : ''}`}>
-            <div className="plate" />
-            <span className="ingredient ingredient-one" />
-            <span className="ingredient ingredient-two" />
-            <span className="ingredient ingredient-three" />
-          </div>
+          {externalImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={externalImageUrl}
+              alt={recipe.title}
+              style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 14, marginBottom: 16, display: 'block' }}
+            />
+          ) : (
+            <div className={`detail-visual${theme ? ` ${theme}` : ''}`}>
+              <div className="plate" />
+              <span className="ingredient ingredient-one" />
+              <span className="ingredient ingredient-two" />
+              <span className="ingredient ingredient-three" />
+            </div>
+          )}
           <h2>{recipe.title}</h2>
           <div className="detail-meta" style={{ marginBottom: 16 }}>
             {totalTime > 0 && <span>{totalTime} דק׳</span>}

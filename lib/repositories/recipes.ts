@@ -4,11 +4,13 @@ import type { Database } from '@/lib/supabase/types'
 export type RecipeRow = Database['public']['Tables']['recipes']['Row']
 export type IngredientRow = Database['public']['Tables']['ingredients']['Row']
 export type StepRow = Database['public']['Tables']['recipe_steps']['Row']
+export type ImageRow = Database['public']['Tables']['recipe_images']['Row']
 
 export type RecipeWithDetails = {
   recipe: RecipeRow
   ingredients: IngredientRow[]
   steps: StepRow[]
+  images: ImageRow[]
 }
 
 export async function getRecipes(userId: string): Promise<RecipeRow[]> {
@@ -24,15 +26,17 @@ export async function getRecipes(userId: string): Promise<RecipeRow[]> {
 
 export async function getRecipe(id: string): Promise<RecipeWithDetails | null> {
   const supabase = await createClient()
-  const [recipeRes, ingredientsRes, stepsRes] = await Promise.all([
+  const [recipeRes, ingredientsRes, stepsRes, imagesRes] = await Promise.all([
     supabase.from('recipes').select('*').eq('id', id).single(),
     supabase.from('ingredients').select('*').eq('recipe_id', id).order('position'),
     supabase.from('recipe_steps').select('*').eq('recipe_id', id).order('position'),
+    supabase.from('recipe_images').select('*').eq('recipe_id', id).order('position'),
   ])
   if (recipeRes.error || !recipeRes.data) return null
   return {
     recipe: recipeRes.data,
     ingredients: ingredientsRes.data ?? [],
     steps: stepsRes.data ?? [],
+    images: imagesRes.data ?? [],
   }
 }
