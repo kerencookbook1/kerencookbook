@@ -120,9 +120,17 @@ export default function PhotoImportPage() {
       }
       const extracted = data as ExtractedRecipe;
       setRecipe(extracted);
-      setTitle(extracted.title || "");
-      setIngredients((extracted.ingredients || []).join("\n"));
-      setSteps((extracted.steps || []).map((s, i) => `${i + 1}. ${s}`).join("\n"));
+      // When recognition failed, blank the structured fields so the user
+      // isn't tricked into saving hallucinated content
+      if (extracted.recognition_failed) {
+        setTitle("");
+        setIngredients("");
+        setSteps("");
+      } else {
+        setTitle(extracted.title || "");
+        setIngredients((extracted.ingredients || []).join("\n"));
+        setSteps((extracted.steps || []).map((s, i) => `${i + 1}. ${s}`).join("\n"));
+      }
       setStage("review");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -301,19 +309,59 @@ export default function PhotoImportPage() {
             )}
             <p>מקור שהועלה</p>
             {recipe.raw_text && (
-              <details style={{ marginTop: 14 }}>
-                <summary style={{ cursor: "pointer", fontWeight: 700, color: "var(--muted)", fontSize: ".9rem" }}>
-                  👁 מה שה־AI קרא בפועל
-                </summary>
-                <pre style={{
-                  marginTop: 10, padding: 12, borderRadius: 10,
-                  background: "#f4efe2", color: "#3f352b", fontSize: ".85rem",
-                  fontFamily: "inherit", whiteSpace: "pre-wrap", lineHeight: 1.6,
-                  maxHeight: 220, overflow: "auto",
-                }}>
-                  {recipe.raw_text || "(האי־איי לא זיהה טקסט)"}
-                </pre>
-              </details>
+              recipe.recognition_failed ? (
+                <div style={{ marginTop: 14 }}>
+                  <p style={{ margin: "0 0 6px", fontWeight: 800, color: "#3f352b", fontSize: ".95rem" }}>
+                    📄 מה שהצלחנו לקרוא מהתמונה:
+                  </p>
+                  <pre style={{
+                    margin: 0, padding: 14, borderRadius: 10,
+                    background: "#fffcf5", color: "#241a10",
+                    fontSize: "1rem", fontFamily: "inherit",
+                    whiteSpace: "pre-wrap", lineHeight: 1.75,
+                    border: "1.5px dashed #d4a01a",
+                    maxHeight: 400, overflow: "auto",
+                  }}>
+                    {recipe.raw_text}
+                  </pre>
+                  <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="outline-button"
+                      style={{ minHeight: 38, flex: 1 }}
+                      onClick={() => {
+                        if (recipe.raw_text) setIngredients(recipe.raw_text);
+                      }}
+                    >
+                      ⤵ העתיקי לשדה המרכיבים
+                    </button>
+                    <button
+                      type="button"
+                      className="outline-button"
+                      style={{ minHeight: 38, flex: 1 }}
+                      onClick={() => {
+                        if (recipe.raw_text) navigator.clipboard?.writeText(recipe.raw_text);
+                      }}
+                    >
+                      📋 העתיקי ללוח
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <details style={{ marginTop: 14 }}>
+                  <summary style={{ cursor: "pointer", fontWeight: 700, color: "var(--muted)", fontSize: ".9rem" }}>
+                    👁 מה שה־AI קרא בפועל
+                  </summary>
+                  <pre style={{
+                    marginTop: 10, padding: 12, borderRadius: 10,
+                    background: "#f4efe2", color: "#3f352b", fontSize: ".85rem",
+                    fontFamily: "inherit", whiteSpace: "pre-wrap", lineHeight: 1.6,
+                    maxHeight: 220, overflow: "auto",
+                  }}>
+                    {recipe.raw_text}
+                  </pre>
+                </details>
+              )
             )}
           </div>
           <form className="review-form" onSubmit={(e) => e.preventDefault()}>
