@@ -10,6 +10,7 @@ type IconName = "home" | "book" | "add" | "chef" | "cart" | "calendar" | "user";
 type NavItem = {
   href: string;
   label: string;
+  mobileLabel?: string;  // shorter label for bottom nav slots
   icon: IconName;
   exact?: boolean;
   mobile?: boolean;   // include in bottom nav
@@ -21,18 +22,18 @@ type NavItem = {
 const items: NavItem[] = [
   { href: "/",         label: "בית",          icon: "home",     exact: true, mobile: true,  desktop: true },
   // Recipes
-  { href: "/recipes",  label: "המתכונים שלי", icon: "book",     mobile: true,  desktop: true, section: "מתכונים" },
-  { href: "/import",   label: "הוספת מתכון",  icon: "add",      mobile: true,  desktop: true, highlight: true },
+  { href: "/recipes",  label: "המתכונים שלי", mobileLabel: "מתכונים", icon: "book",     mobile: true,  desktop: true, section: "מתכונים" },
+  { href: "/import",   label: "הוספת מתכון",  mobileLabel: "הוספה",   icon: "add",      mobile: true,  desktop: true, highlight: true },
   // Tools
   { href: "/pantry",   label: "מה יש לי בבית?", icon: "chef",   mobile: false, desktop: true, section: "כלים" },
-  { href: "/shopping", label: "רשימת קניות",  icon: "cart",     mobile: true,  desktop: true },
+  { href: "/shopping", label: "רשימת קניות",  mobileLabel: "קניות",   icon: "cart",     mobile: true,  desktop: true },
   { href: "/meals",    label: "תכנון ארוחות", icon: "calendar", mobile: false, desktop: true },
 ];
 
 // Rendered separately at the bottom of the desktop sidebar (above logout).
 // Kept in the mobile bottom nav via its own entry.
 const bottomItems: NavItem[] = [
-  { href: "/profile", label: "הפרופיל שלי", icon: "user", mobile: true, desktop: true },
+  { href: "/profile", label: "הפרופיל שלי", mobileLabel: "פרופיל", icon: "user", mobile: true, desktop: true },
 ];
 
 function Icon({ name }: { name: IconName }) {
@@ -133,7 +134,7 @@ export function AppNavigation() {
               aria-current={active ? "page" : undefined}
             >
               <Icon name={item.icon} />
-              <span>{item.label}</span>
+              <span>{item.mobileLabel ?? item.label}</span>
             </Link>
           );
         })}

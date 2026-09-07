@@ -313,10 +313,10 @@ a, [role="button"] { cursor: pointer; }
 
 /* ======= MOBILE BOTTOM NAV (< 760px) ======= */
 @media (max-width: 759px) {
-  .app-frame { padding-bottom: 76px; }
+  .app-frame { padding-bottom: 82px; }
   .app-navigation {
     position: fixed; z-index: 20; right: 0; bottom: 0; left: 0;
-    display: flex; height: calc(68px + env(safe-area-inset-bottom));
+    display: flex; height: calc(74px + env(safe-area-inset-bottom));
     align-items: center; justify-content: space-around; gap: 2px;
     border-top: 1px solid #e9e1d8;
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
@@ -324,21 +324,28 @@ a, [role="button"] { cursor: pointer; }
     box-shadow: 0 -6px 20px rgb(72 50 30 / 7%);
     backdrop-filter: blur(12px);
   }
+  /* Belt-and-braces: hide the desktop-only sidebar-bottom on mobile — it
+     contains a second profile link + logout that should never render here.
+     The rule at :root already declares display:none, but keeping this
+     explicit prevents cache/state issues. */
+  .app-navigation .sidebar-bottom { display: none !important; }
   .sidebar-brand, .navigation-sections, .sidebar-logout, .sidebar-bottom { display: none; }
   .navigation-items {
     display: flex; width: 100%; align-items: stretch; justify-content: space-around; gap: 2px;
   }
   .sidebar-link {
-    display: flex; min-width: 52px; min-height: 54px;
+    display: flex; min-width: 58px; min-height: 60px; max-width: 84px;
     flex-direction: column; align-items: center; justify-content: center;
-    gap: 3px; border-radius: 10px; padding: 4px 6px;
-    color: #62574c; font-size: .68rem; text-align: center;
+    gap: 4px; border-radius: 10px; padding: 4px 4px;
+    color: #62574c; font-size: .72rem; font-weight: 700; text-align: center;
     text-decoration: none; border: 0; background: transparent; cursor: pointer;
+    white-space: nowrap;
   }
-  .sidebar-link.is-active { color: var(--terracotta); background: transparent; box-shadow: none; }
+  .sidebar-link > span { display: block; line-height: 1; }
+  .sidebar-link.is-active { color: var(--terracotta); background: transparent; box-shadow: none; font-weight: 800; }
   .sidebar-link.is-active svg { color: var(--terracotta); }
   .sidebar-link.is-add {
-    margin: 0; background: transparent; box-shadow: none; color: var(--terracotta);
+    margin: 0; background: transparent; box-shadow: none; color: var(--terracotta); font-weight: 800;
   }
   .sidebar-link.is-add svg {
     padding: 5px; border-radius: 10px;
