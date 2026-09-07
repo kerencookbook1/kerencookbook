@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getRecipeCards } from '@/lib/repositories/recipes'
 import { CategoryTabs } from './_components/category-tabs'
 import { FavoriteButton } from './_components/favorite-button'
+import { SearchBarTrigger } from './_components/search-trigger'
 
 export const metadata = { title: 'המטבח של קרן' }
 
@@ -45,9 +46,7 @@ export default async function HomePage() {
           <span className="brand-mark" aria-hidden="true">✿</span>
           המטבח של קרן
         </Link>
-        <Link href="/recipes" className="search-box" aria-label="חפשי מתכון">
-          חיפוש מתכון, מרכיב, קטגוריה...
-        </Link>
+        <SearchBarTrigger />
         <Link href="/import" className="add-button" aria-label="הוספת מתכון חדש">
           <span aria-hidden="true">+</span>
           <span>הוספת מתכון</span>

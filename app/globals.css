@@ -262,6 +262,15 @@ a, [role="button"] { cursor: pointer; }
   }
   .navigation-sections { display: flex; flex-direction: column; gap: 12px; flex: 1; }
   .navigation-items { display: none; }
+  .app-navigation .sidebar-search-btn {
+    margin-bottom: 12px;
+    background: rgba(247, 234, 208, 0.08);
+    border: 1px solid rgba(247, 234, 208, 0.12);
+  }
+  .app-navigation .sidebar-search-btn:hover {
+    background: rgba(247, 234, 208, 0.15);
+    border-color: rgba(247, 234, 208, 0.25);
+  }
   .nav-section { display: grid; gap: 3px; }
   .nav-section-title {
     margin: 14px 14px 6px; font-size: .7rem; font-weight: 800;
@@ -329,7 +338,7 @@ a, [role="button"] { cursor: pointer; }
      The rule at :root already declares display:none, but keeping this
      explicit prevents cache/state issues. */
   .app-navigation .sidebar-bottom { display: none !important; }
-  .sidebar-brand, .navigation-sections, .sidebar-logout, .sidebar-bottom { display: none; }
+  .sidebar-brand, .navigation-sections, .sidebar-logout, .sidebar-bottom, .sidebar-search-btn { display: none; }
   .navigation-items {
     display: flex; width: 100%; align-items: stretch; justify-content: space-around; gap: 2px;
   }

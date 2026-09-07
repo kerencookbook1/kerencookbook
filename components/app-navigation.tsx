@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/lib/actions/auth";
 import { ThemeToggle } from "./theme-toggle";
+import { SearchTrigger } from "../app/_components/search-trigger";
 
 type IconName = "home" | "book" | "add" | "chef" | "cart" | "calendar" | "user";
 
@@ -98,6 +99,9 @@ export function AppNavigation() {
         <span className="brand-flower" aria-hidden="true">*</span>
         <span>המטבח של קרן</span>
       </Link>
+
+      {/* Sidebar search trigger */}
+      <SearchTrigger className="sidebar-link sidebar-search-btn" label="חיפוש" />
 
       {/* Desktop sidebar — grouped sections */}
       <div className="navigation-sections">

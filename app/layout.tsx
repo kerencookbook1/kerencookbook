@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AppNavigation } from "../components/app-navigation";
+import { SearchProvider } from "./_components/search-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,10 +22,12 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&family=Playfair+Display:wght@700;900&family=Space+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <div className="app-frame">
-          <AppNavigation />
-          <div className="app-page">{children}</div>
-        </div>
+        <SearchProvider>
+          <div className="app-frame">
+            <AppNavigation />
+            <div className="app-page">{children}</div>
+          </div>
+        </SearchProvider>
       </body>
     </html>
   );
