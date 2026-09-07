@@ -26,8 +26,12 @@ const items: NavItem[] = [
   { href: "/pantry",   label: "מה יש לי בבית?", icon: "chef",   mobile: false, desktop: true, section: "כלים" },
   { href: "/shopping", label: "רשימת קניות",  icon: "cart",     mobile: true,  desktop: true },
   { href: "/meals",    label: "תכנון ארוחות", icon: "calendar", mobile: false, desktop: true },
-  // Profile
-  { href: "/profile",  label: "הפרופיל שלי",  icon: "user",     mobile: true,  desktop: true, section: "אני" },
+];
+
+// Rendered separately at the bottom of the desktop sidebar (above logout).
+// Kept in the mobile bottom nav via its own entry.
+const bottomItems: NavItem[] = [
+  { href: "/profile", label: "הפרופיל שלי", icon: "user", mobile: true, desktop: true },
 ];
 
 function Icon({ name }: { name: IconName }) {
@@ -69,8 +73,9 @@ function isActive(pathname: string, item: NavItem): boolean {
 
 export function AppNavigation() {
   const pathname = usePathname();
-  const mobileItems = items.filter((i) => i.mobile !== false);
+  const mobileItems = [...items, ...bottomItems].filter((i) => i.mobile !== false);
   const desktopItems = items.filter((i) => i.desktop !== false);
+  const desktopBottomItems = bottomItems.filter((i) => i.desktop !== false);
 
   // Group desktop items by section for the sidebar
   const sections: { title: string | null; items: NavItem[] }[] = []
@@ -133,17 +138,33 @@ export function AppNavigation() {
         })}
       </div>
 
-      {/* Desktop sidebar: logout at bottom */}
-      <form action={logout} className="sidebar-logout">
-        <button type="submit" className="sidebar-link">
-          <svg width={21} height={21} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-          <span>יציאה</span>
-        </button>
-      </form>
+      {/* Desktop sidebar: profile + logout at bottom */}
+      <div className="sidebar-bottom">
+        {desktopBottomItems.map((item) => {
+          const active = isActive(pathname, item);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`sidebar-link${active ? " is-active" : ""}`}
+              aria-current={active ? "page" : undefined}
+            >
+              <Icon name={item.icon} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+        <form action={logout} className="sidebar-logout">
+          <button type="submit" className="sidebar-link">
+            <svg width={21} height={21} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <span>יציאה</span>
+          </button>
+        </form>
+      </div>
     </nav>
   );
 }

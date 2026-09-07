@@ -211,13 +211,16 @@ a, [role="button"] { cursor: pointer; }
     background: linear-gradient(135deg, #ffa155, var(--terracotta-dark));
     box-shadow: 0 8px 18px rgb(216 75 50 / 40%), inset 0 0 0 2px rgba(255,255,255,0.25);
   }
-  .sidebar-logout {
-    border-top: 1px solid rgba(247, 234, 208, 0.15); padding-top: 10px; margin-top: 16px;
+  .sidebar-bottom {
+    border-top: 1px solid rgba(247, 234, 208, 0.15);
+    padding-top: 10px; margin-top: 16px;
+    display: grid; gap: 3px;
   }
-  .sidebar-logout .sidebar-link {
+  .sidebar-logout { margin: 0; padding: 0; border-top: 0; }
+  .app-navigation .sidebar-logout .sidebar-link {
     color: rgba(240, 230, 208, 0.55); font-weight: 600;
   }
-  .sidebar-logout .sidebar-link:hover {
+  .app-navigation .sidebar-logout .sidebar-link:hover {
     color: #ffb896; background: rgba(255, 90, 26, 0.12);
   }
 }
