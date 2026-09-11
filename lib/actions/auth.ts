@@ -4,12 +4,33 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import type { Database } from '@/lib/supabase/types'
+import { createAdminClient } from '@/lib/supabase/admin'
 import {
   loginSchema,
   registerSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
 } from '@/lib/validations/auth'
+
+async function resolveIdentifierToEmail(identifier: string): Promise<string | null> {
+  const trimmed = identifier.trim()
+  if (!trimmed) return null
+  if (trimmed.includes('@')) return trimmed  // looks like an email — use as-is
+
+  // Otherwise treat it as a display_name and look up via service role.
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('id')
+    .ilike('display_name', trimmed)  // case-insensitive
+    .limit(1)
+    .maybeSingle()
+  if (!profile) return null
+
+  const { data: userRes, error } = await admin.auth.admin.getUserById(profile.id)
+  if (error || !userRes?.user?.email) return null
+  return userRes.user.email
+}
 
 export type AuthActionState = { error?: string; success?: boolean } | null
 
@@ -38,18 +59,21 @@ export async function login(
   formData: FormData
 ): Promise<AuthActionState> {
   const parsed = loginSchema.safeParse({
-    email: formData.get('email'),
+    identifier: formData.get('identifier'),
     password: formData.get('password'),
     rememberMe: formData.get('rememberMe') === 'on',
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
+  const email = await resolveIdentifierToEmail(parsed.data.identifier)
+  if (!email) return { error: 'אימייל, שם משתמש או סיסמה שגויים' }
+
   const supabase = await getClient(parsed.data.rememberMe)
   const { error } = await supabase.auth.signInWithPassword({
-    email: parsed.data.email,
+    email,
     password: parsed.data.password,
   })
-  if (error) return { error: 'אימייל או סיסמה שגויים' }
+  if (error) return { error: 'אימייל, שם משתמש או סיסמה שגויים' }
 
   redirect('/')
 }

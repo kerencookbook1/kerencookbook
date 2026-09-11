@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const loginSchema = z.object({
-  email: z.string().email('כתובת אימייל לא תקינה'),
+  identifier: z.string().min(2, 'הכנס אימייל או שם משתמש'),
   password: z.string().min(6, 'הסיסמה חייבת להכיל לפחות 6 תווים'),
   rememberMe: z.boolean().default(false),
 })

@@ -13,8 +13,16 @@ export function LoginForm() {
       {state?.error && <p className="auth-error" role="alert">{state.error}</p>}
 
       <label>
-        אימייל
-        <input type="email" name="email" autoComplete="email" required />
+        אימייל או שם משתמש
+        <input
+          type="text"
+          name="identifier"
+          autoComplete="username"
+          dir="ltr"
+          style={{ textAlign: 'start' }}
+          placeholder="you@example.com או השם שנרשמת איתו"
+          required
+        />
       </label>
 
       <label>
@@ -23,7 +31,7 @@ export function LoginForm() {
       </label>
 
       <label className="auth-checkbox">
-        <input type="checkbox" name="rememberMe" />
+        <input type="checkbox" name="rememberMe" defaultChecked />
         זכור אותי (30 יום)
       </label>
 
