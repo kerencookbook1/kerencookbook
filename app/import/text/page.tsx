@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { createRecipe } from "@/lib/actions/recipes";
 import { DietFieldControl, type DietOverride } from "@/components/recipes/diet-field-control";
+import { IngredientPicker } from "@/components/recipes/ingredient-picker";
 import { parseIngredientLine } from "@/lib/ingredients";
+
+function appendIngredient(current: string, name: string): string {
+  const trimmed = current.replace(/\s+$/, '');
+  return trimmed ? `${trimmed}\n${name}` : name;
+}
 
 type ExtractedRecipe = {
   title: string;
@@ -202,6 +208,7 @@ export default function ImportTextPage() {
             <label>מרכיבים
               <textarea rows={8} value={ingredients} onChange={(e) => setIngredients(e.target.value)} />
             </label>
+            <IngredientPicker onPick={(name) => setIngredients((v) => appendIngredient(v, name))} />
             <label>שלבי הכנה
               <textarea rows={8} value={steps} onChange={(e) => setSteps(e.target.value)} />
             </label>

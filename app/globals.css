@@ -401,6 +401,12 @@ a, [role="button"] { cursor: pointer; }
 .diet-toggle-pill.is-active { background: var(--focus); color: #fff; border-color: var(--focus); }
 .diet-toggle-pill:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 
+/* Ingredient picker (import review) */
+.ingredient-picker { display: flex; gap: 8px; align-items: stretch; margin: 6px 0 10px; }
+.ingredient-picker input { flex: 1; min-height: 40px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; background: #fffdfa; font-size: 0.95rem; }
+.ingredient-picker input:focus { border-color: var(--focus); outline: 3px solid var(--focus-ring); }
+.ingredient-picker button { min-width: 44px; padding: 0 12px; font-size: 1.2rem; font-weight: 700; line-height: 1; }
+
 /* Diet field */
 .diet-field { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fffdfa; }
 .diet-checkbox-label { display: flex !important; flex-direction: row; align-items: center; gap: 10px; font-weight: 700; cursor: pointer; }

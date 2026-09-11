@@ -5,7 +5,13 @@ import { useMemo, useRef, useState } from "react";
 import { createRecipe } from "@/lib/actions/recipes";
 import { ImageCropper } from "../../_components/image-cropper";
 import { DietFieldControl, type DietOverride } from "@/components/recipes/diet-field-control";
+import { IngredientPicker } from "@/components/recipes/ingredient-picker";
 import { parseIngredientLine } from "@/lib/ingredients";
+
+function appendIngredient(current: string, name: string): string {
+  const trimmed = current.replace(/\s+$/, '');
+  return trimmed ? `${trimmed}\n${name}` : name;
+}
 
 /**
  * Normalize an image before sending: apply EXIF orientation so vision
@@ -408,6 +414,7 @@ export default function PhotoImportPage() {
             <label>מרכיבים
               <textarea rows={8} value={ingredients} onChange={(e) => setIngredients(e.target.value)} />
             </label>
+            <IngredientPicker onPick={(name) => setIngredients((v) => appendIngredient(v, name))} />
             <label>שלבי הכנה
               <textarea rows={8} value={steps} onChange={(e) => setSteps(e.target.value)} />
             </label>
