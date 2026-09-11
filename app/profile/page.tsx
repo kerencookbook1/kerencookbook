@@ -102,6 +102,16 @@ export default async function ProfilePage() {
             ניהול מפתחות
           </Link>
         </article>
+
+        {/* Backup & restore card */}
+        <article className="profile-card">
+          <p className="eyebrow">הגדרות</p>
+          <h2>גיבוי ושחזור</h2>
+          <p>הורידי גיבוי JSON של המתכונים שלך או של כל המידע, וייבאי אותו בחזרה בכל זמן.</p>
+          <Link className="text-button" href="/settings/backup" style={{ marginTop: 16, display: 'inline-block' }}>
+            פתיחת הגדרות גיבוי
+          </Link>
+        </article>
       </section>
 
       {/* Logout */}
