@@ -1,11 +1,43 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/preview', '/api/scan', '/api/providers', '/api/import-url']
+const PUBLIC_PATHS = [
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/preview',
+  '/api/scan',
+  '/api/providers',
+  '/api/import-url',
+]
+
+function hasSupabaseAuthCookie(request: NextRequest): boolean {
+  for (const c of request.cookies.getAll()) {
+    if (c.name.startsWith('sb-') && c.name.includes('auth-token')) return true
+  }
+  return false
+}
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+  const pathname = request.nextUrl.pathname
+  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p))
 
+  // Fast path: anonymous visitor (no Supabase auth cookie at all).
+  // Skip the network call to Supabase entirely — it's the main source of
+  // per-navigation latency (1–3s felt in sidebar clicks). We only need to
+  // redirect to /login when the target route is protected.
+  if (!hasSupabaseAuthCookie(request)) {
+    if (isPublic) return NextResponse.next({ request })
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
+  // Authenticated request: run the SSR client so the session token is
+  // refreshed via cookies. The `getUser()` call validates the token
+  // server-side and MUST NOT be removed for authenticated navigations.
+  let supabaseResponse = NextResponse.next({ request })
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
@@ -18,19 +50,14 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, options),
           )
         },
       },
-    }
+    },
   )
 
-  // Refresh session — do NOT remove this call
   const { data: { user } } = await supabase.auth.getUser()
-
-  const isPublic = PUBLIC_PATHS.some((p) =>
-    request.nextUrl.pathname.startsWith(p)
-  )
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
@@ -43,6 +70,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.png|.*\\.svg|.*\\.ico|.*\\.webp).*)',
+    // Exclude static assets + Next internals + the manifest.
+    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.png|.*\\.svg|.*\\.ico|.*\\.webp).*)',
   ],
 }

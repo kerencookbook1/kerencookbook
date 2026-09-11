@@ -12,9 +12,14 @@ type RecipeCard = {
   cook_time: number | null
   category: string | null
   is_favorite?: boolean
+  is_diet_effective?: boolean
   image_url?: string | null
   ingredientNames?: string[]
 }
+
+/** Non-category filters that show as tiles alongside categories. */
+type SpecialId = 'all' | 'diet'
+type FilterId = SpecialId | CategoryId
 
 const FALLBACK_IMAGES = [
   '/images/recipes/shakshuka-default.png',
@@ -52,7 +57,7 @@ function effectiveCategory(r: RecipeCard): CategoryId {
 }
 
 export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
-  const [activeId, setActiveId] = useState<'all' | CategoryId>('all')
+  const [activeId, setActiveId] = useState<FilterId>('all')
   const [showAll, setShowAll] = useState(false)
 
   // Count per category (using effective category for uncategorized rows)
@@ -65,13 +70,20 @@ export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
     return counts
   }, [recipes])
 
+  const dietCount = useMemo(
+    () => recipes.filter((r) => r.is_diet_effective).length,
+    [recipes],
+  )
+
   const filtered = useMemo(() => {
     if (activeId === 'all') return recipes
+    if (activeId === 'diet') return recipes.filter((r) => r.is_diet_effective)
     return recipes.filter((r) => effectiveCategory(r) === activeId)
   }, [recipes, activeId])
 
   const displayed = filtered.slice(0, 6)
-  const activeLabel = activeId === 'all' ? 'הכל' : activeId
+  const activeLabel =
+    activeId === 'all' ? 'הכל' : activeId === 'diet' ? 'דיאטטי' : activeId
 
   // Show only categories that have at least one recipe (unless user opens "show all")
   const nonEmpty = CATEGORIES.filter((c) => (countByCategory.get(c.id) ?? 0) > 0)
@@ -109,6 +121,19 @@ export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
             <span className="category-tile-count">{recipes.length}</span>
           </button>
 
+          {/* "Diet" tile — always visible, even at 0 count */}
+          <button
+            type="button"
+            className={`category-tile${activeId === 'diet' ? ' is-active' : ''}`}
+            onClick={() => setActiveId('diet')}
+            aria-pressed={activeId === 'diet'}
+            style={{ '--tile-color': '#dcecd0' } as React.CSSProperties}
+          >
+            <span className="category-tile-icon" aria-hidden="true">🥗</span>
+            <span className="category-tile-label">דיאטטי</span>
+            <span className="category-tile-count">{dietCount}</span>
+          </button>
+
           {visibleCategories.map((cat) => {
             const isActive = cat.id === activeId
             const count = countByCategory.get(cat.id) ?? 0
@@ -135,7 +160,16 @@ export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
       <section className="recipe-section" aria-label={`מתכונים בקטגוריה ${activeLabel}`}>
         <div className="section-heading">
           <h2>{activeId === 'all' ? 'נבחרו בשבילך' : activeLabel}</h2>
-          <Link href={`/recipes${activeId !== 'all' ? `?category=${encodeURIComponent(activeId)}` : ''}`} className="text-button">
+          <Link
+            href={
+              activeId === 'all'
+                ? '/recipes'
+                : activeId === 'diet'
+                  ? '/recipes?diet=1'
+                  : `/recipes?category=${encodeURIComponent(activeId)}`
+            }
+            className="text-button"
+          >
             הכל ({filtered.length})
           </Link>
         </div>
@@ -170,7 +204,13 @@ export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
           </div>
         ) : (
           <div className="empty-state" role="status">
-            <p>{activeId === 'all' ? 'עדיין אין מתכונים. הוסיפי את הראשון!' : `אין עדיין מתכונים ב"${activeLabel}".`}</p>
+            <p>
+              {activeId === 'all'
+                ? 'עדיין אין מתכונים. הוסיפי את הראשון!'
+                : activeId === 'diet'
+                  ? 'עדיין אין מתכונים דיאטטיים. סמני מתכון כדיאטטי כדי שיופיע כאן.'
+                  : `אין עדיין מתכונים ב"${activeLabel}".`}
+            </p>
             <Link href="/recipes/new" className="primary-button">+ מתכון חדש</Link>
           </div>
         )}

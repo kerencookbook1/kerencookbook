@@ -48,10 +48,16 @@ next-env.d.ts
 
 # local dev noise
 dev.log
+dev*.log
 build.log
+build*.log
+lint.log
+tc*.log
 /test-results/
 /playwright-report/
 /.claude/worktrees/
+/scripts/parse-lint.py
+/.agents/skills/ui-ux-pro-max/scripts/__pycache__/
 
 # Supabase CLI local state
 /supabase/.temp/

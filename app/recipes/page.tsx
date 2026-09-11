@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
-import { getRecipeCards } from '@/lib/repositories/recipes'
+import { getRecipeCards, countRecipes } from '@/lib/repositories/recipes'
 import Link from 'next/link'
+
+const PAGE_SIZE = 24
 
 export const metadata = { title: 'המתכונים שלי — המטבח של קרן' }
 
@@ -25,10 +27,24 @@ export default async function RecipesPage({
 }) {
   const params = await searchParams
   const dietOnly = params.diet === '1'
+  const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const recipes = user ? await getRecipeCards(user.id, { dietOnly }) : []
+  const [recipes, totalCount] = user
+    ? await Promise.all([
+        // Diet filter runs in-memory, so we skip DB LIMIT when active
+        // (see getRecipeCards). Otherwise we paginate at the DB layer.
+        getRecipeCards(user.id, {
+          dietOnly,
+          ...(dietOnly ? {} : { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
+        }),
+        countRecipes(user.id),
+      ])
+    : [[], 0]
   const activeFilter = params.filter ?? 'הכל'
+  const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+  const hasPrev = page > 1
+  const hasNext = !dietOnly && page < pageCount
 
   const dietHref = (() => {
     const next = new URLSearchParams(
@@ -40,7 +56,7 @@ export default async function RecipesPage({
     return qs ? `/recipes?${qs}` : '/recipes'
   })()
 
-  const dietCount = recipes.filter((r) => r.is_diet_effective).length
+  const dietCountOnPage = recipes.filter((r) => r.is_diet_effective).length
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8" dir="rtl">
@@ -64,10 +80,10 @@ export default async function RecipesPage({
 
       <div className="mt-6 grid gap-3 sm:grid-cols-4">
         {[
-          { label: 'סה"כ מתכונים', value: recipes.length },
-          { label: 'דיאטטיים', value: dietCount },
-          { label: 'מסונן', value: dietOnly ? 'דיאטטי' : 'הכל' },
-          { label: 'מיון', value: 'לפי תאריך' },
+          { label: 'סה"כ מתכונים', value: totalCount },
+          { label: 'בעמוד זה', value: recipes.length },
+          { label: 'דיאטטיים (בעמוד)', value: dietCountOnPage },
+          { label: dietOnly ? 'מסונן' : 'עמוד', value: dietOnly ? 'דיאטטי' : `${page} / ${pageCount}` },
         ].map((s) => (
           <div
             key={s.label}
@@ -140,14 +156,16 @@ export default async function RecipesPage({
         <>
           <div className="mt-8 mb-4 flex items-baseline justify-between">
             <h2 className="text-lg font-semibold">
-              {recipes.length} מתכונים
+              {dietOnly
+                ? `${recipes.length} מתכונים דיאטטיים`
+                : `מציג ${(page - 1) * PAGE_SIZE + 1}–${(page - 1) * PAGE_SIZE + recipes.length} מתוך ${totalCount}`}
             </h2>
             <span className="text-xs font-medium text-neutral-500">
               ממוין לפי תאריך הוספה
             </span>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {recipes.map((recipe, index) => {
+            {recipes.map((recipe, index: number) => {
               const totalMinutes = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0)
               const imgSrc = recipe.image_url || FOOD_IMAGES[index % FOOD_IMAGES.length]
               return (
@@ -190,8 +208,57 @@ export default async function RecipesPage({
               )
             })}
           </div>
+
+          {!dietOnly && pageCount > 1 && (
+            <nav
+              className="mt-8 flex items-center justify-center gap-2"
+              aria-label="פאגינציה"
+            >
+              {hasPrev ? (
+                <Link
+                  href={pageHref(params, page - 1)}
+                  className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 shadow-sm hover:border-neutral-300 hover:bg-neutral-50"
+                  aria-label="עמוד קודם"
+                  prefetch
+                >
+                  ← הקודם
+                </Link>
+              ) : (
+                <span className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-400" aria-hidden>
+                  ← הקודם
+                </span>
+              )}
+              <span className="px-3 text-sm font-medium text-neutral-600">
+                עמוד {page} מתוך {pageCount}
+              </span>
+              {hasNext ? (
+                <Link
+                  href={pageHref(params, page + 1)}
+                  className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 shadow-sm hover:border-neutral-300 hover:bg-neutral-50"
+                  aria-label="עמוד הבא"
+                  prefetch
+                >
+                  הבא →
+                </Link>
+              ) : (
+                <span className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-400" aria-hidden>
+                  הבא →
+                </span>
+              )}
+            </nav>
+          )}
         </>
       )}
     </main>
   )
+}
+
+function pageHref(params: Record<string, string>, targetPage: number): string {
+  const next = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => typeof v === 'string'),
+  )
+  if (targetPage <= 1) next.delete('page')
+  else next.set('page', String(targetPage))
+  const qs = next.toString()
+  return qs ? `/recipes?${qs}` : '/recipes'
 }

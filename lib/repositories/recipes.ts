@@ -13,6 +13,17 @@ export type RecipeWithDetails = {
   images: ImageRow[]
 }
 
+/** Fast count of a user's recipes — for pagination UI. Runs as a `head` request with `count: 'exact'`, so no rows are transferred. */
+export async function countRecipes(userId: string): Promise<number> {
+  const supabase = await createClient()
+  const { count, error } = await supabase
+    .from('recipes')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_id', userId)
+  if (error) throw error
+  return count ?? 0
+}
+
 export async function getRecipes(userId: string): Promise<RecipeRow[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -32,6 +43,10 @@ export type RecipeCardRow = RecipeRow & {
 
 export type GetRecipeCardsOptions = {
   dietOnly?: boolean
+  /** Max rows to return. Omit for no limit (used by pages that need the full set — search, pantry, meal planning). */
+  limit?: number
+  /** Skip N rows before returning (paired with `limit` for pagination). */
+  offset?: number
 }
 
 /** Recipes enriched with primary external image URL and ingredient names — for card grids and category filtering. */
@@ -40,11 +55,22 @@ export async function getRecipeCards(
   options: GetRecipeCardsOptions = {},
 ): Promise<RecipeCardRow[]> {
   const supabase = await createClient()
-  const { data: recipes, error } = await supabase
+  let query = supabase
     .from('recipes')
     .select('*')
     .eq('owner_id', userId)
     .order('updated_at', { ascending: false })
+
+  // Apply LIMIT at the DB layer when the caller doesn't need diet-filtering.
+  // Diet filtering happens in-memory below, so we can't rely on the LIMIT
+  // clause when dietOnly is true — a limited-then-filtered page would show
+  // fewer results than expected. In that case we skip DB pagination.
+  if (options.limit != null && !options.dietOnly) {
+    const from = options.offset ?? 0
+    query = query.range(from, from + options.limit - 1)
+  }
+
+  const { data: recipes, error } = await query
   if (error) throw error
   if (!recipes || recipes.length === 0) return []
 

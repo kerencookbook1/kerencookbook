@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { IngredientItem } from '@/lib/validations/recipes'
+import { IngredientCombobox } from './ingredient-combobox'
 
 type Props = {
   initial?: IngredientItem[]
@@ -54,11 +55,6 @@ export function IngredientFields({ initial = [], onChange }: Props) {
 
   return (
     <div className="ingredient-fields">
-      <datalist id="ingredient-suggestions">
-        {suggestions.map((name) => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
       {items.map((item, i) => (
         <div key={i} className="ingredient-row">
           <input
@@ -75,14 +71,12 @@ export function IngredientFields({ initial = [], onChange }: Props) {
             onChange={e => update(i, 'unit', e.target.value)}
             aria-label={`יחידת מרכיב ${i + 1}`}
           />
-          <input
-            type="text"
-            placeholder="שם מרכיב *"
+          <IngredientCombobox
             value={item.name}
-            onChange={e => update(i, 'name', e.target.value)}
-            aria-label={`שם מרכיב ${i + 1}`}
-            list="ingredient-suggestions"
-            autoComplete="off"
+            onChange={(v) => update(i, 'name', v)}
+            suggestions={suggestions}
+            placeholder="שם מרכיב *"
+            ariaLabel={`שם מרכיב ${i + 1}`}
           />
           <button
             type="button"

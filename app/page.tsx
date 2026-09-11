@@ -33,7 +33,9 @@ export default async function HomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const recipes = user ? await getRecipeCards(user.id) : []
+  // Home page is a snapshot — cap at 12 latest recipes to keep the query
+  // fast. The full list lives at /recipes with pagination.
+  const recipes = user ? await getRecipeCards(user.id, { limit: 12 }) : []
   const favorites = recipes.filter((r) => r.is_favorite).slice(0, 4)
   const dietCount = recipes.filter((r) => r.is_diet_effective).length
   const greeting = greetingByHour(new Date().getHours())
