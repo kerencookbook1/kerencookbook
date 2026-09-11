@@ -7,21 +7,24 @@
 .recipe-photo { object-fit: cover; object-position: center; }
 
 :root {
-  --ink: #1c150e;
-  --muted: #7a6858;
-  --canvas: #faf6ef;
+  /* Design C — Modern Fresh (site-wide palette, 2026-09-11).            */
+  /* Names kept for backwards compatibility with existing classes; the   */
+  /* values are the neutral-50/white/lime palette from /preview/design-c. */
+  --ink: #171717;
+  --muted: #525252;
+  --canvas: #fafaf9;
   --surface: #ffffff;
-  --line: #e8ddd0;
-  --terracotta: #d4531e;
-  --terracotta-dark: #b3420e;
-  --terracotta-bg: #fdeae4;
-  --sage: #1f6b3a;
-  --sage-dark: #154d29;
-  --sage-bg: #e2f0e8;
-  --focus: #1f6b3a;
-  --focus-ring: rgba(31,107,58,.4);
-  --shadow: 0 6px 28px rgba(28,21,14,.11);
-  --shadow-lg: 0 16px 48px rgba(28,21,14,.16);
+  --line: #e5e5e5;
+  --terracotta: #65a30d;      /* was warm terracotta; now lime-600 primary */
+  --terracotta-dark: #4d7c0f; /* lime-700 */
+  --terracotta-bg: #ecfccb;   /* lime-100 */
+  --sage: #65a30d;            /* unified with primary */
+  --sage-dark: #4d7c0f;
+  --sage-bg: #ecfccb;
+  --focus: #65a30d;
+  --focus-ring: rgba(101,163,13,.35);
+  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.06);
+  --shadow-lg: 0 4px 6px rgba(0,0,0,.04), 0 10px 15px rgba(0,0,0,.08);
   /* shadcn tokens — mapped onto the existing warm palette so imported */
   /* components inherit the same colors as hand-written CSS.            */
   --background: var(--canvas);
