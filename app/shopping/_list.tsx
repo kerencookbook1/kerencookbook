@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import { AISLES, aisleIcon, aisleOrder, guessAisle, type Aisle } from '@/lib/aisles'
 import {
   addShoppingItem,
@@ -8,6 +8,8 @@ import {
   deleteShoppingItem,
   toggleShoppingItem,
 } from '@/lib/actions/shopping'
+
+let cachedSuggestions: string[] | null = null
 
 type Item = {
   id: string
@@ -24,6 +26,23 @@ export function ShoppingList({ initialItems }: { initialItems: Item[] }) {
   const [items, setItems] = useState<Item[]>(initialItems)
   const [busy, startTransition] = useTransition()
   const [draft, setDraft] = useState('')
+  const [suggestions, setSuggestions] = useState<string[]>(cachedSuggestions ?? [])
+
+  useEffect(() => {
+    if (cachedSuggestions) return
+    let alive = true
+    fetch('/api/ingredients/suggestions')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!alive || !data?.suggestions) return
+        cachedSuggestions = data.suggestions
+        setSuggestions(data.suggestions)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
 
   const grouped = useMemo(() => {
     const byAisle = new Map<string, Item[]>()
@@ -92,12 +111,19 @@ export function ShoppingList({ initialItems }: { initialItems: Item[] }) {
   return (
     <div style={{ display: 'grid', gap: 20, marginTop: 8 }}>
       {/* Add item */}
+      <datalist id="shopping-suggestions">
+        {suggestions.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
       <form onSubmit={handleAdd} className="upload-panel" style={{ padding: 16, display: 'flex', gap: 10 }}>
         <input
           type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="הוסיפי פריט… (למשל: 6 ביצים, גבינה צהובה)"
+          placeholder="הוסיפי פריט… (התחל להקליד — נציע השלמות)"
+          list="shopping-suggestions"
+          autoComplete="off"
           style={{
             flex: 1,
             minHeight: 46,
