@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { FavoriteButton } from '../../_components/favorite-button'
 import { RecipeTabs } from '../../_components/recipe-tabs'
 import { AddToShoppingButton } from '../../_components/add-to-shopping-button'
+import { CalorieButton } from '@/components/recipes/calorie-button'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -195,6 +196,14 @@ export default async function RecipePage({ params }: Props) {
               התחל בישול
             </Link>
             <AddToShoppingButton recipeId={id} />
+            <CalorieButton
+              ingredients={ingredients.map((ing) => ({
+                name: ing.name,
+                amount: ing.amount,
+                unit: ing.unit,
+              }))}
+              servings={recipe.servings ?? null}
+            />
             <Link href={`/recipes/${id}/edit`} className="outline-button" style={{ flex: 1, minWidth: 160 }}>
               עריכת מתכון
             </Link>

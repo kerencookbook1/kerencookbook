@@ -6,7 +6,7 @@ import { logout } from "@/lib/actions/auth";
 import { ThemeToggle } from "./theme-toggle";
 import { SearchTrigger } from "../app/_components/search-trigger";
 
-type IconName = "home" | "book" | "add" | "chef" | "cart" | "calendar" | "user";
+type IconName = "home" | "book" | "add" | "chef" | "cart" | "calendar" | "user" | "flame";
 
 type NavItem = {
   href: string;
@@ -28,6 +28,7 @@ const items: NavItem[] = [
   // Tools
   { href: "/pantry",   label: "מה יש לי בבית?", icon: "chef",   mobile: false, desktop: true, section: "כלים" },
   { href: "/shopping", label: "רשימת קניות",  mobileLabel: "קניות",   icon: "cart",     mobile: true,  desktop: true },
+  { href: "/calories", label: "מחשבון קלוריות", mobileLabel: "קלוריות", icon: "flame",  mobile: false, desktop: true },
   { href: "/meals",    label: "תכנון ארוחות", icon: "calendar", mobile: false, desktop: true },
 ];
 
@@ -65,6 +66,8 @@ function Icon({ name }: { name: IconName }) {
       return <svg {...props}><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 10h18" /><path d="M8 3v3" /><path d="M16 3v3" /></svg>;
     case "user":
       return <svg {...props}><circle cx="12" cy="8" r="3.5" /><path d="M4.5 21a7.5 7.5 0 0 1 15 0" /></svg>;
+    case "flame":
+      return <svg {...props}><path d="M12 2s4 4 4 8a4 4 0 0 1-8 0c0-1.5.5-3 1.5-4 .5 1 1 1.5 1.5 2 0-2 1-4 1-6Z" /><path d="M6 15a6 6 0 0 0 12 0c0-2-1-3.5-2-4.5-.5 1-1.5 1.5-2 2 .5-2-.5-4-2-6-.5 2-2 3-2 5s-2 2-2 3.5Z" /></svg>;
   }
 }
 
