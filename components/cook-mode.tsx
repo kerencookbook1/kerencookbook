@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type WakeLockSentinel = {
   released: boolean;
@@ -28,8 +28,14 @@ function playAlertBeep() {
     osc.start();
     osc.stop(ctx.currentTime + 1.0);
     setTimeout(() => ctx.close(), 1200);
-  } catch { /* audio might be blocked — silent fallback */ }
+  } catch { /* audio might be blocked */ }
   try { navigator.vibrate?.([220, 90, 220]); } catch { /* not available */ }
+}
+
+function formatTime(s: number) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 
 type Ingredient = { id: string; name: string; amount: string | null; unit: string | null }
@@ -44,15 +50,10 @@ type Props = {
 }
 
 export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultServings }: Props) {
-  const [current, setCurrent] = useState(0)
   const [servings, setServings] = useState(defaultServings || 4)
-  const [timerActive, setTimerActive] = useState(false)
-  const [timeLeft, setTimeLeft] = useState<number | null>(null)
+  const [checked, setChecked] = useState<Record<string, boolean>>({})
   const [wakeLockOn, setWakeLockOn] = useState(false)
-  const [timerFinished, setTimerFinished] = useState(false)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
-  const finishedRef = useRef(false)
 
   // Keep screen on for the whole cook session
   useEffect(() => {
@@ -66,9 +67,8 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
         wakeLockRef.current = lock
         setWakeLockOn(true)
         lock.addEventListener('release', () => setWakeLockOn(false))
-      } catch { /* permission denied or not supported */ }
+      } catch { /* denied or unsupported */ }
     })()
-    // Re-acquire when tab becomes visible again
     const onVisibility = async () => {
       if (document.visibilityState !== 'visible' || wakeLockRef.current) return
       try {
@@ -87,17 +87,135 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
     }
   }, [])
 
-  const currentStep = steps[current]
-  const stepDuration = currentStep?.duration_seconds ?? null
+  const ratio = servings / (defaultServings || 4)
+  const doneCount = steps.filter((s) => checked[s.id]).length
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTimerActive(false)
-    if (intervalRef.current) clearInterval(intervalRef.current)
-    setTimeLeft(stepDuration)
-    setTimerFinished(false)
-    finishedRef.current = false
-  }, [current, stepDuration])
+  return (
+    <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8" dir="rtl">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href={`/recipes/${recipeId}`}
+          className="text-xs font-medium text-neutral-500 hover:text-neutral-900"
+        >
+          ← {recipeTitle}
+        </Link>
+        <div className="flex items-center gap-3">
+          {wakeLockOn && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-lime-100 px-2 py-1 text-xs font-medium text-lime-700" title="המסך יישאר דלוק">
+              💡 מסך דלוק
+            </span>
+          )}
+          <span className="text-xs font-medium text-neutral-500">
+            {doneCount}/{steps.length} שלבים
+          </span>
+        </div>
+      </header>
+
+      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
+        <div
+          className="h-full bg-lime-600 transition-all"
+          style={{ width: `${steps.length ? (doneCount / steps.length) * 100 : 0}%` }}
+        />
+      </div>
+
+      <h1 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">
+        {recipeTitle}
+      </h1>
+
+      <section className="mt-6 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 pb-3">
+          <h2 className="text-lg font-semibold">מרכיבים</h2>
+          <div className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-2 py-1">
+            <button
+              type="button"
+              className="grid h-7 w-7 place-items-center rounded-md text-lg font-bold text-neutral-700 hover:bg-neutral-100"
+              aria-label="הקטנת מנות"
+              onClick={() => setServings((v) => Math.max(1, v - 1))}
+            >
+              −
+            </button>
+            <div className="min-w-14 text-center">
+              <p className="text-xs text-neutral-500">מנות</p>
+              <p className="text-xl font-bold leading-none">{servings}</p>
+            </div>
+            <button
+              type="button"
+              className="grid h-7 w-7 place-items-center rounded-md text-lg font-bold text-neutral-700 hover:bg-neutral-100"
+              aria-label="הגדלת מנות"
+              onClick={() => setServings((v) => v + 1)}
+            >
+              +
+            </button>
+          </div>
+        </div>
+        <ul className="mt-3 grid gap-1 text-sm sm:grid-cols-2">
+          {ingredients.map((ing) => {
+            const numeric = ing.amount != null ? parseFloat(ing.amount) : NaN
+            const scaledAmount = !Number.isNaN(numeric)
+              ? (Math.round(numeric * ratio * 4) / 4).toString()
+              : ing.amount
+            return (
+              <li key={ing.id} className="flex items-baseline gap-1.5 py-1">
+                {scaledAmount && (
+                  <strong className="font-bold text-lime-700">{scaledAmount}</strong>
+                )}
+                {ing.unit && <span className="text-neutral-500">{ing.unit}</span>}
+                <span>{ing.name}</span>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+
+      <ol className="mt-8 space-y-4">
+        {steps.map((step, idx) => (
+          <StepCard
+            key={step.id}
+            index={idx}
+            total={steps.length}
+            step={step}
+            checked={!!checked[step.id]}
+            onToggle={() =>
+              setChecked((prev) => ({ ...prev, [step.id]: !prev[step.id] }))
+            }
+          />
+        ))}
+      </ol>
+
+      <div className="mt-10 flex flex-wrap gap-3">
+        <Link
+          href={`/recipes/${recipeId}`}
+          className="flex-1 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-neutral-700 shadow-sm hover:border-lime-500 hover:text-lime-700"
+        >
+          חזרה למתכון
+        </Link>
+        <button
+          type="button"
+          onClick={() => setChecked({})}
+          className="rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm hover:border-neutral-300"
+        >
+          נקה סימונים
+        </button>
+      </div>
+    </main>
+  )
+}
+
+type StepCardProps = {
+  index: number
+  total: number
+  step: Step
+  checked: boolean
+  onToggle: () => void
+}
+
+function StepCard({ index, total, step, checked, onToggle }: StepCardProps) {
+  const duration = step.duration_seconds ?? null
+  const [timerActive, setTimerActive] = useState(false)
+  const [timeLeft, setTimeLeft] = useState<number | null>(duration)
+  const [finished, setFinished] = useState(false)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const finishedRef = useRef(false)
 
   useEffect(() => {
     if (timerActive && timeLeft !== null && timeLeft > 0) {
@@ -106,193 +224,97 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
       }, 1000)
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (timerActive && timeLeft === 0 && !finishedRef.current) {
         finishedRef.current = true
         setTimerActive(false)
-        setTimerFinished(true)
+        setFinished(true)
         playAlertBeep()
       }
     }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
   }, [timerActive, timeLeft])
 
-  function startTimer() {
-    if (stepDuration && timeLeft === null) setTimeLeft(stepDuration)
-    setTimerActive(true)
+  function toggleTimer() {
+    if (timerActive) {
+      setTimerActive(false)
+    } else {
+      if (timeLeft === null || timeLeft === 0) {
+        setTimeLeft(duration)
+        finishedRef.current = false
+        setFinished(false)
+      }
+      setTimerActive(true)
+    }
   }
 
-  function formatTime(s: number) {
-    const m = Math.floor(s / 60)
-    const sec = s % 60
-    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
-  }
-
-  const ratio = servings / (defaultServings || 4)
+  const cardBorder = useMemo(() => {
+    if (finished) return 'border-lime-500 ring-2 ring-lime-100'
+    if (timerActive) return 'border-amber-400 ring-2 ring-amber-50'
+    if (checked) return 'border-neutral-200 opacity-60'
+    return 'border-neutral-200'
+  }, [finished, timerActive, checked])
 
   return (
-    <main className="cook-shell">
-      <header className="cook-header">
-        <Link className="back-link" href={`/recipes/${recipeId}`}>← {recipeTitle}</Link>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          {wakeLockOn && (
-            <span title="המסך יישאר דלוק" style={{ fontSize: '.75rem', color: '#a8dea8', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              💡 מסך דלוק
-            </span>
-          )}
-          {stepDuration !== null && (
-            <button
-              type="button"
-              className="timer-toggle"
-              aria-pressed={timerActive}
-              onClick={() => timerActive ? setTimerActive(false) : startTimer()}
-            >
-              {timerActive ? `${formatTime(timeLeft ?? stepDuration)} ⏸` : 'הפעלת טיימר'}
-            </button>
-          )}
-        </div>
-      </header>
-
-      {/* Progress bar */}
-      <div
-        className="cook-progress"
-        role="progressbar"
-        aria-valuenow={current + 1}
-        aria-valuemin={1}
-        aria-valuemax={steps.length}
-        aria-label={`שלב ${current + 1} מתוך ${steps.length}`}
-      >
-        <span style={{ width: `${((current + 1) / steps.length) * 100}%` }} />
-      </div>
-
-      {/* Timer overlay */}
-      {timerActive && timeLeft !== null && (
-        <div style={{
-          textAlign: 'center',
-          marginBottom: 24,
-          fontFamily: 'Georgia, serif',
-          fontSize: 'clamp(4rem, 12vw, 8rem)',
-          lineHeight: 1,
-          color: timeLeft <= 10 ? '#f47a5a' : '#fffaf2',
-          letterSpacing: '-.04em',
-        }}>
-          {formatTime(timeLeft)}
-          <p style={{ fontSize: '1rem', color: '#c8b8a5', fontFamily: 'sans-serif', margin: '8px 0 0' }}>
-            טיימר פועל
-          </p>
-        </div>
-      )}
-
-      {/* Timer finished banner */}
-      {timerFinished && (
-        <div
-          role="alert"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-            marginBottom: 24, padding: '14px 20px', borderRadius: 14,
-            background: '#3b6035', border: '2px solid #7bbf6a', color: '#fffaf2',
-          }}
+    <li className={`rounded-xl border bg-white p-5 shadow-sm transition ${cardBorder}`}>
+      <div className="flex items-start gap-4">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-pressed={checked}
+          aria-label={checked ? `שלב ${index + 1} הושלם, לבטל` : `סמן שלב ${index + 1} כהושלם`}
+          className={`mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold transition ${
+            checked
+              ? 'bg-lime-600 text-white'
+              : 'border-2 border-neutral-300 bg-white text-neutral-700 hover:border-lime-500'
+          }`}
         >
-          <span style={{ fontWeight: 800 }}>🔔 הטיימר של השלב הסתיים!</span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              type="button"
-              className="outline-button"
-              style={{ borderColor: '#a8dea8', color: '#fffaf2', minHeight: 36 }}
-              onClick={() => setTimerFinished(false)}
-            >
-              הבנתי
-            </button>
-            {current < steps.length - 1 && (
-              <button
-                type="button"
-                className="primary-button"
-                style={{ minHeight: 36 }}
-                onClick={() => { setTimerFinished(false); setCurrent((v) => v + 1) }}
-              >
-                לשלב הבא ←
-              </button>
-            )}
+          {checked ? '✓' : index + 1}
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              שלב {index + 1} מתוך {total}
+              {duration != null && (
+                <span className="text-neutral-400"> · {formatTime(duration)}</span>
+              )}
+            </p>
           </div>
-        </div>
-      )}
-
-      <section className="cook-grid">
-        {/* Ingredients panel */}
-        <aside className="ingredients-panel">
-          <p className="eyebrow">מרכיבים</p>
-          <div className="servings">
-            <span>מנות</span>
-            <button type="button" aria-label="הקטנת מנות" onClick={() => setServings((v) => Math.max(1, v - 1))}>-</button>
-            <strong>{servings}</strong>
-            <button type="button" aria-label="הגדלת מנות" onClick={() => setServings((v) => v + 1)}>+</button>
-          </div>
-          <ul>
-            {ingredients.map((ing) => (
-              <li key={ing.id}>
-                {ing.amount && (
-                  <strong style={{ color: '#f2c1a3' }}>
-                    {/* Simple ratio scaling for numeric amounts */}
-                    {(() => {
-                      const num = parseFloat(ing.amount ?? '')
-                      return !isNaN(num) ? (Math.round(num * ratio * 4) / 4).toString() : ing.amount
-                    })()}
-                  </strong>
-                )}
-                {ing.unit && <span style={{ color: '#c8b8a5' }}> {ing.unit}</span>}
-                {' '}{ing.name}
-              </li>
-            ))}
-          </ul>
-        </aside>
-
-        {/* Step */}
-        <article className="cook-step">
-          <p className="eyebrow" style={{ color: '#c8b8a5' }}>
-            שלב {current + 1} מתוך {steps.length}
+          {step.title && (
+            <p className="mt-1 text-base font-bold text-lime-700">{step.title}</p>
+          )}
+          <p className={`mt-2 whitespace-pre-wrap text-base leading-relaxed ${checked ? 'text-neutral-500 line-through' : 'text-neutral-900'}`}>
+            {step.body}
           </p>
-          {currentStep?.title && (
-            <p style={{ color: '#f2c1a3', margin: '4px 0 12px', fontWeight: 800 }}>{currentStep.title}</p>
-          )}
-          <h1>{currentStep?.body}</h1>
 
-          {stepDuration !== null && !timerActive && (
-            <button
-              type="button"
-              className="outline-button"
-              style={{ marginTop: 24, borderColor: '#776d61', color: '#fffaf2' }}
-              onClick={startTimer}
-            >
-              {`⏱ ${formatTime(stepDuration)}`}
-            </button>
-          )}
-
-          <div className="step-actions">
-            <button
-              className="outline-button"
-              type="button"
-              disabled={current === 0}
-              onClick={() => setCurrent((v) => v - 1)}
-              style={{ borderColor: '#776d61', color: '#fffaf2' }}
-            >
-              הקודם
-            </button>
-            {current < steps.length - 1 ? (
+          {duration != null && (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
               <button
-                className="primary-button"
                 type="button"
-                onClick={() => setCurrent((v) => v + 1)}
+                onClick={toggleTimer}
+                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                  timerActive
+                    ? 'border-amber-400 bg-amber-50 text-amber-700'
+                    : 'border-neutral-200 bg-white text-neutral-700 hover:border-lime-500 hover:text-lime-700'
+                }`}
               >
-                לשלב הבא
+                <span aria-hidden="true">⏱</span>
+                {timerActive
+                  ? `${formatTime(timeLeft ?? 0)} · השהיה`
+                  : timeLeft !== null && timeLeft > 0 && timeLeft !== duration
+                    ? `המשך: ${formatTime(timeLeft)}`
+                    : `הפעל טיימר · ${formatTime(duration)}`}
               </button>
-            ) : (
-              <Link href={`/recipes/${recipeId}`} className="primary-button" style={{ textDecoration: 'none' }}>
-                סיימתי! 🎉
-              </Link>
-            )}
-          </div>
-        </article>
-      </section>
-    </main>
+              {finished && (
+                <span className="inline-flex items-center gap-2 rounded-md bg-lime-100 px-2 py-1 text-xs font-semibold text-lime-800">
+                  🔔 הטיימר הסתיים
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </li>
   )
 }
