@@ -3,6 +3,10 @@ import type { ReactNode } from "react";
 import { AppNavigation } from "../components/app-navigation";
 import { SearchProvider } from "./_components/search-provider";
 import "./globals.css";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "המטבח של קרן",
@@ -13,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="he" dir="rtl" suppressHydrationWarning>
+    <html lang="he" dir="rtl" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <head>
         {/* Restore saved theme before first paint to avoid flash */}
         <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('theme')||'modern';document.documentElement.setAttribute('data-theme',t);}catch(e){}` }} />
