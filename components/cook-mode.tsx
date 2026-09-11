@@ -54,6 +54,83 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
   const [checked, setChecked] = useState<Record<string, boolean>>({})
   const [wakeLockOn, setWakeLockOn] = useState(false)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+  const [readingIdx, setReadingIdx] = useState<number | null>(null)
+  const [ttsPaused, setTtsPaused] = useState(false)
+  const [ttsSupported, setTtsSupported] = useState<boolean | null>(null)
+  const readingIdxRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    setTtsSupported(typeof window !== 'undefined' && 'speechSynthesis' in window)
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
+
+  function pickHebrewVoice(): SpeechSynthesisVoice | null {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null
+    const voices = window.speechSynthesis.getVoices()
+    return (
+      voices.find((v) => v.lang.toLowerCase().startsWith('he')) ??
+      voices.find((v) => v.lang.toLowerCase().startsWith('iw')) ??
+      null
+    )
+  }
+
+  function speakFrom(startIndex: number) {
+    if (!('speechSynthesis' in window)) return
+    window.speechSynthesis.cancel()
+    setTtsPaused(false)
+    const voice = pickHebrewVoice()
+
+    const speakOne = (idx: number) => {
+      if (idx >= steps.length) {
+        setReadingIdx(null)
+        readingIdxRef.current = null
+        return
+      }
+      readingIdxRef.current = idx
+      setReadingIdx(idx)
+      const step = steps[idx]
+      const text = [step.title, step.body].filter(Boolean).join('. ')
+      const u = new SpeechSynthesisUtterance(text)
+      u.lang = 'he-IL'
+      if (voice) u.voice = voice
+      u.rate = 0.95
+      u.onend = () => {
+        // Move on only if we're still reading this same index
+        if (readingIdxRef.current === idx) speakOne(idx + 1)
+      }
+      u.onerror = () => {
+        setReadingIdx(null)
+        readingIdxRef.current = null
+      }
+      window.speechSynthesis.speak(u)
+    }
+    speakOne(startIndex)
+  }
+
+  function pauseSpeech() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.pause()
+      setTtsPaused(true)
+    }
+  }
+
+  function resumeSpeech() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.resume()
+      setTtsPaused(false)
+    }
+  }
+
+  function stopSpeech() {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+    setReadingIdx(null)
+    readingIdxRef.current = null
+    setTtsPaused(false)
+  }
 
   // Keep screen on for the whole cook session
   useEffect(() => {
@@ -167,7 +244,52 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
         </ul>
       </section>
 
-      <ol className="mt-8 space-y-4">
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">אופן ההכנה</h2>
+        {ttsSupported && steps.length > 0 && (
+          <div className="flex items-center gap-2">
+            {readingIdx === null ? (
+              <button
+                type="button"
+                onClick={() => speakFrom(0)}
+                className="inline-flex items-center gap-2 rounded-lg bg-lime-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-lime-700"
+              >
+                <span aria-hidden="true">🔊</span>
+                <span>הקראה של השלבים</span>
+              </button>
+            ) : (
+              <>
+                {ttsPaused ? (
+                  <button
+                    type="button"
+                    onClick={resumeSpeech}
+                    className="inline-flex items-center gap-2 rounded-lg border border-lime-600 bg-white px-3 py-2 text-sm font-semibold text-lime-700 shadow-sm transition hover:bg-lime-50"
+                  >
+                    ▶ המשך
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={pauseSpeech}
+                    className="inline-flex items-center gap-2 rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 shadow-sm transition hover:bg-amber-100"
+                  >
+                    ⏸ השהיה
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={stopSpeech}
+                  className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 shadow-sm transition hover:border-neutral-300"
+                >
+                  ■ עצור
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      <ol className="mt-3 space-y-4">
         {steps.map((step, idx) => (
           <StepCard
             key={step.id}
@@ -175,9 +297,11 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
             total={steps.length}
             step={step}
             checked={!!checked[step.id]}
+            isReading={readingIdx === idx && !ttsPaused}
             onToggle={() =>
               setChecked((prev) => ({ ...prev, [step.id]: !prev[step.id] }))
             }
+            onSpeakThis={ttsSupported ? () => speakFrom(idx) : undefined}
           />
         ))}
       </ol>
@@ -206,10 +330,12 @@ type StepCardProps = {
   total: number
   step: Step
   checked: boolean
+  isReading?: boolean
   onToggle: () => void
+  onSpeakThis?: () => void
 }
 
-function StepCard({ index, total, step, checked, onToggle }: StepCardProps) {
+function StepCard({ index, total, step, checked, isReading, onToggle, onSpeakThis }: StepCardProps) {
   const duration = step.duration_seconds ?? null
   const [timerActive, setTimerActive] = useState(false)
   const [timeLeft, setTimeLeft] = useState<number | null>(duration)
@@ -250,11 +376,12 @@ function StepCard({ index, total, step, checked, onToggle }: StepCardProps) {
   }
 
   const cardBorder = useMemo(() => {
+    if (isReading) return 'border-sky-500 ring-2 ring-sky-100'
     if (finished) return 'border-lime-500 ring-2 ring-lime-100'
     if (timerActive) return 'border-amber-400 ring-2 ring-amber-50'
     if (checked) return 'border-neutral-200 opacity-60'
     return 'border-neutral-200'
-  }, [finished, timerActive, checked])
+  }, [finished, timerActive, checked, isReading])
 
   return (
     <li className={`rounded-xl border bg-white p-5 shadow-sm transition ${cardBorder}`}>
@@ -288,31 +415,44 @@ function StepCard({ index, total, step, checked, onToggle }: StepCardProps) {
             {step.body}
           </p>
 
-          {duration != null && (
-            <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {duration != null && (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleTimer}
+                  className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                    timerActive
+                      ? 'border-amber-400 bg-amber-50 text-amber-700'
+                      : 'border-neutral-200 bg-white text-neutral-700 hover:border-lime-500 hover:text-lime-700'
+                  }`}
+                >
+                  <span aria-hidden="true">⏱</span>
+                  {timerActive
+                    ? `${formatTime(timeLeft ?? 0)} · השהיה`
+                    : timeLeft !== null && timeLeft > 0 && timeLeft !== duration
+                      ? `המשך: ${formatTime(timeLeft)}`
+                      : `הפעל טיימר · ${formatTime(duration)}`}
+                </button>
+                {finished && (
+                  <span className="inline-flex items-center gap-2 rounded-md bg-lime-100 px-2 py-1 text-xs font-semibold text-lime-800">
+                    🔔 הטיימר הסתיים
+                  </span>
+                )}
+              </>
+            )}
+            {onSpeakThis && (
               <button
                 type="button"
-                onClick={toggleTimer}
-                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                  timerActive
-                    ? 'border-amber-400 bg-amber-50 text-amber-700'
-                    : 'border-neutral-200 bg-white text-neutral-700 hover:border-lime-500 hover:text-lime-700'
-                }`}
+                onClick={onSpeakThis}
+                className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 shadow-sm transition hover:border-sky-500 hover:text-sky-700"
+                title="הקרא משלב זה והלאה"
               >
-                <span aria-hidden="true">⏱</span>
-                {timerActive
-                  ? `${formatTime(timeLeft ?? 0)} · השהיה`
-                  : timeLeft !== null && timeLeft > 0 && timeLeft !== duration
-                    ? `המשך: ${formatTime(timeLeft)}`
-                    : `הפעל טיימר · ${formatTime(duration)}`}
+                <span aria-hidden="true">🔊</span>
+                הקרא מכאן
               </button>
-              {finished && (
-                <span className="inline-flex items-center gap-2 rounded-md bg-lime-100 px-2 py-1 text-xs font-semibold text-lime-800">
-                  🔔 הטיימר הסתיים
-                </span>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </li>
