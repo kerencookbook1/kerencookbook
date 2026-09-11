@@ -294,6 +294,8 @@ export type Database = {
           description: string | null
           difficulty: string | null
           id: string
+          is_diet_auto: boolean
+          is_diet_override: boolean | null
           is_favorite: boolean
           notes: string | null
           owner_id: string
@@ -311,6 +313,8 @@ export type Database = {
           description?: string | null
           difficulty?: string | null
           id?: string
+          is_diet_auto?: boolean
+          is_diet_override?: boolean | null
           is_favorite?: boolean
           notes?: string | null
           owner_id: string
@@ -328,6 +332,8 @@ export type Database = {
           description?: string | null
           difficulty?: string | null
           id?: string
+          is_diet_auto?: boolean
+          is_diet_override?: boolean | null
           is_favorite?: boolean
           notes?: string | null
           owner_id?: string

@@ -24,6 +24,7 @@ export const recipeFormSchema = z.object({
   servings: z.coerce.number().int().min(1).nullable().optional(),
   ingredientsJson: z.string(),
   stepsJson: z.string(),
+  isDietOverride: z.enum(['auto', 'on', 'off']).default('auto'),
 })
 
 export type RecipeFormInput = z.infer<typeof recipeFormSchema>

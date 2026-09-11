@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react'
 import { IngredientFields } from './ingredient-fields'
 import { StepFields } from './step-fields'
+import { DietFieldControl, overrideFromDb, type DietOverride } from './diet-field-control'
 import type { RecipeActionState } from '@/lib/actions/recipes'
 import type { IngredientItem, StepItem } from '@/lib/validations/recipes'
 import { CATEGORIES } from '@/lib/categories'
@@ -20,6 +21,7 @@ type RecipeFormInitial = {
   servings?: number | null
   ingredients?: IngredientItem[]
   steps?: StepItem[]
+  isDietOverride?: boolean | null
 }
 
 type Props = {
@@ -32,11 +34,15 @@ export function RecipeForm({ action, initial = {} }: Props) {
     action,
     null
   )
+  const [title, setTitle] = useState<string>(initial.title ?? '')
   const [ingredients, setIngredients] = useState<IngredientItem[]>(
     initial.ingredients ?? [{ name: '', amount: '', unit: '' }]
   )
   const [steps, setSteps] = useState<StepItem[]>(
     initial.steps ?? [{ title: '', body: '', durationSeconds: null }]
+  )
+  const [dietOverride, setDietOverride] = useState<DietOverride>(
+    overrideFromDb(initial.isDietOverride)
   )
 
   return (
@@ -52,6 +58,7 @@ export function RecipeForm({ action, initial = {} }: Props) {
       )}
       <input type="hidden" name="ingredientsJson" value={JSON.stringify(ingredients)} />
       <input type="hidden" name="stepsJson" value={JSON.stringify(steps)} />
+      <input type="hidden" name="isDietOverride" value={dietOverride} />
 
       <section className="form-section">
         <label>
@@ -59,7 +66,8 @@ export function RecipeForm({ action, initial = {} }: Props) {
           <input
             type="text"
             name="title"
-            defaultValue={initial.title ?? ''}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             required
             autoFocus
           />
@@ -84,6 +92,13 @@ export function RecipeForm({ action, initial = {} }: Props) {
             ))}
           </select>
         </label>
+
+        <DietFieldControl
+          title={title}
+          ingredientNames={ingredients.map((i) => i.name)}
+          override={dietOverride}
+          onOverrideChange={setDietOverride}
+        />
 
         <div className="time-servings-row">
           <label>

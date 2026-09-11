@@ -394,6 +394,22 @@ a, [role="button"] { cursor: pointer; }
 .time-servings-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 .form-actions { position: sticky; bottom: 0; background: var(--canvas); padding: 16px; border-top: 1px solid var(--line); display: flex; gap: 12px; }
 
+/* Diet-only toggle on library page */
+.library-diet-toggle { display: flex; padding: 8px 16px 0; }
+.diet-toggle-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--ink); font-weight: 700; font-size: 0.9rem; text-decoration: none; transition: all 0.15s; }
+.diet-toggle-pill:hover { border-color: var(--focus); }
+.diet-toggle-pill.is-active { background: var(--focus); color: #fff; border-color: var(--focus); }
+.diet-toggle-pill:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+
+/* Diet field */
+.diet-field { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fffdfa; }
+.diet-checkbox-label { display: flex !important; flex-direction: row; align-items: center; gap: 10px; font-weight: 700; cursor: pointer; }
+.diet-checkbox-label input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--focus); cursor: pointer; margin: 0; }
+.diet-hint { margin: 0; font-size: 0.85rem; color: var(--ink-muted, #666); font-weight: 400; }
+.diet-reset { background: none; border: none; padding: 0; color: var(--focus); text-decoration: underline; font-size: 0.85rem; cursor: pointer; font-family: inherit; }
+.diet-reset:hover { text-decoration: none; }
+.diet-reset:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; border-radius: 4px; }
+
 /* Ingredient fields */
 .ingredient-fields { display: grid; gap: 8px; }
 .ingredient-row { display: grid; grid-template-columns: 70px 80px 1fr 36px; gap: 8px; align-items: center; }

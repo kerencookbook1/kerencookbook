@@ -23,11 +23,21 @@ export default async function RecipesPage({
 }: {
   searchParams: Promise<Record<string, string>>
 }) {
+  const params = await searchParams
+  const dietOnly = params.diet === '1'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const recipes = user ? await getRecipeCards(user.id) : []
-  const params = await searchParams
+  const recipes = user ? await getRecipeCards(user.id, { dietOnly }) : []
   const activeFilter = params.filter ?? 'הכל'
+  const dietHref = (() => {
+    const next = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => typeof v === 'string')
+    )
+    if (dietOnly) next.delete('diet')
+    else next.set('diet', '1')
+    const qs = next.toString()
+    return qs ? `/recipes?${qs}` : '/recipes'
+  })()
 
   return (
     <main className="library-shell">
@@ -64,6 +74,16 @@ export default async function RecipesPage({
             </Link>
           ))}
         </nav>
+        <div className="library-diet-toggle">
+          <Link
+            href={dietHref}
+            className={`diet-toggle-pill${dietOnly ? ' is-active' : ''}`}
+            aria-pressed={dietOnly}
+          >
+            <span aria-hidden="true">{dietOnly ? '✓' : '○'}</span>
+            <span>דיאטטי בלבד</span>
+          </Link>
+        </div>
       </div>
 
       {recipes.length === 0 ? (

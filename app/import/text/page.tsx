@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createRecipe } from "@/lib/actions/recipes";
+import { DietFieldControl, type DietOverride } from "@/components/recipes/diet-field-control";
+import { parseIngredientLine } from "@/lib/ingredients";
 
 type ExtractedRecipe = {
   title: string;
@@ -26,6 +28,12 @@ export default function ImportTextPage() {
   const [steps, setSteps] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [dietOverride, setDietOverride] = useState<DietOverride>('auto');
+
+  const ingredientNames = useMemo(
+    () => ingredients.split("\n").map((l) => l.trim()).filter(Boolean),
+    [ingredients]
+  );
 
   async function handleExtract(e: React.FormEvent) {
     e.preventDefault();
@@ -67,7 +75,7 @@ export default function ImportTextPage() {
         .split("\n")
         .map((l) => l.trim())
         .filter(Boolean)
-        .map((line) => ({ name: line, amount: "", unit: "" }));
+        .map(parseIngredientLine);
 
       const stepItems = steps
         .split("\n")
@@ -84,6 +92,7 @@ export default function ImportTextPage() {
       if (recipe?.servings != null) fd.append("servings", String(recipe.servings));
       fd.append("ingredientsJson", JSON.stringify(ingredientItems));
       fd.append("stepsJson", JSON.stringify(stepItems));
+      fd.append("isDietOverride", dietOverride);
 
       const result = await createRecipe(null, fd);
       if (result?.error) setSaveError(result.error);
@@ -196,6 +205,12 @@ export default function ImportTextPage() {
             <label>שלבי הכנה
               <textarea rows={8} value={steps} onChange={(e) => setSteps(e.target.value)} />
             </label>
+            <DietFieldControl
+              title={title}
+              ingredientNames={ingredientNames}
+              override={dietOverride}
+              onOverrideChange={setDietOverride}
+            />
             {saveError && (
               <div role="alert" style={{ padding: 12, borderRadius: 12, background: "#fdecea", color: "#8a1c14", fontSize: ".9rem" }}>
                 {saveError}

@@ -38,6 +38,7 @@ export default async function EditRecipePage({ params }: Props) {
           prepTime: recipe.prep_time,
           cookTime: recipe.cook_time,
           servings: recipe.servings,
+          isDietOverride: recipe.is_diet_override,
           ingredients: ingredients.map((ing) => ({
             name: ing.name,
             amount: ing.amount ?? '',

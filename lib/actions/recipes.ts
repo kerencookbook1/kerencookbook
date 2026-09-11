@@ -4,6 +4,13 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { recipeFormSchema } from '@/lib/validations/recipes'
 import type { IngredientItem, StepItem } from '@/lib/validations/recipes'
+import { isDietAuto } from '@/lib/diet'
+
+function overrideToDbValue(v: 'auto' | 'on' | 'off'): boolean | null {
+  if (v === 'on') return true
+  if (v === 'off') return false
+  return null
+}
 
 export type RecipeActionState = { error?: string } | null
 
@@ -36,12 +43,15 @@ export async function createRecipe(
     servings: formData.get('servings') || null,
     ingredientsJson: formData.get('ingredientsJson') ?? '[]',
     stepsJson: formData.get('stepsJson') ?? '[]',
+    isDietOverride: formData.get('isDietOverride') || 'auto',
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { title, description, category, difficulty, rating, notes, prepTime, cookTime, servings, ingredientsJson, stepsJson } = parsed.data
+  const { title, description, category, difficulty, rating, notes, prepTime, cookTime, servings, ingredientsJson, stepsJson, isDietOverride } = parsed.data
   const ingredients = parseJson<IngredientItem>(ingredientsJson)
   const steps = parseJson<StepItem>(stepsJson)
+  const dietAuto = isDietAuto(title, ingredients.map((i) => i.name))
+  const dietOverride = overrideToDbValue(isDietOverride)
 
   // Ensure a profile row exists (signup does not auto-create one)
   const displayName =
@@ -66,6 +76,8 @@ export async function createRecipe(
       prep_time: prepTime ?? null,
       cook_time: cookTime ?? null,
       servings: servings ?? null,
+      is_diet_auto: dietAuto,
+      is_diet_override: dietOverride,
     })
     .select('id')
     .single()
@@ -136,12 +148,15 @@ export async function updateRecipe(
     servings: formData.get('servings') || null,
     ingredientsJson: formData.get('ingredientsJson') ?? '[]',
     stepsJson: formData.get('stepsJson') ?? '[]',
+    isDietOverride: formData.get('isDietOverride') || 'auto',
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { title, description, category, difficulty, rating, notes, prepTime, cookTime, servings, ingredientsJson, stepsJson } = parsed.data
+  const { title, description, category, difficulty, rating, notes, prepTime, cookTime, servings, ingredientsJson, stepsJson, isDietOverride } = parsed.data
   const ingredients = parseJson<IngredientItem>(ingredientsJson)
   const steps = parseJson<StepItem>(stepsJson)
+  const dietAuto = isDietAuto(title, ingredients.map((i) => i.name))
+  const dietOverride = overrideToDbValue(isDietOverride)
 
   const { error: updateError } = await supabase
     .from('recipes')
@@ -155,6 +170,8 @@ export async function updateRecipe(
       prep_time: prepTime ?? null,
       cook_time: cookTime ?? null,
       servings: servings ?? null,
+      is_diet_auto: dietAuto,
+      is_diet_override: dietOverride,
     })
     .eq('id', recipeId)
     .eq('owner_id', user.id)

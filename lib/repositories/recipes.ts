@@ -27,10 +27,18 @@ export async function getRecipes(userId: string): Promise<RecipeRow[]> {
 export type RecipeCardRow = RecipeRow & {
   image_url: string | null
   ingredientNames: string[]
+  is_diet_effective: boolean
+}
+
+export type GetRecipeCardsOptions = {
+  dietOnly?: boolean
 }
 
 /** Recipes enriched with primary external image URL and ingredient names — for card grids and category filtering. */
-export async function getRecipeCards(userId: string): Promise<RecipeCardRow[]> {
+export async function getRecipeCards(
+  userId: string,
+  options: GetRecipeCardsOptions = {},
+): Promise<RecipeCardRow[]> {
   const supabase = await createClient()
   const { data: recipes, error } = await supabase
     .from('recipes')
@@ -40,7 +48,16 @@ export async function getRecipeCards(userId: string): Promise<RecipeCardRow[]> {
   if (error) throw error
   if (!recipes || recipes.length === 0) return []
 
-  const ids = recipes.map((r) => r.id)
+  const filtered = options.dietOnly
+    ? recipes.filter((r) =>
+        r.is_diet_override === true ||
+        (r.is_diet_override === null && r.is_diet_auto === true),
+      )
+    : recipes
+
+  if (filtered.length === 0) return []
+
+  const ids = filtered.map((r) => r.id)
   const [imagesRes, ingredientsRes] = await Promise.all([
     supabase
       .from('recipe_images')
@@ -64,10 +81,13 @@ export async function getRecipeCards(userId: string): Promise<RecipeCardRow[]> {
     ingredientsByRecipe.set(ing.recipe_id, arr)
   }
 
-  return recipes.map((r) => ({
+  return filtered.map((r) => ({
     ...r,
     image_url: imagesByRecipe.get(r.id) ?? null,
     ingredientNames: ingredientsByRecipe.get(r.id) ?? [],
+    is_diet_effective:
+      r.is_diet_override === true ||
+      (r.is_diet_override === null && r.is_diet_auto === true),
   }))
 }
 
