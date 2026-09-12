@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/types'
+import { resolveRecipeImageUrl } from '@/lib/recipe-image-url'
 
 export type RecipeRow = Database['public']['Tables']['recipes']['Row']
 export type IngredientRow = Database['public']['Tables']['ingredients']['Row']
@@ -92,11 +93,18 @@ export async function getRecipeCards(
     supabase.from('ingredients').select('recipe_id, name').in('recipe_id', ids),
   ])
 
+  // Prefer the primary image; fall back to the first row per recipe. Storage-path
+  // entries are resolved to public URLs (bucket is public-read after migration
+  // 0008); external http(s) entries are returned as-is.
+  // Prefer the primary image; fall back to the first row per recipe. Storage-path
+  // entries are resolved to public URLs (bucket is public-read after migration
+  // 0008); external http(s) entries are returned as-is.
   const imagesByRecipe = new Map<string, string>()
   for (const img of imagesRes.data ?? []) {
-    if (!/^https?:\/\//i.test(img.storage_path)) continue
+    const url = resolveRecipeImageUrl(null, img.storage_path)
+    if (!url) continue
     if (img.is_primary || !imagesByRecipe.has(img.recipe_id)) {
-      imagesByRecipe.set(img.recipe_id, img.storage_path)
+      imagesByRecipe.set(img.recipe_id, url)
     }
   }
 

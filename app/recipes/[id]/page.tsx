@@ -5,6 +5,7 @@ import { FavoriteButton } from '../../_components/favorite-button'
 import { RecipeTabs } from '../../_components/recipe-tabs'
 import { AddToShoppingButton } from '../../_components/add-to-shopping-button'
 import { CalorieButton } from '@/components/recipes/calorie-button'
+import { resolveRecipeImageUrl } from '@/lib/recipe-image-url'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -46,10 +47,9 @@ export default async function RecipePage({ params }: Props) {
   const totalTime = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0)
 
   const primaryImage = images.find((img) => img.is_primary) ?? images[0]
-  const externalImageUrl =
-    primaryImage && /^https?:\/\//i.test(primaryImage.storage_path)
-      ? primaryImage.storage_path
-      : null
+  const externalImageUrl = primaryImage
+    ? resolveRecipeImageUrl(null, primaryImage.storage_path)
+    : null
 
   const theme = pickTheme(recipe.title, ingredients, id)
 

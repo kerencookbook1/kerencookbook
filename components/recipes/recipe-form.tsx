@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, type ReactNode } from 'react'
 import { IngredientFields } from './ingredient-fields'
 import { StepFields } from './step-fields'
 import { DietFieldControl, overrideFromDb, type DietOverride } from './diet-field-control'
@@ -27,9 +27,11 @@ type RecipeFormInitial = {
 type Props = {
   action: (prev: RecipeActionState, formData: FormData) => Promise<RecipeActionState>
   initial?: RecipeFormInitial
+  /** Optional images editor rendered above the ingredients section. Provided by the edit page (needs auth). */
+  imagesSection?: ReactNode
 }
 
-export function RecipeForm({ action, initial = {} }: Props) {
+export function RecipeForm({ action, initial = {}, imagesSection }: Props) {
   const [state, formAction, isPending] = useActionState<RecipeActionState, FormData>(
     action,
     null
@@ -169,6 +171,13 @@ export function RecipeForm({ action, initial = {} }: Props) {
           />
         </label>
       </section>
+
+      {imagesSection && (
+        <section className="form-section">
+          <h2 className="section-heading">תמונות המתכון</h2>
+          {imagesSection}
+        </section>
+      )}
 
       <section className="form-section">
         <h2 className="section-heading">מרכיבים</h2>

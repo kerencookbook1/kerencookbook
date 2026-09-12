@@ -1,8 +1,10 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { getRecipe } from '@/lib/repositories/recipes'
 import { RecipeForm } from '@/components/recipes/recipe-form'
 import { updateRecipe, deleteRecipe } from '@/lib/actions/recipes'
 import { DeleteButton } from '@/components/recipes/delete-button'
+import { RecipeImagesEditor } from '@/components/recipes/recipe-images-editor'
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
 type Props = { params: Promise<{ id: string }> }
@@ -11,10 +13,14 @@ export const metadata = { title: 'עריכת מתכון — המטבח של קר
 
 export default async function EditRecipePage({ params }: Props) {
   const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
   const data = await getRecipe(id)
   if (!data) notFound()
 
-  const { recipe, ingredients, steps } = data
+  const { recipe, ingredients, steps, images } = data
 
   return (
     <div className="screen-shell">
@@ -27,6 +33,18 @@ export default async function EditRecipePage({ params }: Props) {
 
       <RecipeForm
         action={updateRecipe}
+        imagesSection={
+          <RecipeImagesEditor
+            recipeId={id}
+            ownerId={user.id}
+            initial={images.map((img) => ({
+              id: img.id,
+              storage_path: img.storage_path,
+              is_primary: img.is_primary,
+              position: img.position,
+            }))}
+          />
+        }
         initial={{
           recipeId: id,
           title: recipe.title,
