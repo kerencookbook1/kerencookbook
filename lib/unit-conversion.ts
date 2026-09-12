@@ -136,6 +136,15 @@ function pickGramsPerCup(ingredientName: string): number {
   return 200
 }
 
+/**
+ * Public: grams in one US cup of the given ingredient. Used by the calorie
+ * estimator to convert a "cup"-quantity into a mass when the DB row only
+ * knows kcal/100g. Falls back to 200g when the ingredient is unknown.
+ */
+export function gramsPerUsCup(ingredientName: string): number {
+  return pickGramsPerCup(ingredientName)
+}
+
 function pickMlPerCup(ingredientName: string): number | null {
   const lower = ingredientName.toLowerCase()
   for (const entry of CUP_TO_ML) {

@@ -10,6 +10,7 @@
 import { findCalorieRow, type CalorieRow } from './calories'
 import { parseAmount } from './shopping-normalize'
 import { stripDescriptors } from './shopping-normalize'
+import { gramsPerUsCup } from './unit-conversion'
 
 export type IngredientForCalories = {
   name: string
@@ -56,20 +57,39 @@ function classifyUnit(unit: string | null): keyof typeof UNIT_GROUPS | null {
   return null
 }
 
+/** Multiplier for ml → grams for oil-like ingredients (density ≈ 0.92 g/ml). */
+function isOilLike(name: string): boolean {
+  return /שמן|oil|butter|חמאה|מרגרינה|ghee/i.test(name)
+}
+
 function kcalFromRow(row: CalorieRow, amount: number, group: keyof typeof UNIT_GROUPS | null): number | null {
   switch (group) {
     case 'cup':
       if (row.kcalPerCup != null) return row.kcalPerCup * amount
-      if (row.kcalPer100g != null) return (row.kcalPer100g * 240 * amount) / 100  // approx 240g per cup for solids
+      // Ingredient-aware fallback: a cup of cocoa (100g) is NOT a cup of sugar (200g)
+      // or a cup of butter (227g). Use the density table shared with the metric
+      // converter so a missing kcalPerCup entry still produces a sane number.
+      if (row.kcalPer100g != null) {
+        const grams = gramsPerUsCup(row.name)
+        return (row.kcalPer100g * grams * amount) / 100
+      }
       return null
     case 'tbsp':
       if (row.kcalPerTbsp != null) return row.kcalPerTbsp * amount
-      if (row.kcalPer100g != null) return (row.kcalPer100g * 15 * amount) / 100
+      // 1 tbsp = 1/16 cup, so use the same density fallback rather than a
+      // fixed 15g which is wrong for oils and light powders.
+      if (row.kcalPer100g != null) {
+        const grams = gramsPerUsCup(row.name) / 16
+        return (row.kcalPer100g * grams * amount) / 100
+      }
       return null
     case 'tsp':
       if (row.kcalPerTsp != null) return row.kcalPerTsp * amount
       if (row.kcalPerTbsp != null) return (row.kcalPerTbsp * amount) / 3
-      if (row.kcalPer100g != null) return (row.kcalPer100g * 5 * amount) / 100
+      if (row.kcalPer100g != null) {
+        const grams = gramsPerUsCup(row.name) / 48
+        return (row.kcalPer100g * grams * amount) / 100
+      }
       return null
     case 'gram':
       if (row.kcalPer100g != null) return (row.kcalPer100g * amount) / 100
@@ -78,10 +98,17 @@ function kcalFromRow(row: CalorieRow, amount: number, group: keyof typeof UNIT_G
       if (row.kcalPer100g != null) return row.kcalPer100g * 10 * amount
       return null
     case 'ml':
-      if (row.kcalPer100g != null) return (row.kcalPer100g * amount) / 100
+      if (row.kcalPer100g != null) {
+        // Oil-like ingredients are ~0.92 g/ml; most other liquids are ~1.0.
+        const density = isOilLike(row.name) ? 0.92 : 1.0
+        return (row.kcalPer100g * amount * density) / 100
+      }
       return null
     case 'liter':
-      if (row.kcalPer100g != null) return row.kcalPer100g * 10 * amount
+      if (row.kcalPer100g != null) {
+        const density = isOilLike(row.name) ? 0.92 : 1.0
+        return row.kcalPer100g * 10 * amount * density
+      }
       return null
     case 'unit':
       if (row.kcalPerUnit != null) return row.kcalPerUnit * amount
