@@ -22,9 +22,22 @@ export default async function ScaleRecipePage({ params, searchParams }: Props) {
   if (!data) notFound()
 
   const { recipe, ingredients, steps } = data
-  const originalServings = recipe.servings ?? null
+
+  // Recipes without a stored `servings` value can still be scaled — the user
+  // just needs to tell us how many the current amounts feed. We accept an
+  // override via ?source=N and fall back to a sensible default of 4.
+  const storedServings = recipe.servings ?? null
+  const sourceRaw = Number(sp.source)
+  const sourceOverride =
+    Number.isFinite(sourceRaw) && sourceRaw > 0 ? Math.round(sourceRaw) : null
+  const originalServings = sourceOverride ?? storedServings ?? 4
+  const isSourceInferred = storedServings == null && sourceOverride == null
+
   const targetRaw = Number(sp.servings)
-  const targetServings = Number.isFinite(targetRaw) && targetRaw > 0 ? targetRaw : (originalServings ?? 4)
+  const targetServings =
+    Number.isFinite(targetRaw) && targetRaw > 0
+      ? targetRaw
+      : Math.max(1, originalServings)
   const factor = computeFactor(originalServings, targetServings)
 
   const scaled = factor != null
@@ -57,9 +70,19 @@ export default async function ScaleRecipePage({ params, searchParams }: Props) {
           <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">
             מספר מנות מקורי
           </span>
-          <span className="text-2xl font-bold tracking-tight">
-            {originalServings ?? '—'}
-          </span>
+          {storedServings != null && sourceOverride == null ? (
+            <span className="text-2xl font-bold tracking-tight">{storedServings}</span>
+          ) : (
+            <input
+              type="number"
+              name="source"
+              min={1}
+              step={1}
+              defaultValue={originalServings}
+              className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-2xl font-bold outline-none focus:border-lime-500 focus:ring-2 focus:ring-lime-100"
+              aria-describedby="source-hint"
+            />
+          )}
         </label>
         <label className="grid gap-1">
           <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">
@@ -82,11 +105,17 @@ export default async function ScaleRecipePage({ params, searchParams }: Props) {
             חשב מחדש
           </button>
         </div>
+        {isSourceInferred && (
+          <p id="source-hint" className="sm:col-span-3 mt-1 text-xs text-neutral-500">
+            למתכון הזה אין מספר מנות שמור — הזיני כמה מנות המרכיבים במתכון המקורי מכינים,
+            ואז את מספר המנות שאת רוצה. כדאי להוסיף את הערך למתכון דרך <Link href={`/recipes/${id}/edit`} className="text-lime-700 underline">עריכת מתכון</Link>.
+          </p>
+        )}
       </form>
 
       {factor == null ? (
         <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          המתכון לא מכיל מספר מנות מקורי, אז אי אפשר לחשב יחס התאמה. עדכן את המתכון עם מספר מנות ואז נסה שוב.
+          לא הצלחתי לחשב יחס התאמה. ודאי שמספר המנות המקורי ומספר המנות הרצוי הם מספרים חיוביים.
         </div>
       ) : (
         <>

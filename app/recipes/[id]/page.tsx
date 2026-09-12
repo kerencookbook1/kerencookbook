@@ -201,15 +201,17 @@ export default async function RecipePage({ params }: Props) {
               }))}
               servings={recipe.servings ?? null}
             />
-            {recipe.servings != null && (
-              <Link
-                href={`/recipes/${id}/scale?servings=${Math.max(1, Math.round(recipe.servings / 2))}`}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm transition hover:border-lime-500 hover:text-lime-700"
-              >
-                <span aria-hidden="true">⚖️</span>
-                <span>התאם למנות</span>
-              </Link>
-            )}
+            <Link
+              href={
+                recipe.servings != null
+                  ? `/recipes/${id}/scale?servings=${Math.max(1, Math.round(recipe.servings / 2))}`
+                  : `/recipes/${id}/scale`
+              }
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm transition hover:border-lime-500 hover:text-lime-700"
+            >
+              <span aria-hidden="true">⚖️</span>
+              <span>התאם למנות</span>
+            </Link>
             <Link href={`/recipes/${id}/edit`} className="outline-button" style={{ flex: 1, minWidth: 160 }}>
               עריכת מתכון
             </Link>
