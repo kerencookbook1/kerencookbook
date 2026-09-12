@@ -25,6 +25,7 @@ export const recipeFormSchema = z.object({
   author: z.string().optional().default(''),
   sourceName: z.string().optional().default(''),
   sourceUrl: z.string().optional().default(''),
+  sourcePhotoPath: z.string().optional().default(''),
   ingredientsJson: z.string(),
   stepsJson: z.string(),
   isDietOverride: z.enum(['auto', 'on', 'off']).default('auto'),

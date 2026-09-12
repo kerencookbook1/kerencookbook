@@ -7,6 +7,8 @@ import { ImageCropper } from "../../_components/image-cropper";
 import { DietFieldControl, type DietOverride } from "@/components/recipes/diet-field-control";
 import { IngredientPicker } from "@/components/recipes/ingredient-picker";
 import { parseIngredientLine } from "@/lib/ingredients";
+import { createClient } from "@/lib/supabase/client";
+import { RECIPE_IMAGES_BUCKET } from "@/lib/recipe-image-url";
 
 function appendIngredient(current: string, name: string): string {
   const trimmed = current.replace(/\s+$/, '');
@@ -181,6 +183,31 @@ export default function PhotoImportPage() {
         .filter(Boolean)
         .map((body) => ({ title: "", body, durationSeconds: null }));
 
+      // Upload the normalized source photo to Storage so the recipe can link
+      // back to it. This gives OCR / handwritten imports proper provenance —
+      // the "צפי בצילום המקור" button on the recipe page uses this path.
+      let sourcePhotoPath: string | null = null;
+      if (rawFile) {
+        try {
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const normalizedBlob = await normalizeImage(rawFile, rotation);
+            const objectName = `${user.id}/imports/${crypto.randomUUID()}.jpg`;
+            const upload = await supabase.storage
+              .from(RECIPE_IMAGES_BUCKET)
+              .upload(objectName, normalizedBlob, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: 'image/jpeg',
+              });
+            if (!upload.error) sourcePhotoPath = objectName;
+          }
+        } catch {
+          // Non-fatal — save the recipe even if the photo upload didn't work.
+        }
+      }
+
       const fd = new FormData();
       fd.append("title", title);
       fd.append("description", recipe?.description ?? "");
@@ -192,6 +219,12 @@ export default function PhotoImportPage() {
       fd.append("stepsJson", JSON.stringify(stepItems));
       fd.append("isDietOverride", dietOverride);
       if (recipe?.author) fd.append("author", recipe.author);
+      if (sourcePhotoPath) {
+        fd.append("sourcePhotoPath", sourcePhotoPath);
+        // Also use the source photo as the recipe's initial primary image so
+        // the card grid isn't stuck on the category-emoji placeholder.
+        fd.append("imageUrl", sourcePhotoPath);
+      }
 
       const result = await createRecipe(null, fd);
       if (result?.error) setSaveError(result.error);

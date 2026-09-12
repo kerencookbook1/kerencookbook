@@ -44,13 +44,14 @@ export async function createRecipe(
     author: formData.get('author') || '',
     sourceName: formData.get('sourceName') || '',
     sourceUrl: formData.get('sourceUrl') || '',
+    sourcePhotoPath: formData.get('sourcePhotoPath') || '',
     ingredientsJson: formData.get('ingredientsJson') ?? '[]',
     stepsJson: formData.get('stepsJson') ?? '[]',
     isDietOverride: formData.get('isDietOverride') || 'auto',
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { title, description, category, difficulty, rating, notes, prepTime, cookTime, servings, author, sourceName, sourceUrl, ingredientsJson, stepsJson, isDietOverride } = parsed.data
+  const { title, description, category, difficulty, rating, notes, prepTime, cookTime, servings, author, sourceName, sourceUrl, sourcePhotoPath, ingredientsJson, stepsJson, isDietOverride } = parsed.data
   const ingredients = parseJson<IngredientItem>(ingredientsJson)
   const steps = parseJson<StepItem>(stepsJson)
   const dietAuto = isDietAuto(title, ingredients.map((i) => i.name))
@@ -82,6 +83,7 @@ export async function createRecipe(
       author: author?.trim() || null,
       source_name: sourceName?.trim() || null,
       source_url: sourceUrl?.trim() || null,
+      source_photo_path: sourcePhotoPath?.trim() || null,
       is_diet_auto: dietAuto,
       is_diet_override: dietOverride,
     })
@@ -118,14 +120,22 @@ export async function createRecipe(
     )
   }
 
+  // `imageUrl` can be either an external HTTP(S) URL (URL / video imports) or
+  // a storage path from the recipe-images bucket (photo imports uploaded the
+  // photo client-side before calling this action).
   const imageUrl = formData.get('imageUrl')
-  if (typeof imageUrl === 'string' && /^https?:\/\//i.test(imageUrl.trim())) {
-    await supabase.from('recipe_images').insert({
-      recipe_id: recipe.id,
-      storage_path: imageUrl.trim(),
-      is_primary: true,
-      position: 0,
-    })
+  if (typeof imageUrl === 'string' && imageUrl.trim()) {
+    const raw = imageUrl.trim()
+    const isUrl = /^https?:\/\//i.test(raw)
+    const looksLikeStoragePath = /^[0-9a-f-]{36}\/.+/i.test(raw)
+    if (isUrl || looksLikeStoragePath) {
+      await supabase.from('recipe_images').insert({
+        recipe_id: recipe.id,
+        storage_path: raw,
+        is_primary: true,
+        position: 0,
+      })
+    }
   }
 
   redirect(`/recipes/${recipe.id}`)
@@ -155,13 +165,14 @@ export async function updateRecipe(
     author: formData.get('author') || '',
     sourceName: formData.get('sourceName') || '',
     sourceUrl: formData.get('sourceUrl') || '',
+    sourcePhotoPath: formData.get('sourcePhotoPath') || '',
     ingredientsJson: formData.get('ingredientsJson') ?? '[]',
     stepsJson: formData.get('stepsJson') ?? '[]',
     isDietOverride: formData.get('isDietOverride') || 'auto',
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { title, description, category, difficulty, rating, notes, prepTime, cookTime, servings, author, sourceName, sourceUrl, ingredientsJson, stepsJson, isDietOverride } = parsed.data
+  const { title, description, category, difficulty, rating, notes, prepTime, cookTime, servings, author, sourceName, sourceUrl, sourcePhotoPath, ingredientsJson, stepsJson, isDietOverride } = parsed.data
   const ingredients = parseJson<IngredientItem>(ingredientsJson)
   const steps = parseJson<StepItem>(stepsJson)
   const dietAuto = isDietAuto(title, ingredients.map((i) => i.name))
@@ -182,6 +193,7 @@ export async function updateRecipe(
       author: author?.trim() || null,
       source_name: sourceName?.trim() || null,
       source_url: sourceUrl?.trim() || null,
+      source_photo_path: sourcePhotoPath?.trim() || null,
       is_diet_auto: dietAuto,
       is_diet_override: dietOverride,
     })

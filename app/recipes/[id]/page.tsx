@@ -329,6 +329,28 @@ export default async function RecipePage({ params }: Props) {
               sourceName={recipe.source_name}
               sourceUrl={recipe.source_url}
             />
+            {recipe.source_url && (
+              <a
+                href={recipe.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm transition hover:border-lime-500 hover:text-lime-700"
+              >
+                <span aria-hidden="true">🔗</span>
+                <span>{recipe.source_name ? `לאתר המקור · ${recipe.source_name}` : 'לאתר המקור'} ↗</span>
+              </a>
+            )}
+            {!recipe.source_url && recipe.source_photo_path && (
+              <a
+                href={resolveRecipeImageUrl(null, recipe.source_photo_path) ?? '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm transition hover:border-lime-500 hover:text-lime-700"
+              >
+                <span aria-hidden="true">📷</span>
+                <span>צפי בצילום המקור ↗</span>
+              </a>
+            )}
             <Link href={`/recipes/${id}/edit`} className="outline-button" style={{ flex: 1, minWidth: 160 }}>
               עריכת מתכון
             </Link>

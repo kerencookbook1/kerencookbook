@@ -304,6 +304,7 @@ export type Database = {
           rating: number | null
           servings: number | null
           source_name: string | null
+          source_photo_path: string | null
           source_url: string | null
           status: string
           title: string
@@ -326,6 +327,7 @@ export type Database = {
           rating?: number | null
           servings?: number | null
           source_name?: string | null
+          source_photo_path?: string | null
           source_url?: string | null
           status?: string
           title: string
@@ -348,6 +350,7 @@ export type Database = {
           rating?: number | null
           servings?: number | null
           source_name?: string | null
+          source_photo_path?: string | null
           source_url?: string | null
           status?: string
           title?: string
