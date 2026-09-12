@@ -288,6 +288,7 @@ export type Database = {
       }
       recipes: {
         Row: {
+          author: string | null
           category: string | null
           cook_time: number | null
           created_at: string
@@ -302,11 +303,14 @@ export type Database = {
           prep_time: number | null
           rating: number | null
           servings: number | null
+          source_name: string | null
+          source_url: string | null
           status: string
           title: string
           updated_at: string
         }
         Insert: {
+          author?: string | null
           category?: string | null
           cook_time?: number | null
           created_at?: string
@@ -321,11 +325,14 @@ export type Database = {
           prep_time?: number | null
           rating?: number | null
           servings?: number | null
+          source_name?: string | null
+          source_url?: string | null
           status?: string
           title: string
           updated_at?: string
         }
         Update: {
+          author?: string | null
           category?: string | null
           cook_time?: number | null
           created_at?: string
@@ -340,6 +347,8 @@ export type Database = {
           prep_time?: number | null
           rating?: number | null
           servings?: number | null
+          source_name?: string | null
+          source_url?: string | null
           status?: string
           title?: string
           updated_at?: string

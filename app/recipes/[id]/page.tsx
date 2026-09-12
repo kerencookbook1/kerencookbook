@@ -130,6 +130,44 @@ export default async function RecipePage({ params }: Props) {
     <div className="library-shell">
       <header className="library-header">
         <Link href="/recipes" className="back-link">← המתכונים שלי</Link>
+        {(recipe.author || recipe.source_name || recipe.source_url) && (
+          <p
+            style={{
+              margin: '10px 0 0',
+              fontSize: '.9rem',
+              color: 'var(--muted, #525252)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8,
+              alignItems: 'baseline',
+            }}
+          >
+            {recipe.author && (
+              <span>
+                <span style={{ opacity: .75 }}>מאת</span>{' '}
+                <strong style={{ color: 'var(--ink, #171717)', fontWeight: 700 }}>{recipe.author}</strong>
+              </span>
+            )}
+            {(recipe.source_name || recipe.source_url) && (
+              <span>
+                {recipe.author && <span aria-hidden style={{ opacity: .5 }}>·</span>}{' '}
+                <span style={{ opacity: .75 }}>מקור:</span>{' '}
+                {recipe.source_url ? (
+                  <a
+                    href={recipe.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--terracotta-dark, #4d7c0f)', textDecoration: 'underline', fontWeight: 600 }}
+                  >
+                    {recipe.source_name || recipe.source_url}
+                  </a>
+                ) : (
+                  <strong style={{ color: 'var(--ink, #171717)', fontWeight: 600 }}>{recipe.source_name}</strong>
+                )}
+              </span>
+            )}
+          </p>
+        )}
         <div className="library-title-row" style={{ marginTop: 12 }}>
           <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(2.2rem,4vw,3.8rem)', letterSpacing: '-.03em', margin: 0 }}>
             {recipe.title}
@@ -228,6 +266,9 @@ export default async function RecipePage({ params }: Props) {
               prepTime={recipe.prep_time}
               cookTime={recipe.cook_time}
               servings={recipe.servings}
+              author={recipe.author}
+              sourceName={recipe.source_name}
+              sourceUrl={recipe.source_url}
             />
             <Link href={`/recipes/${id}/edit`} className="outline-button" style={{ flex: 1, minWidth: 160 }}>
               עריכת מתכון

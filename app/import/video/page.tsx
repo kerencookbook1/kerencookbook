@@ -136,6 +136,16 @@ export default function ImportVideoPage() {
       if (recipe?.sourceMetadata?.thumbnailUrl) {
         fd.append("imageUrl", recipe.sourceMetadata.thumbnailUrl);
       }
+      // Attribution — channel becomes author, YouTube (or filename) becomes source.
+      if (recipe?.sourceMetadata?.author) {
+        fd.append("author", recipe.sourceMetadata.author);
+      }
+      if (recipe?.sourceMetadata?.sourceKind === 'youtube') {
+        fd.append("sourceName", "YouTube");
+      }
+      if (recipe?.sourceMetadata?.sourceUrl) {
+        fd.append("sourceUrl", recipe.sourceMetadata.sourceUrl);
+      }
 
       const result = await createRecipe(null, fd);
       if (result?.error) setSaveError(result.error);

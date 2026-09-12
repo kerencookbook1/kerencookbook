@@ -41,13 +41,16 @@ export async function createRecipe(
     prepTime: formData.get('prepTime') || null,
     cookTime: formData.get('cookTime') || null,
     servings: formData.get('servings') || null,
+    author: formData.get('author') || '',
+    sourceName: formData.get('sourceName') || '',
+    sourceUrl: formData.get('sourceUrl') || '',
     ingredientsJson: formData.get('ingredientsJson') ?? '[]',
     stepsJson: formData.get('stepsJson') ?? '[]',
     isDietOverride: formData.get('isDietOverride') || 'auto',
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { title, description, category, difficulty, rating, notes, prepTime, cookTime, servings, ingredientsJson, stepsJson, isDietOverride } = parsed.data
+  const { title, description, category, difficulty, rating, notes, prepTime, cookTime, servings, author, sourceName, sourceUrl, ingredientsJson, stepsJson, isDietOverride } = parsed.data
   const ingredients = parseJson<IngredientItem>(ingredientsJson)
   const steps = parseJson<StepItem>(stepsJson)
   const dietAuto = isDietAuto(title, ingredients.map((i) => i.name))
@@ -76,6 +79,9 @@ export async function createRecipe(
       prep_time: prepTime ?? null,
       cook_time: cookTime ?? null,
       servings: servings ?? null,
+      author: author?.trim() || null,
+      source_name: sourceName?.trim() || null,
+      source_url: sourceUrl?.trim() || null,
       is_diet_auto: dietAuto,
       is_diet_override: dietOverride,
     })
@@ -146,13 +152,16 @@ export async function updateRecipe(
     prepTime: formData.get('prepTime') || null,
     cookTime: formData.get('cookTime') || null,
     servings: formData.get('servings') || null,
+    author: formData.get('author') || '',
+    sourceName: formData.get('sourceName') || '',
+    sourceUrl: formData.get('sourceUrl') || '',
     ingredientsJson: formData.get('ingredientsJson') ?? '[]',
     stepsJson: formData.get('stepsJson') ?? '[]',
     isDietOverride: formData.get('isDietOverride') || 'auto',
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { title, description, category, difficulty, rating, notes, prepTime, cookTime, servings, ingredientsJson, stepsJson, isDietOverride } = parsed.data
+  const { title, description, category, difficulty, rating, notes, prepTime, cookTime, servings, author, sourceName, sourceUrl, ingredientsJson, stepsJson, isDietOverride } = parsed.data
   const ingredients = parseJson<IngredientItem>(ingredientsJson)
   const steps = parseJson<StepItem>(stepsJson)
   const dietAuto = isDietAuto(title, ingredients.map((i) => i.name))
@@ -170,6 +179,9 @@ export async function updateRecipe(
       prep_time: prepTime ?? null,
       cook_time: cookTime ?? null,
       servings: servings ?? null,
+      author: author?.trim() || null,
+      source_name: sourceName?.trim() || null,
+      source_url: sourceUrl?.trim() || null,
       is_diet_auto: dietAuto,
       is_diet_override: dietOverride,
     })

@@ -21,6 +21,9 @@ type Props = {
   prepTime?: number | null
   cookTime?: number | null
   servings?: number | null
+  author?: string | null
+  sourceName?: string | null
+  sourceUrl?: string | null
 }
 
 const MAX_URL_CHARS = 6000 // WhatsApp truncates around 8k; leave headroom for base URL + encoding
@@ -29,6 +32,14 @@ const MAX_URL_CHARS = 6000 // WhatsApp truncates around 8k; leave headroom for b
 function buildMessage(props: Props, siteOrigin: string): string {
   const lines: string[] = []
   lines.push(`*${props.title}*`)
+
+  if (props.author?.trim()) {
+    lines.push(`✍️ מאת: ${props.author.trim()}`)
+  }
+  if (props.sourceName?.trim() || props.sourceUrl?.trim()) {
+    const site = props.sourceName?.trim() || props.sourceUrl?.trim()
+    lines.push(`📖 מקור: ${site}`)
+  }
 
   const meta: string[] = []
   const total = (props.prepTime ?? 0) + (props.cookTime ?? 0)

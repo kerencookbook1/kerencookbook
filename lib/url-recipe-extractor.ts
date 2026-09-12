@@ -4,6 +4,7 @@ import { extractRecipeFromText, type ExtractedRecipe } from './provider-adapters
 export type ImportResult = ExtractedRecipe & {
   source_url: string
   source_site?: string
+  author?: string
   image_url?: string
   method: 'json-ld' | 'ai'
 }
@@ -166,11 +167,35 @@ function extractFromJsonLd(html: string, sourceUrl: string): ImportResult | null
     cook_minutes: parseIsoDuration(strGet(recipe, 'cookTime')),
     ingredients: parseStringArray(recipe['recipeIngredient']),
     steps: parseInstructions(recipe['recipeInstructions']),
+    author: parseAuthor(recipe['author']),
     source_url: sourceUrl,
     source_site: safeHostname(sourceUrl),
     image_url: parseImage(recipe['image']),
     method: 'json-ld',
   }
+}
+
+/**
+ * schema.org/Recipe `author` can be:
+ *   - a plain string ("Yotam Ottolenghi")
+ *   - a Person object ({@type:"Person", name:"..."})
+ *   - an array of either
+ * Return the first legible name we can find.
+ */
+function parseAuthor(a: unknown): string | undefined {
+  if (typeof a === 'string' && a.trim()) return a.trim()
+  if (Array.isArray(a)) {
+    for (const item of a) {
+      const name = parseAuthor(item)
+      if (name) return name
+    }
+    return undefined
+  }
+  if (a && typeof a === 'object') {
+    const name = (a as Record<string, unknown>)['name']
+    if (typeof name === 'string' && name.trim()) return name.trim()
+  }
+  return undefined
 }
 
 function strGet(obj: Record<string, unknown>, key: string): string | null {

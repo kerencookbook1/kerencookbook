@@ -19,6 +19,9 @@ type RecipeFormInitial = {
   prepTime?: number | null
   cookTime?: number | null
   servings?: number | null
+  author?: string | null
+  sourceName?: string | null
+  sourceUrl?: string | null
   ingredients?: IngredientItem[]
   steps?: StepItem[]
   isDietOverride?: boolean | null
@@ -72,6 +75,37 @@ export function RecipeForm({ action, initial = {}, imagesSection }: Props) {
             onChange={(e) => setTitle(e.target.value)}
             required
             autoFocus
+          />
+        </label>
+
+        <div className="time-servings-row">
+          <label>
+            מחבר/שף
+            <input
+              type="text"
+              name="author"
+              defaultValue={initial.author ?? ''}
+              placeholder="למשל: סבתא רות · יותם אוטולנגי"
+            />
+          </label>
+          <label>
+            שם המקור
+            <input
+              type="text"
+              name="sourceName"
+              defaultValue={initial.sourceName ?? ''}
+              placeholder="למשל: המטבח של קרן · AllRecipes"
+            />
+          </label>
+        </div>
+        <label>
+          כתובת המקור (אם יש)
+          <input
+            type="url"
+            name="sourceUrl"
+            defaultValue={initial.sourceUrl ?? ''}
+            placeholder="https://..."
+            dir="ltr"
           />
         </label>
 

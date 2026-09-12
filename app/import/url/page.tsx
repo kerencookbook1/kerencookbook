@@ -25,6 +25,7 @@ type ImportResult = {
   provider?: string;
   source_url: string;
   source_site?: string;
+  author?: string;
   image_url?: string;
   method: "json-ld" | "ai";
 };
@@ -113,6 +114,9 @@ export default function ImportUrlPage() {
       fd.append("stepsJson", JSON.stringify(stepItems));
       fd.append("isDietOverride", dietOverride);
       if (recipe?.image_url) fd.append("imageUrl", recipe.image_url);
+      if (recipe?.author) fd.append("author", recipe.author);
+      if (recipe?.source_site) fd.append("sourceName", recipe.source_site);
+      if (recipe?.source_url) fd.append("sourceUrl", recipe.source_url);
 
       const result = await createRecipe(null, fd);
       if (result?.error) setSaveError(result.error);
