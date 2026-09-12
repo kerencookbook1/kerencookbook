@@ -33,6 +33,13 @@ const SOURCES = [
   },
   {
     number: '05',
+    title: 'ייבוא מוידאו',
+    description: 'קישור ליוטיוב או קובץ אודיו — AI יזהה את המתכון.',
+    href: '/import/video',
+    primary: false,
+  },
+  {
+    number: '06',
     title: 'הקלטת קול',
     description: 'הכתיבי מתכון בקול — AI יתמלל ויעצב.',
     href: '/import/voice',
