@@ -173,12 +173,23 @@ export function SearchDialog({ isOpen, onClose }: { isOpen: boolean; onClose: ()
             onClick={onClose}
             aria-label="סגור חיפוש"
             style={{
-              border: 0, background: 'transparent', color: 'var(--muted)',
-              cursor: 'pointer', padding: 4, fontSize: '1.1rem',
-              display: 'flex', alignItems: 'center', gap: 4,
+              border: 0,
+              background: 'var(--terracotta-dark, #4d7c0f)',
+              color: '#fff',
+              cursor: 'pointer',
+              padding: '8px 14px',
+              fontSize: '.85rem',
+              fontWeight: 700,
+              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              minHeight: 36,
+              boxShadow: '0 1px 2px rgba(0,0,0,.08)',
             }}
           >
-            <span style={{ fontSize: '.75rem', border: '1px solid var(--line)', borderRadius: 6, padding: '2px 6px' }}>Esc</span>
+            <span aria-hidden style={{ fontSize: '1rem' }}>✕</span>
+            <span>סגירה</span>
           </button>
         </div>
 
