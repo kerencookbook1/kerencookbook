@@ -8,6 +8,7 @@ import { CalorieButton } from '@/components/recipes/calorie-button'
 import { resolveRecipeImageUrl } from '@/lib/recipe-image-url'
 import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeholder'
 import { IngredientListWithToggle } from '@/components/recipes/ingredient-list-with-toggle'
+import { WhatsAppShareButton } from '@/components/recipes/whatsapp-share-button'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -212,6 +213,22 @@ export default async function RecipePage({ params }: Props) {
               <span aria-hidden="true">⚖️</span>
               <span>התאם למנות</span>
             </Link>
+            <WhatsAppShareButton
+              recipeId={id}
+              title={recipe.title}
+              ingredients={ingredients.map((ing) => ({
+                name: ing.name,
+                amount: ing.amount,
+                unit: ing.unit,
+              }))}
+              steps={steps.map((s) => ({
+                title: s.title ?? null,
+                body: s.body,
+              }))}
+              prepTime={recipe.prep_time}
+              cookTime={recipe.cook_time}
+              servings={recipe.servings}
+            />
             <Link href={`/recipes/${id}/edit`} className="outline-button" style={{ flex: 1, minWidth: 160 }}>
               עריכת מתכון
             </Link>
