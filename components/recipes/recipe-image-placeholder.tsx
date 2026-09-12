@@ -49,13 +49,49 @@ function pickCategory(props: Props): CategoryId {
 }
 
 /**
+ * Sub-category emoji overrides. When a poultry recipe is specifically turkey,
+ * beef is a hamburger, or fish is salmon, we swap the emoji so the placeholder
+ * feels tuned to the actual dish. The tint stays with the parent category.
+ * Add new entries here as feedback comes in.
+ */
+const SUBCATEGORY_OVERRIDES: Array<{
+  parent: CategoryId
+  keywords: string[]
+  emoji: string
+  label: string
+}> = [
+  { parent: 'עוף',   keywords: ['הודו', 'turkey'],                 emoji: '🦃', label: 'הודו' },
+  { parent: 'בשר',   keywords: ['המבורגר', 'burger', 'hamburger'], emoji: '🍔', label: 'המבורגר' },
+  { parent: 'בשר',   keywords: ['נקניק', 'sausage', 'hotdog', 'hot dog'], emoji: '🌭', label: 'נקניק' },
+  { parent: 'דגים',  keywords: ['שרימפס', 'סרטן', 'shrimp', 'crab'], emoji: '🦐', label: 'פירות ים' },
+  { parent: 'קינוחים', keywords: ['גלידה', 'סורבה', 'ice cream'], emoji: '🍨', label: 'גלידה' },
+  { parent: 'קינוחים', keywords: ['עוגיה', 'cookie'],              emoji: '🍪', label: 'עוגיות' },
+  { parent: 'מאפים', keywords: ['פיצה', 'pizza'],                  emoji: '🍕', label: 'פיצה' },
+  { parent: 'מאפים', keywords: ['בייגל', 'bagel'],                 emoji: '🥯', label: 'בייגל' },
+  { parent: 'שתייה',  keywords: ['קפה', 'coffee', 'אספרסו'],       emoji: '☕', label: 'קפה' },
+  { parent: 'שתייה',  keywords: ['תה', 'tea'],                     emoji: '🍵', label: 'תה' },
+]
+
+function refineIcon(parent: CategoryId, title: string, ingredientNames: string[]): { icon: string; label: string } {
+  const haystack = [title, ...ingredientNames].join(' ').toLowerCase()
+  for (const rule of SUBCATEGORY_OVERRIDES) {
+    if (rule.parent !== parent) continue
+    if (rule.keywords.some((k) => haystack.includes(k.toLowerCase()))) {
+      return { icon: rule.emoji, label: rule.label }
+    }
+  }
+  const fallback = CATEGORIES.find((c) => c.id === parent)?.icon ?? '🍽️'
+  return { icon: fallback, label: parent }
+}
+
+/**
  * Fallback visual for a recipe that has no photo. Renders a big emoji drawing
  * of the dish type on a soft tinted background matching the category palette.
  * Cards can drop this in wherever they would otherwise use `<img />`.
  */
 export function RecipeImagePlaceholder(props: Props) {
   const cat = pickCategory(props)
-  const icon = CATEGORIES.find((c) => c.id === cat)?.icon ?? '🍽️'
+  const { icon, label } = refineIcon(cat, props.title ?? '', props.ingredientNames ?? [])
   const bg = TINT[cat]
   const bgDeep = TINT_DEEP[cat]
 
@@ -96,7 +132,7 @@ export function RecipeImagePlaceholder(props: Props) {
           letterSpacing: '.02em',
         }}
       >
-        {cat}
+        {label}
       </span>
     </div>
   )
