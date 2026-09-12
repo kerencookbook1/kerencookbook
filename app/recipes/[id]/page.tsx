@@ -4,11 +4,11 @@ import Link from 'next/link'
 import { FavoriteButton } from '../../_components/favorite-button'
 import { RecipeTabs } from '../../_components/recipe-tabs'
 import { AddToShoppingButton } from '../../_components/add-to-shopping-button'
-import { CalorieButton } from '@/components/recipes/calorie-button'
 import { resolveRecipeImageUrl } from '@/lib/recipe-image-url'
 import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeholder'
 import { IngredientListWithToggle } from '@/components/recipes/ingredient-list-with-toggle'
 import { WhatsAppShareButton } from '@/components/recipes/whatsapp-share-button'
+import { NutritionCard } from '@/components/recipes/nutrition-card'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -81,6 +81,19 @@ export default async function RecipePage({ params }: Props) {
         </section>
       ) : (
         <p style={{ color: 'var(--muted)' }}>אין מרכיבים רשומים.</p>
+      )}
+
+      {ingredients.length > 0 && (
+        <section style={{ marginTop: 28 }}>
+          <NutritionCard
+            ingredients={ingredients.map((ing) => ({
+              name: ing.name,
+              amount: ing.amount,
+              unit: ing.unit,
+            }))}
+            servings={recipe.servings}
+          />
+        </section>
       )}
     </>
   )
@@ -232,14 +245,6 @@ export default async function RecipePage({ params }: Props) {
               התחל בישול
             </Link>
             <AddToShoppingButton recipeId={id} />
-            <CalorieButton
-              ingredients={ingredients.map((ing) => ({
-                name: ing.name,
-                amount: ing.amount,
-                unit: ing.unit,
-              }))}
-              servings={recipe.servings ?? null}
-            />
             <Link
               href={
                 recipe.servings != null
