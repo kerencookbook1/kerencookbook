@@ -28,6 +28,7 @@ const SYSTEM_PROMPT = `אתה מומחה OCR ומחלץ מתכונים מתמו�
   "servings": מספר מנות או null,
   "prep_minutes": דקות הכנה או null,
   "cook_minutes": דקות בישול או null,
+  "author": "שם השף/המחבר אם רשום בתמונה (למשל: 'המתכון של סבתא רות', 'מאת אבי כהן') — אחרת null",
   "ingredients": ["מרכיב שכתוב בתמונה", ...],
   "steps": ["שלב שכתוב בתמונה", ...]
 }`
@@ -39,6 +40,8 @@ export type ExtractedRecipe = {
   servings?: number | null
   prep_minutes?: number | null
   cook_minutes?: number | null
+  /** Name of the chef / recipe author, when detectable from the text. */
+  author?: string | null
   ingredients: string[]
   steps: string[]
   provider?: string
@@ -425,6 +428,8 @@ const TEXT_SYSTEM_PROMPT = `אתה מומחה בזיהוי מתכונים מטק
 4. אם משהו לא ברור — עדיף להשמיט מאשר להמציא.
 5. בחר קטגוריה אחת מהרשימה הבאה בלבד: ${CATEGORY_LIST}. אם לא ברור — בחר "אחר".
 
+6. חפש בטקסט את שם השף/המחבר של המתכון. שמות נפוצים בטקסטים ישראלים: "המתכון של [שם]", "מאת [שם]", "השף [שם]", "מטבחה של [שם]". דוגמאות: "רון יוחננוף", "אבי כהן", "אורלי פלאי-ברונשטיין", "יותם אוטולנגי". אם אין שם ברור — החזר null.
+
 החזר JSON תקף בלבד במבנה הבא, ללא טקסט לפני או אחרי:
 {
   "title": "שם המתכון (חובה)",
@@ -433,6 +438,7 @@ const TEXT_SYSTEM_PROMPT = `אתה מומחה בזיהוי מתכונים מטק
   "servings": מספר מנות או null,
   "prep_minutes": דקות הכנה או null,
   "cook_minutes": דקות בישול או null,
+  "author": "שם השף/המחבר או null",
   "ingredients": ["מרכיב עם כמות ויחידה", ...],
   "steps": ["שלב 1", "שלב 2", ...]
 }`

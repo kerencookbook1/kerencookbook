@@ -22,6 +22,7 @@ type ExtractedRecipe = {
   ingredients: string[];
   steps: string[];
   provider?: string;
+  author?: string | null;
 };
 
 export default function ImportTextPage() {
@@ -99,6 +100,7 @@ export default function ImportTextPage() {
       fd.append("ingredientsJson", JSON.stringify(ingredientItems));
       fd.append("stepsJson", JSON.stringify(stepItems));
       fd.append("isDietOverride", dietOverride);
+      if (recipe?.author) fd.append("author", recipe.author);
 
       const result = await createRecipe(null, fd);
       if (result?.error) setSaveError(result.error);

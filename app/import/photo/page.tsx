@@ -58,6 +58,7 @@ type ExtractedRecipe = {
   raw_text?: string | null;
   recognition_failed?: boolean;
   reason?: string | null;
+  author?: string | null;
 };
 
 export default function PhotoImportPage() {
@@ -190,6 +191,7 @@ export default function PhotoImportPage() {
       fd.append("ingredientsJson", JSON.stringify(ingredientItems));
       fd.append("stepsJson", JSON.stringify(stepItems));
       fd.append("isDietOverride", dietOverride);
+      if (recipe?.author) fd.append("author", recipe.author);
 
       const result = await createRecipe(null, fd);
       if (result?.error) setSaveError(result.error);

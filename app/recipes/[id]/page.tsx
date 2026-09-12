@@ -143,43 +143,97 @@ export default async function RecipePage({ params }: Props) {
     <div className="library-shell">
       <header className="library-header">
         <Link href="/recipes" className="back-link">← המתכונים שלי</Link>
-        {(recipe.author || recipe.source_name || recipe.source_url) && (
-          <p
+        {(recipe.author || recipe.source_name || recipe.source_url || recipe.servings != null) && (
+          <div
             style={{
-              margin: '10px 0 0',
-              fontSize: '.9rem',
-              color: 'var(--muted, #525252)',
+              marginTop: 14,
+              padding: '14px 18px',
+              borderRadius: 14,
+              background: 'linear-gradient(135deg, #EAF1E3 0%, #FBF7F0 100%)',
+              border: '1px solid rgba(77, 124, 15, .18)',
               display: 'flex',
               flexWrap: 'wrap',
-              gap: 8,
-              alignItems: 'baseline',
+              gap: 16,
+              alignItems: 'center',
             }}
           >
-            {recipe.author && (
-              <span>
-                <span style={{ opacity: .75 }}>מאת</span>{' '}
-                <strong style={{ color: 'var(--ink, #171717)', fontWeight: 700 }}>{recipe.author}</strong>
-              </span>
+            {/* "המתכון של X" — prominent when author OR source_name present */}
+            {(recipe.author || recipe.source_name) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 220 }}>
+                <span
+                  aria-hidden
+                  style={{
+                    fontSize: '1.8rem',
+                    lineHeight: 1,
+                    filter: 'drop-shadow(0 1px 2px rgba(0,0,0,.08))',
+                  }}
+                >
+                  🍳
+                </span>
+                <div style={{ lineHeight: 1.25 }}>
+                  <div style={{ fontSize: '.72rem', fontWeight: 700, color: '#6b6357', letterSpacing: '.06em', textTransform: 'uppercase' }}>
+                    המתכון של
+                  </div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#2A2620', marginTop: 2 }}>
+                    {recipe.author || recipe.source_name}
+                  </div>
+                  {recipe.author && recipe.source_name && recipe.author !== recipe.source_name && (
+                    <div style={{ fontSize: '.78rem', color: '#6b6357', marginTop: 3 }}>
+                      {recipe.source_url ? (
+                        <>
+                          מאתר{' '}
+                          <a
+                            href={recipe.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#4d7c0f', textDecoration: 'underline', fontWeight: 700 }}
+                          >
+                            {recipe.source_name} ↗
+                          </a>
+                        </>
+                      ) : (
+                        <>מאתר <strong style={{ color: '#4d7c0f' }}>{recipe.source_name}</strong></>
+                      )}
+                    </div>
+                  )}
+                  {!recipe.author && recipe.source_url && (
+                    <div style={{ fontSize: '.78rem', color: '#6b6357', marginTop: 3 }}>
+                      <a
+                        href={recipe.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#4d7c0f', textDecoration: 'underline', fontWeight: 700 }}
+                      >
+                        לצפייה בעמוד המקור ↗
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
-            {(recipe.source_name || recipe.source_url) && (
-              <span>
-                {recipe.author && <span aria-hidden style={{ opacity: .5 }}>·</span>}{' '}
-                <span style={{ opacity: .75 }}>מקור:</span>{' '}
-                {recipe.source_url ? (
-                  <a
-                    href={recipe.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: 'var(--terracotta-dark, #4d7c0f)', textDecoration: 'underline', fontWeight: 600 }}
-                  >
-                    {recipe.source_name || recipe.source_url}
-                  </a>
-                ) : (
-                  <strong style={{ color: 'var(--ink, #171717)', fontWeight: 600 }}>{recipe.source_name}</strong>
-                )}
-              </span>
+
+            {/* Servings pill */}
+            {recipe.servings != null && (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 16px',
+                  background: '#fffdf9',
+                  border: '1.5px solid #4d7c0f',
+                  borderRadius: 999,
+                  color: '#3f6212',
+                  fontWeight: 800,
+                }}
+              >
+                <span aria-hidden style={{ fontSize: '1.2rem' }}>🍽</span>
+                <span style={{ fontSize: '.95rem' }}>
+                  {recipe.servings} {recipe.servings === 1 ? 'מנה' : 'מנות'}
+                </span>
+              </div>
             )}
-          </p>
+          </div>
         )}
         <div className="library-title-row" style={{ marginTop: 12 }}>
           <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(2.2rem,4vw,3.8rem)', letterSpacing: '-.03em', margin: 0 }}>

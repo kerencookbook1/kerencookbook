@@ -1,10 +1,10 @@
 import type { ProviderId } from './preview-providers'
 import { extractRecipeFromText, type ExtractedRecipe } from './provider-adapters'
+import { prettySiteName } from './source-site-names'
 
 export type ImportResult = ExtractedRecipe & {
   source_url: string
   source_site?: string
-  author?: string
   image_url?: string
   method: 'json-ld' | 'ai'
 }
@@ -282,7 +282,10 @@ function parseImage(v: unknown): string | undefined {
 
 function safeHostname(url: string): string | undefined {
   try {
-    return new URL(url).hostname.replace(/^www\./, '')
+    // Return the pretty site name (e.g. "יוחננוף") when we recognize the
+    // domain; otherwise fall back to the raw hostname sans "www.".
+    const raw = new URL(url).hostname
+    return prettySiteName(raw)
   } catch {
     return undefined
   }
