@@ -24,6 +24,7 @@ const items: NavItem[] = [
   { href: "/",         label: "בית",          icon: "home",     exact: true, mobile: true,  desktop: true },
   // Recipes
   { href: "/recipes",  label: "המתכונים שלי", mobileLabel: "מתכונים", icon: "book",     mobile: true,  desktop: true, section: "מתכונים" },
+  { href: "/chefs",    label: "שפים",         mobileLabel: "שפים",    icon: "chef",     mobile: false, desktop: true },
   { href: "/import",   label: "הוספת מתכון",  mobileLabel: "הוספה",   icon: "add",      mobile: true,  desktop: true, highlight: true },
   // Tools
   { href: "/pantry",   label: "מה יש לי בבית?", icon: "chef",   mobile: false, desktop: true, section: "כלים" },
