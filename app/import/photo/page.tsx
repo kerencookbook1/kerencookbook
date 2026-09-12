@@ -229,18 +229,18 @@ export default function PhotoImportPage() {
       {stage === "upload" && (
         <section className="import-layout">
           <div className="upload-panel">
-            <div className="camera-frame"><span>אזור צילום</span></div>
-            <h2>צלמי דף או כרטיסיית מתכון</h2>
-            <p>התמונה תישלח לספק ה־AI המוגדר לצורך חילוץ המתכון בלבד.</p>
-            {error && (
-              <div role="alert" style={{ margin: "12px 0", padding: 12, borderRadius: 12, background: "#fdecea", color: "#8a1c14", fontSize: ".9rem" }}>
-                {error}
-              </div>
-            )}
-            <div className="upload-actions">
+            <div className="upload-actions" style={{ marginBottom: 20 }}>
               <button className="primary-button" type="button" onClick={() => cameraInputRef.current?.click()}>צילום עכשיו</button>
               <button className="outline-button" type="button" onClick={() => galleryInputRef.current?.click()}>בחירת תמונה</button>
             </div>
+            {error && (
+              <div role="alert" style={{ margin: "0 0 16px", padding: 12, borderRadius: 12, background: "#fdecea", color: "#8a1c14", fontSize: ".9rem" }}>
+                {error}
+              </div>
+            )}
+            <div className="camera-frame"><span>אזור צילום</span></div>
+            <h2 style={{ marginTop: 16 }}>צלמי דף או כרטיסיית מתכון</h2>
+            <p>התמונה תישלח לספק ה־AI המוגדר לצורך חילוץ המתכון בלבד.</p>
           </div>
           <aside className="provider-card">
             <p className="eyebrow">עיבוד חכם</p>
@@ -262,11 +262,11 @@ export default function PhotoImportPage() {
               </>
             ) : (
               <>
-                <h2 style={{ marginTop: 0 }}>וודאי שהתמונה מיושרת</h2>
-                <p style={{ marginBottom: 16 }}>הטקסט צריך להיות בכיוון הקריאה הרגיל. אם צריך, סובבי או חתכי אזור קטן יותר לזיהוי טוב יותר:</p>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={previewUrl} alt="תצוגה מקדימה" style={{ maxWidth: "100%", maxHeight: 380, borderRadius: 12, marginBottom: 16, objectFit: "contain", background: "#f4efe2" }} />
-                <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+                  <button type="button" className="outline-button" onClick={reset}>בחירת תמונה אחרת</button>
+                  <button type="button" className="primary-button" onClick={handleAnalyze}>המשך לניתוח ←</button>
+                </div>
+                <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
                   <button type="button" className="outline-button" onClick={() => handleRotate(-90)}>↺ סובבי שמאלה 90°</button>
                   <button type="button" className="outline-button" onClick={() => handleRotate(90)}>סובבי ימינה 90° ↻</button>
                   <button type="button" className="outline-button" onClick={() => handleRotate(180)}>הפכי 180°</button>
@@ -277,10 +277,10 @@ export default function PhotoImportPage() {
                     {error}
                   </div>
                 )}
-                <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
-                  <button type="button" className="outline-button" onClick={reset}>בחירת תמונה אחרת</button>
-                  <button type="button" className="primary-button" onClick={handleAnalyze}>המשך לניתוח ←</button>
-                </div>
+                <h2 style={{ marginTop: 0 }}>וודאי שהתמונה מיושרת</h2>
+                <p style={{ marginBottom: 16 }}>הטקסט צריך להיות בכיוון הקריאה הרגיל. אם צריך, סובבי או חתכי אזור קטן יותר לזיהוי טוב יותר:</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={previewUrl} alt="תצוגה מקדימה" style={{ maxWidth: "100%", maxHeight: 380, borderRadius: 12, marginBottom: 16, objectFit: "contain", background: "#f4efe2" }} />
               </>
             )}
           </div>
