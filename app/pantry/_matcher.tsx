@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeholder'
 
 type Recipe = {
   id: string
@@ -13,12 +14,25 @@ type Recipe = {
   cook_time: number | null
 }
 
-const FALLBACK_IMAGES = [
-  '/images/recipes/shakshuka-default.png',
-  '/images/recipes/cauliflower-tahini-default.png',
-  '/images/recipes/lemon-cake-default.png',
-  '/images/recipes/creamy-pasta-default.png',
-  '/images/recipes/meatballs-default.png',
+/** Quick-add chips for common Israeli pantry staples — one click adds to input. */
+const QUICK_ITEMS: Array<{ label: string; emoji: string }> = [
+  { label: 'ביצים',      emoji: '🥚' },
+  { label: 'בצל',        emoji: '🧅' },
+  { label: 'עגבניות',    emoji: '🍅' },
+  { label: 'שום',        emoji: '🧄' },
+  { label: 'שמן זית',    emoji: '🫒' },
+  { label: 'קמח',        emoji: '🌾' },
+  { label: 'סוכר',       emoji: '🍯' },
+  { label: 'חמאה',       emoji: '🧈' },
+  { label: 'חלב',        emoji: '🥛' },
+  { label: 'גבינה צהובה', emoji: '🧀' },
+  { label: 'לימון',      emoji: '🍋' },
+  { label: 'פלפל',       emoji: '🌶️' },
+  { label: 'מלח',        emoji: '🧂' },
+  { label: 'אורז',       emoji: '🍚' },
+  { label: 'פסטה',       emoji: '🍝' },
+  { label: 'תפוח אדמה',  emoji: '🥔' },
+  { label: 'גזר',        emoji: '🥕' },
 ]
 
 // Normalize an ingredient/pantry item so "2 ביצים גדולות" and "ביצה" both match.
@@ -51,6 +65,15 @@ function scoreMatch(ingredientWords: Set<string>, pantryWords: Set<string>): { m
 export function PantryMatcher({ recipes }: { recipes: Recipe[] }) {
   const [input, setInput] = useState('')
   const [strict, setStrict] = useState(false)
+
+  function addQuickItem(label: string) {
+    setInput((current) => {
+      const lines = current.split('\n').map((l) => l.trim())
+      if (lines.some((l) => l.toLowerCase() === label.toLowerCase())) return current
+      const trimmed = current.replace(/\s+$/, '')
+      return trimmed ? `${trimmed}\n${label}` : label
+    })
+  }
 
   const pantryWords = useMemo(() => {
     const words = new Set<string>()
@@ -104,8 +127,36 @@ export function PantryMatcher({ recipes }: { recipes: Recipe[] }) {
         />
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, fontWeight: 700, cursor: 'pointer' }}>
           <input type="checkbox" checked={strict} onChange={(e) => setStrict(e.target.checked)} style={{ width: 18, height: 18 }} />
-          הצג רק מתכונים שיש לי את **כל** המרכיבים
+          הצג רק מתכונים שיש לי את <em>כל</em> המרכיבים
         </label>
+
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--muted, #525252)', marginBottom: 8 }}>
+            הוספה מהירה
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {QUICK_ITEMS.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => addQuickItem(item.label)}
+                className="outline-button"
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 999,
+                  fontSize: '.85rem',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  minHeight: 34,
+                }}
+              >
+                <span aria-hidden>{item.emoji}</span> {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {pantryWords.size === 0 ? (
@@ -125,14 +176,23 @@ export function PantryMatcher({ recipes }: { recipes: Recipe[] }) {
         <div>
           <p style={{ margin: '0 0 14px', color: 'var(--muted)' }}>{results.length} מתכונים תואמים</p>
           <div className="recipe-grid">
-            {results.map(({ recipe, matched, missing, percent, missingList }, i) => {
-              const imgSrc = recipe.image_url || FALLBACK_IMAGES[i % FALLBACK_IMAGES.length]
+            {results.map(({ recipe, matched, missing, percent, missingList }) => {
               const totalMinutes = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0)
               return (
                 <article key={recipe.id} className="recipe-card">
                   <Link href={`/recipes/${recipe.id}`} className="recipe-visual" tabIndex={-1} aria-hidden="true">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imgSrc} alt="" className="recipe-photo" loading="lazy" />
+                    {recipe.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={recipe.image_url} alt="" className="recipe-photo" loading="lazy" />
+                    ) : (
+                      <div className="recipe-photo" style={{ padding: 0 }}>
+                        <RecipeImagePlaceholder
+                          category={recipe.category}
+                          title={recipe.title}
+                          ingredientNames={recipe.ingredientNames}
+                        />
+                      </div>
+                    )}
                   </Link>
                   <div
                     style={{

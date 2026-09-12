@@ -7,6 +7,7 @@ import { AddToShoppingButton } from '../../_components/add-to-shopping-button'
 import { CalorieButton } from '@/components/recipes/calorie-button'
 import { resolveRecipeImageUrl } from '@/lib/recipe-image-url'
 import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeholder'
+import { IngredientListWithToggle } from '@/components/recipes/ingredient-list-with-toggle'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -69,18 +70,13 @@ export default async function RecipePage({ params }: Props) {
       {ingredients.length > 0 ? (
         <section>
           <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '1.5rem', marginBottom: 14 }}>מרכיבים</h2>
-          <ul style={{ display: 'grid', gap: 10, margin: 0, padding: 0, listStyle: 'none' }}>
-            {ingredients.map((ing) => (
-              <li key={ing.id}
-                style={{ display: 'flex', gap: 8, paddingBottom: 10, borderBottom: '1px solid var(--line)', color: '#51473e' }}>
-                {ing.amount && (
-                  <span style={{ minWidth: 40, fontWeight: 800, color: 'var(--terracotta-dark)' }}>{ing.amount}</span>
-                )}
-                {ing.unit && <span style={{ color: 'var(--muted)' }}>{ing.unit}</span>}
-                <span>{ing.name}</span>
-              </li>
-            ))}
-          </ul>
+          <IngredientListWithToggle
+            ingredients={ingredients.map((ing) => ({
+              amount: ing.amount,
+              unit: ing.unit,
+              name: ing.name,
+            }))}
+          />
         </section>
       ) : (
         <p style={{ color: 'var(--muted)' }}>אין מרכיבים רשומים.</p>
