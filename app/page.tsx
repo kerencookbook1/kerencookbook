@@ -30,7 +30,13 @@ export default async function HomePage() {
 
   // Home page is a snapshot — cap at 12 latest recipes to keep the query
   // fast. The full list lives at /recipes with pagination.
-  const recipes = user ? await getRecipeCards(user.id, { limit: 12 }) : []
+  const [recipes, profileRes] = await Promise.all([
+    user ? getRecipeCards(user.id, { limit: 12 }) : Promise.resolve([]),
+    user
+      ? supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
+  const displayName = profileRes.data?.display_name?.trim() || null
   const favorites = recipes.filter((r) => r.is_favorite).slice(0, 4)
   const dietCount = recipes.filter((r) => r.is_diet_effective).length
   const greeting = greetingByHour(new Date().getHours())
@@ -59,7 +65,7 @@ export default async function HomePage() {
 
       <section className="mt-8" aria-label="ברוכה הבאה">
         <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-          היי 👋
+          {displayName ? `היי ${displayName} 👋` : 'היי 👋'}
         </p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
           {greeting}
