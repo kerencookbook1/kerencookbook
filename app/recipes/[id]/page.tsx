@@ -6,6 +6,7 @@ import { RecipeTabs } from '../../_components/recipe-tabs'
 import { AddToShoppingButton } from '../../_components/add-to-shopping-button'
 import { CalorieButton } from '@/components/recipes/calorie-button'
 import { resolveRecipeImageUrl } from '@/lib/recipe-image-url'
+import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeholder'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -173,12 +174,12 @@ export default async function RecipePage({ params }: Props) {
               style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 20, marginBottom: 22, display: 'block' }}
             />
           ) : (
-            <div className={`recipe-visual${theme ? ` ${theme}` : ''}`}
-              style={{ height: 280, borderRadius: 20, marginBottom: 22, overflow: 'hidden', isolation: 'isolate' }}>
-              <div className="plate" />
-              <span className="ingredient ingredient-one" />
-              <span className="ingredient ingredient-two" />
-              <span className="ingredient ingredient-three" />
+            <div style={{ height: 320, borderRadius: 20, marginBottom: 22, overflow: 'hidden' }}>
+              <RecipeImagePlaceholder
+                category={recipe.category}
+                title={recipe.title}
+                ingredientNames={ingredients.map((i) => i.name)}
+              />
             </div>
           )}
 
@@ -228,11 +229,12 @@ export default async function RecipePage({ params }: Props) {
               style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 14, marginBottom: 16, display: 'block' }}
             />
           ) : (
-            <div className={`detail-visual${theme ? ` ${theme}` : ''}`}>
-              <div className="plate" />
-              <span className="ingredient ingredient-one" />
-              <span className="ingredient ingredient-two" />
-              <span className="ingredient ingredient-three" />
+            <div style={{ width: '100%', height: 180, borderRadius: 14, marginBottom: 16, overflow: 'hidden' }}>
+              <RecipeImagePlaceholder
+                category={recipe.category}
+                title={recipe.title}
+                ingredientNames={ingredients.map((i) => i.name)}
+              />
             </div>
           )}
           <h2>{recipe.title}</h2>

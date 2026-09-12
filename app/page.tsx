@@ -4,6 +4,7 @@ import { getRecipeCards } from '@/lib/repositories/recipes'
 import { CategoryTabs } from './_components/category-tabs'
 import { FavoriteButton } from './_components/favorite-button'
 import { SearchBarTrigger } from './_components/search-trigger'
+import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeholder'
 
 export const metadata = { title: 'המטבח של קרן' }
 
@@ -22,12 +23,6 @@ const IMPORT_TILES = [
   { href: '/meals',        label: 'תכנון ארוחות',   icon: '📅', hint: 'תפריט שבועי' },
 ] as const
 
-const FAV_FALLBACK_IMAGES = [
-  '/images/recipes/lemon-cake-default.png',
-  '/images/recipes/meatballs-default.png',
-  '/images/recipes/creamy-pasta-default.png',
-  '/images/recipes/salmon-default.png',
-]
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -123,21 +118,28 @@ export default async function HomePage() {
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {favorites.map((recipe, i) => {
-              const imgSrc = recipe.image_url || FAV_FALLBACK_IMAGES[i % FAV_FALLBACK_IMAGES.length]
+            {favorites.map((recipe) => {
               return (
                 <article
                   key={recipe.id}
                   className="group relative overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                 >
-                  <Link href={`/recipes/${recipe.id}`} tabIndex={-1}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={imgSrc}
-                      alt=""
-                      className="aspect-4/3 w-full object-cover"
-                      loading="lazy"
-                    />
+                  <Link href={`/recipes/${recipe.id}`} tabIndex={-1} className="block aspect-4/3">
+                    {recipe.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={recipe.image_url}
+                        alt=""
+                        className="aspect-4/3 w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <RecipeImagePlaceholder
+                        category={recipe.category}
+                        title={recipe.title}
+                        ingredientNames={recipe.ingredientNames}
+                      />
+                    )}
                   </Link>
                   <div className="absolute right-2 top-2">
                     <FavoriteButton recipeId={recipe.id} initial={true} title={recipe.title} />

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { CATEGORIES, guessCategory, isCategoryId, type CategoryId } from '@/lib/categories'
 import { FavoriteButton } from './favorite-button'
+import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeholder'
 
 type RecipeCard = {
   id: string
@@ -20,18 +21,6 @@ type RecipeCard = {
 /** Non-category filters that show as tiles alongside categories. */
 type SpecialId = 'all' | 'diet'
 type FilterId = SpecialId | CategoryId
-
-const FALLBACK_IMAGES = [
-  '/images/recipes/shakshuka-default.png',
-  '/images/recipes/cauliflower-tahini-default.png',
-  '/images/recipes/lemon-cake-default.png',
-  '/images/recipes/creamy-pasta-default.png',
-  '/images/recipes/meatballs-default.png',
-  '/images/recipes/pumpkin-soup-default.png',
-  '/images/recipes/salmon-default.png',
-  '/images/recipes/herb-salad-default.png',
-  '/images/recipes/tomato-pasta-default.png',
-]
 
 /** Colored circle bg per category — visually distinct without needing custom illustrations. */
 const CATEGORY_TILE_COLOR: Record<CategoryId, string> = {
@@ -176,15 +165,24 @@ export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
 
         {displayed.length > 0 ? (
           <div className="recipe-grid">
-            {displayed.map((recipe, index) => {
+            {displayed.map((recipe) => {
               const totalMinutes = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0)
-              const imgSrc = recipe.image_url || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]
               const catLabel = effectiveCategory(recipe)
               return (
                 <article key={recipe.id} className="recipe-card">
                   <Link href={`/recipes/${recipe.id}`} className="recipe-visual has-title-overlay" tabIndex={-1}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imgSrc} alt="" className="recipe-photo" loading="lazy" />
+                    {recipe.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={recipe.image_url} alt="" className="recipe-photo" loading="lazy" />
+                    ) : (
+                      <div className="recipe-photo" style={{ padding: 0 }}>
+                        <RecipeImagePlaceholder
+                          category={recipe.category}
+                          title={recipe.title}
+                          ingredientNames={recipe.ingredientNames}
+                        />
+                      </div>
+                    )}
                     <div className="recipe-title-overlay">
                       <h3>{recipe.title}</h3>
                     </div>

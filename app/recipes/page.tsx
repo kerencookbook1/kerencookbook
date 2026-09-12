@@ -1,22 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { getRecipeCards, countRecipes } from '@/lib/repositories/recipes'
+import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeholder'
 import Link from 'next/link'
 
 const PAGE_SIZE = 24
 
 export const metadata = { title: 'המתכונים שלי — המטבח של קרן' }
 
-const FOOD_IMAGES = [
-  '/images/recipes/shakshuka-default.png',
-  '/images/recipes/cauliflower-tahini-default.png',
-  '/images/recipes/lemon-cake-default.png',
-  '/images/recipes/creamy-pasta-default.png',
-  '/images/recipes/meatballs-default.png',
-  '/images/recipes/pumpkin-soup-default.png',
-  '/images/recipes/salmon-default.png',
-  '/images/recipes/herb-salad-default.png',
-  '/images/recipes/tomato-pasta-default.png',
-] as const
 
 const FILTERS = ['הכל', 'צמחוני', 'מהיר', 'מתוקים', 'עוף', 'בשר', 'דגים'] as const
 
@@ -165,23 +155,30 @@ export default async function RecipesPage({
             </span>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {recipes.map((recipe, index: number) => {
+            {recipes.map((recipe) => {
               const totalMinutes = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0)
-              const imgSrc = recipe.image_url || FOOD_IMAGES[index % FOOD_IMAGES.length]
               return (
                 <Link
                   key={recipe.id}
                   href={`/recipes/${recipe.id}`}
                   className="group overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                 >
-                  <div className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={imgSrc}
-                      alt={recipe.title}
-                      className="aspect-4/3 w-full object-cover"
-                      loading="lazy"
-                    />
+                  <div className="relative aspect-4/3 w-full">
+                    {recipe.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={recipe.image_url}
+                        alt={recipe.title}
+                        className="aspect-4/3 w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <RecipeImagePlaceholder
+                        category={recipe.category}
+                        title={recipe.title}
+                        ingredientNames={recipe.ingredientNames}
+                      />
+                    )}
                     {recipe.is_diet_effective && (
                       <span className="absolute right-3 top-3 rounded-full bg-lime-100 px-2 py-1 text-xs font-semibold text-lime-700 shadow-sm">
                         ✓ דיאטטי
