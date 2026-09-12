@@ -6,7 +6,10 @@ import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeh
 export const metadata = { title: 'שפים — המטבח של קרן' }
 
 type ChefSummary = {
-  author: string
+  /** The display key — either the chef name or the site name. */
+  name: string
+  /** How we grouped this entry — used to label it correctly in the UI. */
+  kind: 'author' | 'source'
   recipeCount: number
   categories: string[]
   latestImage: string | null
@@ -32,13 +35,12 @@ export default async function ChefsPage() {
 
   const { data: recipesRaw, error } = await supabase
     .from('recipes')
-    .select('id, title, author, category')
+    .select('id, title, author, source_name, category')
     .eq('owner_id', user.id)
-    .not('author', 'is', null)
     .order('updated_at', { ascending: false })
 
   // If the author column is not yet in the DB, guide the user to run migration.
-  if (error && /column.*author.*does not exist/i.test(error.message)) {
+  if (error && /column.*(author|source_name).*does not exist/i.test(error.message)) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-8" dir="rtl">
         <h1 className="text-3xl font-bold mb-4">שפים</h1>
@@ -60,21 +62,30 @@ export default async function ChefsPage() {
 
   const recipes = recipesRaw ?? []
 
-  // Group by normalized author name so "יותם אוטולנגי " and "יותם אוטולנגי"
-  // collapse into the same entry.
-  const byAuthor = new Map<string, ChefSummary>()
+  // Group by author when it's set, else by source_name. Two recipes from the
+  // same website with no explicit chef name still get their own tile — the
+  // user pointed out on 2026-09-12 that this was the missing case.
+  // Keys are namespaced ("author:X" / "source:Y") so a chef and a source
+  // that happen to share a name don't collide.
+  const groups = new Map<string, ChefSummary>()
   for (const r of recipes) {
-    const name = (r.author ?? '').trim()
+    const author = (r.author ?? '').trim()
+    const source = (r.source_name ?? '').trim()
+    const kind: 'author' | 'source' = author ? 'author' : 'source'
+    const name = author || source
     if (!name) continue
-    const existing = byAuthor.get(name)
+    const key = `${kind}:${name}`
+
+    const existing = groups.get(key)
     if (existing) {
       existing.recipeCount++
       if (r.category && !existing.categories.includes(r.category)) {
         existing.categories.push(r.category)
       }
     } else {
-      byAuthor.set(name, {
-        author: name,
+      groups.set(key, {
+        name,
+        kind,
         recipeCount: 1,
         categories: r.category ? [r.category] : [],
         latestImage: null,
@@ -84,24 +95,30 @@ export default async function ChefsPage() {
     }
   }
 
-  const chefs = Array.from(byAuthor.values())
+  const chefs = Array.from(groups.values())
     .filter((c) => c.recipeCount >= 2)
     .sort((a, b) => b.recipeCount - a.recipeCount)
 
-  // Fetch a hero image (the primary image of any of the chef's recipes) so
-  // each chef tile isn't just a text row.
+  // Fetch a hero image (the primary image of any recipe in each group) so
+  // every tile isn't just a text row. We fetch across both grouping keys
+  // (author OR source_name) and match back to the group by whichever field
+  // the entry was grouped on.
   if (chefs.length > 0) {
-    const authorNames = chefs.map((c) => c.author)
+    const groupNames = chefs.map((c) => c.name)
     const { data: withImages } = await supabase
       .from('recipes')
-      .select('author, category, title, recipe_images(storage_path, is_primary, position)')
+      .select('author, source_name, category, title, recipe_images(storage_path, is_primary, position)')
       .eq('owner_id', user.id)
-      .in('author', authorNames)
+      .or(`author.in.(${groupNames.map((n) => `"${n.replace(/"/g, '\\"')}"`).join(',')}),source_name.in.(${groupNames.map((n) => `"${n.replace(/"/g, '\\"')}"`).join(',')})`)
       .order('updated_at', { ascending: false })
 
     for (const row of withImages ?? []) {
-      if (!row.author) continue
-      const chef = byAuthor.get(row.author.trim())
+      const author = (row.author ?? '').trim()
+      const source = (row.source_name ?? '').trim()
+      // Prefer author-based grouping (matches how the group was built)
+      const key = author ? `author:${author}` : source ? `source:${source}` : null
+      if (!key) continue
+      const chef = groups.get(key)
       if (!chef || chef.latestImage) continue
       const images = (row as { recipe_images?: Array<{ storage_path: string; is_primary: boolean; position: number }> }).recipe_images ?? []
       const primary = images.find((i) => i.is_primary) ?? images[0]
@@ -115,13 +132,13 @@ export default async function ChefsPage() {
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8" dir="rtl">
       <header className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-          לפי מחבר
+          לפי מחבר או אתר מקור
         </p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
           שפים
         </h1>
         <p className="mt-3 max-w-xl text-sm text-neutral-600">
-          שפים ומחברים שיש להם לפחות שני מתכונים בספר שלך. הקישי כדי לראות את הקטגוריות של השף ומשם למתכונים עצמם.
+          שפים, מחברים ואתרי מקור שיש להם לפחות שני מתכונים בספר שלך. הקישי כדי לראות את הקטגוריות ומשם למתכונים עצמם.
         </p>
       </header>
 
@@ -144,8 +161,8 @@ export default async function ChefsPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {chefs.map((chef) => (
             <Link
-              key={chef.author}
-              href={`/chefs/${encodeURIComponent(chef.author)}`}
+              key={`${chef.kind}:${chef.name}`}
+              href={`/chefs/${encodeURIComponent(chef.name)}`}
               className="group overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-lime-500 hover:shadow-md"
             >
               <div className="relative aspect-4/3 w-full overflow-hidden">
@@ -163,10 +180,12 @@ export default async function ChefsPage() {
                     title={chef.latestTitle}
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/10 to-transparent" />
                 <div className="absolute inset-x-3 bottom-3 text-white drop-shadow">
-                  <div className="text-xs font-semibold uppercase tracking-wide opacity-90">שף</div>
-                  <div className="text-xl font-bold leading-tight">{chef.author}</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide opacity-90">
+                    {chef.kind === 'author' ? 'שף' : 'מאתר'}
+                  </div>
+                  <div className="text-xl font-bold leading-tight">{chef.name}</div>
                 </div>
               </div>
               <div className="flex items-center justify-between p-4">

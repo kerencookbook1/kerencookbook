@@ -30,11 +30,13 @@ export default async function ChefCategoryRecipesPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
+  // Author OR source_name — mirrors the /chefs grouping so drill-down finds
+  // the same set of recipes.
   const { data: recipesRaw } = await supabase
     .from('recipes')
     .select('id, title, category, prep_time, cook_time, ingredients(name), recipe_images(storage_path, is_primary, position)')
     .eq('owner_id', user.id)
-    .eq('author', chefName)
+    .or(`author.eq."${chefName.replace(/"/g, '\\"')}",source_name.eq."${chefName.replace(/"/g, '\\"')}"`)
     .order('updated_at', { ascending: false })
 
   const all = recipesRaw ?? []

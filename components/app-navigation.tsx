@@ -22,10 +22,10 @@ type NavItem = {
 
 const items: NavItem[] = [
   { href: "/",         label: "בית",          icon: "home",     exact: true, mobile: true,  desktop: true },
-  // Recipes
+  // Recipes — "הוספת מתכון" first, then "שפים" below it (per user request 2026-09-12)
   { href: "/recipes",  label: "המתכונים שלי", mobileLabel: "מתכונים", icon: "book",     mobile: true,  desktop: true, section: "מתכונים" },
-  { href: "/chefs",    label: "שפים",         mobileLabel: "שפים",    icon: "chef",     mobile: false, desktop: true },
   { href: "/import",   label: "הוספת מתכון",  mobileLabel: "הוספה",   icon: "add",      mobile: true,  desktop: true, highlight: true },
+  { href: "/chefs",    label: "שפים",         mobileLabel: "שפים",    icon: "chef",     mobile: false, desktop: true },
   // Tools
   { href: "/pantry",   label: "מה יש לי בבית?", icon: "chef",   mobile: false, desktop: true, section: "כלים" },
   { href: "/shopping", label: "רשימת קניות",  mobileLabel: "קניות",   icon: "cart",     mobile: true,  desktop: true },
@@ -99,6 +99,14 @@ export function AppNavigation() {
     }
   }
 
+  // Split off the very first (untitled) section — typically just "בית" — so
+  // it can render above the search trigger while the titled sections stay
+  // below it. Requested by the user 2026-09-12.
+  const [topSection, ...restSections] =
+    sections.length && !sections[0].title
+      ? [sections[0], ...sections.slice(1)]
+      : [null as null | typeof sections[number], ...sections]
+
   return (
     <nav className="app-navigation" aria-label="ניווט ראשי">
       {/* Desktop sidebar brand */}
@@ -107,12 +115,32 @@ export function AppNavigation() {
         <span>המטבח של קרן</span>
       </Link>
 
+      {/* Home (or any untitled top section) renders above the search */}
+      {topSection && (
+        <div className="nav-section">
+          {topSection.items.map((item) => {
+            const active = isActive(pathname, item);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`sidebar-link${active ? " is-active" : ""}${item.highlight ? " is-add" : ""}`}
+                aria-current={active ? "page" : undefined}
+              >
+                <Icon name={item.icon} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
       {/* Sidebar search trigger */}
       <SearchTrigger className="sidebar-link sidebar-search-btn" label="חיפוש" />
 
-      {/* Desktop sidebar — grouped sections */}
+      {/* Desktop sidebar — remaining grouped sections */}
       <div className="navigation-sections">
-        {sections.map((section, si) => (
+        {restSections.map((section, si) => (
           <div key={si} className="nav-section">
             {section.title && <p className="nav-section-title">{section.title}</p>}
             {section.items.map((item) => {

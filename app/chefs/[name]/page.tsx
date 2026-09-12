@@ -43,11 +43,13 @@ export default async function ChefCategoriesPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
+  // Match recipes where the chef's name appears as either the author OR the
+  // source_name — /chefs groups on both, so drill-down has to as well.
   const { data: recipesRaw } = await supabase
     .from('recipes')
     .select('id, title, category, ingredients(name)')
     .eq('owner_id', user.id)
-    .eq('author', chefName)
+    .or(`author.eq."${chefName.replace(/"/g, '\\"')}",source_name.eq."${chefName.replace(/"/g, '\\"')}"`)
 
   const recipes = recipesRaw ?? []
   if (recipes.length === 0) notFound()
