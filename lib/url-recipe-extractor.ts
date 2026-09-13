@@ -85,18 +85,72 @@ async function safeFetch(url: URL): Promise<{ html: string; contentType: string 
     if (!contentType.includes('html') && !contentType.includes('xml')) {
       throw new Error(`תוכן לא נתמך: ${contentType || 'לא ידוע'}`)
     }
-    // Read as text with size cap
     const contentLength = Number(r.headers.get('content-length') ?? 0)
     if (contentLength && contentLength > MAX_HTML_BYTES) {
       throw new Error('הדף גדול מדי (מעל 5MB)')
     }
-    const html = await r.text()
-    if (html.length > MAX_HTML_BYTES) {
+    // Read as bytes and decode with the right charset — critical for older
+    // Hebrew sites like foodsdictionary.co.il that serve Windows-1255 without
+    // Node's default UTF-8 fetch reader turning every Hebrew glyph into "?".
+    const buffer = await r.arrayBuffer()
+    if (buffer.byteLength > MAX_HTML_BYTES) {
       throw new Error('הדף גדול מדי (מעל 5MB)')
     }
+    const html = decodeHtmlBytes(new Uint8Array(buffer), contentType)
     return { html, contentType }
   } finally {
     clearTimeout(timer)
+  }
+}
+
+/**
+ * Decode the raw HTML byte stream into a UTF-16 JS string using whichever
+ * charset the response advertises. Precedence:
+ *   1. `Content-Type: text/html; charset=X` on the response.
+ *   2. `<meta charset="X">` or the older `<meta http-equiv=...>` inside the
+ *      first ~4KB of the document (browsers read at most 1024 bytes; we're
+ *      more generous).
+ *   3. UTF-8 — but if that produces a suspicious ratio of replacement chars
+ *      on a page that looks Hebrew, fall back to Windows-1255.
+ */
+function decodeHtmlBytes(bytes: Uint8Array, contentTypeHeader: string): string {
+  // 1. Header charset takes priority when present
+  const headerCharset = /charset\s*=\s*"?([^";\s]+)/i.exec(contentTypeHeader)?.[1]
+  if (headerCharset) {
+    const decoded = tryDecode(bytes, headerCharset)
+    if (decoded) return decoded
+  }
+
+  // 2. Sniff <meta charset> in the first 4 KB using an ASCII-safe pass
+  const preamble = new TextDecoder('windows-1252').decode(bytes.slice(0, 4096))
+  const metaCharset =
+    /<meta\s+charset\s*=\s*["']?([^"'>\s]+)/i.exec(preamble)?.[1] ??
+    /<meta[^>]+http-equiv=["']?content-type["']?[^>]*content=["'][^"']*charset=([^"';\s]+)/i.exec(preamble)?.[1]
+  if (metaCharset) {
+    const decoded = tryDecode(bytes, metaCharset)
+    if (decoded) return decoded
+  }
+
+  // 3. Fall back to UTF-8. If the result looks garbled AND contains no
+  // Hebrew letters (even though the page probably should have some), retry
+  // as Windows-1255. This catches sites that don't declare an encoding.
+  const utf8 = new TextDecoder('utf-8', { fatal: false }).decode(bytes)
+  const utf8HasHebrew = /[֐-׿]/.test(utf8)
+  const utf8HasReplacement = /�/.test(utf8)
+  if (!utf8HasHebrew && utf8HasReplacement) {
+    const cp1255 = tryDecode(bytes, 'windows-1255')
+    if (cp1255 && /[֐-׿]/.test(cp1255)) return cp1255
+  }
+  return utf8
+}
+
+/** Normalize charset labels (utf8 → utf-8) and decode; returns null if the encoding isn't supported. */
+function tryDecode(bytes: Uint8Array, label: string): string | null {
+  const normalized = label.trim().toLowerCase().replace(/^utf8$/, 'utf-8')
+  try {
+    return new TextDecoder(normalized, { fatal: false }).decode(bytes)
+  } catch {
+    return null
   }
 }
 
