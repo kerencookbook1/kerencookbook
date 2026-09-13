@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createRecipe } from "@/lib/actions/recipes";
 import { ImageCropper } from "../../_components/image-cropper";
 import { DietFieldControl, type DietOverride } from "@/components/recipes/diet-field-control";
@@ -19,8 +19,6 @@ function appendIngredient(current: string, name: string): string {
  * Normalize an image before sending: apply EXIF orientation so vision
  * models don't have to mentally rotate the paper, cap the long edge at
  * 2400px to save bandwidth, and re-encode as JPEG.
- * Also returns a rotation control so the user can nudge orientation if
- * the auto-fix guessed wrong.
  */
 async function normalizeImage(file: File, extraRotationDeg = 0): Promise<Blob> {
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
@@ -63,13 +61,22 @@ type ExtractedRecipe = {
   author?: string | null;
 };
 
+/** One scanned page of a multi-page recipe. */
+type Page = {
+  id: string;
+  file: File;
+  rotation: number;
+  previewUrl: string;
+};
+
+const MAX_PAGES = 3;
+
 export default function PhotoImportPage() {
   const [stage, setStage] = useState<"upload" | "preview" | "loading" | "review">("upload");
   const [error, setError] = useState<string | null>(null);
-  const [rawFile, setRawFile] = useState<File | null>(null);
-  const [rotation, setRotation] = useState<number>(0);  // extra rotation user applied
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [cropMode, setCropMode] = useState<boolean>(false);
+  const [pages, setPages] = useState<Page[]>([]);
+  const [activeIdx, setActiveIdx] = useState<number>(0);
+  const [cropActive, setCropActive] = useState<boolean>(false);
   const [recipe, setRecipe] = useState<ExtractedRecipe | null>(null);
   const [title, setTitle] = useState("");
   const [ingredients, setIngredients] = useState("");
@@ -86,59 +93,112 @@ export default function PhotoImportPage() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  async function refreshPreview(file: File, rot: number) {
-    const normalized = await normalizeImage(file, rot)
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setPreviewUrl(URL.createObjectURL(normalized))
+  // Clean up object URLs when the component unmounts / pages change
+  useEffect(() => {
+    return () => {
+      for (const p of pages) URL.revokeObjectURL(p.previewUrl);
+    };
+    // We only want the cleanup on unmount — not every page change (each
+    // handler revokes the URL it replaces individually).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const activePage = pages[activeIdx];
+  const canAddMore = pages.length < MAX_PAGES;
+
+  async function makePreviewUrl(file: File, rotation: number): Promise<string> {
+    const normalized = await normalizeImage(file, rotation);
+    return URL.createObjectURL(normalized);
   }
 
-  async function handleFile(file: File) {
+  /** Append a new page (or, when we already have MAX_PAGES, ignore + surface an error). */
+  async function handleAddPage(file: File) {
     setError(null);
-    setRawFile(file);
-    setRotation(0);
+    if (pages.length >= MAX_PAGES) {
+      setError(`אפשר לצלם עד ${MAX_PAGES} דפים בסריקה אחת. מחקי דף קיים כדי להוסיף חדש.`);
+      return;
+    }
     try {
-      await refreshPreview(file, 0);
+      const previewUrl = await makePreviewUrl(file, 0);
+      const next: Page = { id: crypto.randomUUID(), file, rotation: 0, previewUrl };
+      setPages((prev) => {
+        const updated = [...prev, next];
+        setActiveIdx(updated.length - 1);
+        return updated;
+      });
       setStage("preview");
     } catch (err) {
       setError('לא ניתן לקרוא את התמונה: ' + (err instanceof Error ? err.message : String(err)));
-      setStage("upload");
+      if (pages.length === 0) setStage("upload");
     }
   }
 
   async function handleRotate(deltaDeg: number) {
-    if (!rawFile) return
-    const next = ((rotation + deltaDeg) % 360 + 360) % 360
-    setRotation(next)
-    await refreshPreview(rawFile, next)
+    if (!activePage) return;
+    const nextRot = ((activePage.rotation + deltaDeg) % 360 + 360) % 360;
+    const nextUrl = await makePreviewUrl(activePage.file, nextRot);
+    setPages((prev) => {
+      const copy = [...prev];
+      const old = copy[activeIdx];
+      if (!old) return prev;
+      URL.revokeObjectURL(old.previewUrl);
+      copy[activeIdx] = { ...old, rotation: nextRot, previewUrl: nextUrl };
+      return copy;
+    });
   }
 
   async function handleCropApplied(cropped: Blob) {
-    // Replace rawFile with the cropped result and reset rotation
-    const file = new File([cropped], "cropped.jpg", { type: "image/jpeg" })
-    setRawFile(file)
-    setRotation(0)
-    setCropMode(false)
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setPreviewUrl(URL.createObjectURL(cropped))
+    if (!activePage) return;
+    const file = new File([cropped], "cropped.jpg", { type: "image/jpeg" });
+    const nextUrl = URL.createObjectURL(cropped);
+    setPages((prev) => {
+      const copy = [...prev];
+      const old = copy[activeIdx];
+      if (!old) return prev;
+      URL.revokeObjectURL(old.previewUrl);
+      copy[activeIdx] = { ...old, file, rotation: 0, previewUrl: nextUrl };
+      return copy;
+    });
+    setCropActive(false);
+  }
+
+  function handleRemovePage(idx: number) {
+    setPages((prev) => {
+      const removed = prev[idx];
+      if (removed) URL.revokeObjectURL(removed.previewUrl);
+      const next = prev.filter((_, i) => i !== idx);
+      // Adjust active index so it stays valid
+      setActiveIdx((cur) => {
+        if (next.length === 0) return 0;
+        if (cur >= next.length) return next.length - 1;
+        if (cur > idx) return cur - 1;
+        return cur;
+      });
+      if (next.length === 0) {
+        setStage("upload");
+      }
+      return next;
+    });
   }
 
   async function handleAnalyze() {
-    if (!rawFile) return;
+    if (pages.length === 0) return;
     setError(null);
     setStage("loading");
     try {
-      const normalized = await normalizeImage(rawFile, rotation);
       const formData = new FormData();
-      formData.append("image", new File([normalized], "recipe.jpg", { type: "image/jpeg" }));
+      // Normalize each page (rotate + resize + re-encode) so the server
+      // receives clean, oriented JPEGs. Uses per-page rotation state.
+      for (let i = 0; i < pages.length; i++) {
+        const p = pages[i]!;
+        const normalized = await normalizeImage(p.file, p.rotation);
+        formData.append(`image${i + 1}`, new File([normalized], `page${i + 1}.jpg`, { type: "image/jpeg" }));
+      }
       const res = await fetch("/api/scan", { method: "POST", body: formData });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || `שגיאה ${res.status}`);
-      }
+      if (!res.ok) throw new Error(data.error || `שגיאה ${res.status}`);
       const extracted = data as ExtractedRecipe;
       setRecipe(extracted);
-      // When recognition failed, blank the structured fields so the user
-      // isn't tricked into saving hallucinated content
       if (extracted.recognition_failed) {
         setTitle("");
         setIngredients("");
@@ -157,10 +217,10 @@ export default function PhotoImportPage() {
   }
 
   function reset() {
-    setRawFile(null);
-    setRotation(0);
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl(null);
+    for (const p of pages) URL.revokeObjectURL(p.previewUrl);
+    setPages([]);
+    setActiveIdx(0);
+    setCropActive(false);
     setRecipe(null);
     setError(null);
     setSaveError(null);
@@ -183,16 +243,17 @@ export default function PhotoImportPage() {
         .filter(Boolean)
         .map((body) => ({ title: "", body, durationSeconds: null }));
 
-      // Upload the normalized source photo to Storage so the recipe can link
-      // back to it. This gives OCR / handwritten imports proper provenance —
-      // the "צפי בצילום המקור" button on the recipe page uses this path.
+      // Upload the first page as the source photo (it's the "cover" of the
+      // scanned document). Additional pages aren't persisted individually —
+      // if the user wants more images on the recipe, they can add them via
+      // the recipe images editor after save.
       let sourcePhotoPath: string | null = null;
-      if (rawFile) {
+      if (pages[0]) {
         try {
           const supabase = createClient();
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
-            const normalizedBlob = await normalizeImage(rawFile, rotation);
+            const normalizedBlob = await normalizeImage(pages[0].file, pages[0].rotation);
             const objectName = `${user.id}/imports/${crypto.randomUUID()}.jpg`;
             const upload = await supabase.storage
               .from(RECIPE_IMAGES_BUCKET)
@@ -221,8 +282,6 @@ export default function PhotoImportPage() {
       if (recipe?.author) fd.append("author", recipe.author);
       if (sourcePhotoPath) {
         fd.append("sourcePhotoPath", sourcePhotoPath);
-        // Also use the source photo as the recipe's initial primary image so
-        // the card grid isn't stuck on the category-emoji placeholder.
         fd.append("imageUrl", sourcePhotoPath);
       }
 
@@ -242,7 +301,7 @@ export default function PhotoImportPage() {
         <Link className="back-link" href="/recipes/new">חזרה להוספה</Link>
         <p className="eyebrow">ייבוא מתכון</p>
         <h1>צילום, חילוץ ואישור</h1>
-        <p>ה־AI יוצר טיוטה בלבד. תמיד אפשר לתקן לפני השמירה.</p>
+        <p>אפשר לצלם עד {MAX_PAGES} דפים באותה סריקה — לפעמים המתכון פרוס על כמה עמודים. ה־AI יוצר טיוטה בלבד. תמיד אפשר לתקן לפני השמירה.</p>
       </header>
 
       <input
@@ -251,14 +310,14 @@ export default function PhotoImportPage() {
         accept="image/*"
         capture="environment"
         hidden
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAddPage(f); e.target.value = ""; }}
       />
       <input
         ref={galleryInputRef}
         type="file"
         accept="image/*"
         hidden
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAddPage(f); e.target.value = ""; }}
       />
 
       {stage === "upload" && (
@@ -275,47 +334,177 @@ export default function PhotoImportPage() {
             )}
             <div className="camera-frame"><span>אזור צילום</span></div>
             <h2 style={{ marginTop: 16 }}>צלמי דף או כרטיסיית מתכון</h2>
-            <p>התמונה תישלח לספק ה־AI המוגדר לצורך חילוץ המתכון בלבד.</p>
+            <p>אחרי הצילום הראשון תוכלי להוסיף עוד עד {MAX_PAGES - 1} דפים לפני חילוץ. התמונות נשלחות לספק ה־AI המוגדר לצורך חילוץ המתכון בלבד.</p>
           </div>
           <aside className="provider-card">
             <p className="eyebrow">עיבוד חכם</p>
             <h2>ספק AI פעיל</h2>
             <p>הספק נקבע לפי ההגדרות בהגדרות ה־API. אם אין ספק מוגדר, הוסיפי מפתח לפני החילוץ.</p>
             <Link href="/settings/providers" className="outline-button" style={{ display: "inline-block", marginTop: 8 }}>ניהול ספקים</Link>
-            <p className="privacy-note" style={{ marginTop: 16 }}>התמונה נשלחת לספק שנבחר לצורך חילוץ המתכון בלבד.</p>
+            <p className="privacy-note" style={{ marginTop: 16 }}>התמונות נשלחות לספק שנבחר לצורך חילוץ המתכון בלבד.</p>
           </aside>
         </section>
       )}
 
-      {stage === "preview" && previewUrl && (
+      {stage === "preview" && activePage && (
         <section className="import-layout">
           <div className="upload-panel" style={{ textAlign: "center" }}>
-            {cropMode ? (
+            {cropActive ? (
               <>
-                <h2 style={{ marginTop: 0 }}>חיתוך התמונה</h2>
-                <ImageCropper src={previewUrl} onApply={handleCropApplied} onCancel={() => setCropMode(false)} />
+                <h2 style={{ marginTop: 0 }}>חיתוך התמונה — דף {activeIdx + 1}</h2>
+                <ImageCropper src={activePage.previewUrl} onApply={handleCropApplied} onCancel={() => setCropActive(false)} />
               </>
             ) : (
               <>
                 <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-                  <button type="button" className="outline-button" onClick={reset}>בחירת תמונה אחרת</button>
-                  <button type="button" className="primary-button" onClick={handleAnalyze}>המשך לניתוח ←</button>
+                  <button type="button" className="outline-button" onClick={reset}>התחילי מחדש</button>
+                  <button type="button" className="primary-button" onClick={handleAnalyze}>
+                    המשך לניתוח ({pages.length} {pages.length === 1 ? "דף" : "דפים"}) ←
+                  </button>
                 </div>
                 <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
                   <button type="button" className="outline-button" onClick={() => handleRotate(-90)}>↺ סובבי שמאלה 90°</button>
                   <button type="button" className="outline-button" onClick={() => handleRotate(90)}>סובבי ימינה 90° ↻</button>
                   <button type="button" className="outline-button" onClick={() => handleRotate(180)}>הפכי 180°</button>
-                  <button type="button" className="outline-button" onClick={() => setCropMode(true)}>✂️ חיתוך</button>
+                  <button type="button" className="outline-button" onClick={() => setCropActive(true)}>✂️ חיתוך</button>
                 </div>
                 {error && (
                   <div role="alert" style={{ margin: "0 0 12px", padding: 12, borderRadius: 12, background: "#fdecea", color: "#8a1c14", fontSize: ".9rem" }}>
                     {error}
                   </div>
                 )}
-                <h2 style={{ marginTop: 0 }}>וודאי שהתמונה מיושרת</h2>
-                <p style={{ marginBottom: 16 }}>הטקסט צריך להיות בכיוון הקריאה הרגיל. אם צריך, סובבי או חתכי אזור קטן יותר לזיהוי טוב יותר:</p>
+
+                {/* Page thumbnails row + add-page tile */}
+                <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }} role="tablist" aria-label="דפים בסריקה">
+                  {pages.map((p, idx) => {
+                    const isActive = idx === activeIdx;
+                    return (
+                      <div
+                        key={p.id}
+                        style={{ position: "relative", width: 84, height: 84 }}
+                      >
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          onClick={() => setActiveIdx(idx)}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            padding: 0,
+                            borderRadius: 10,
+                            background: "#f4efe2",
+                            border: isActive ? "2.5px solid #4d7c0f" : "1.5px solid #cfbfae",
+                            cursor: "pointer",
+                            overflow: "hidden",
+                            boxShadow: isActive ? "0 2px 8px rgba(77,124,15,.25)" : "0 1px 3px rgba(0,0,0,.08)",
+                          }}
+                          aria-label={`דף ${idx + 1}`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={p.previewUrl}
+                            alt={`דף ${idx + 1}`}
+                            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                          />
+                        </button>
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: 3,
+                            insetInlineEnd: 3,
+                            background: isActive ? "#4d7c0f" : "#1a1614",
+                            color: "#fff",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            padding: "1px 6px",
+                            borderRadius: 999,
+                          }}
+                          aria-hidden
+                        >
+                          {idx + 1}
+                        </span>
+                        {pages.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePage(idx)}
+                            aria-label={`מחיקת דף ${idx + 1}`}
+                            style={{
+                              position: "absolute",
+                              top: -6,
+                              insetInlineStart: -6,
+                              width: 22,
+                              height: 22,
+                              borderRadius: "50%",
+                              background: "#c62828",
+                              color: "#fff",
+                              border: "2px solid #fff",
+                              cursor: "pointer",
+                              fontSize: 11,
+                              fontWeight: 900,
+                              lineHeight: 1,
+                              boxShadow: "0 1px 3px rgba(0,0,0,.3)",
+                            }}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {canAddMore && (
+                    <div style={{ display: "inline-flex", flexDirection: "column", gap: 4 }}>
+                      <button
+                        type="button"
+                        onClick={() => cameraInputRef.current?.click()}
+                        aria-label="הוספת דף מהמצלמה"
+                        style={{
+                          width: 84,
+                          height: 84,
+                          borderRadius: 10,
+                          background: "#EAF1E3",
+                          border: "2px dashed #4d7c0f",
+                          color: "#3f6212",
+                          fontWeight: 800,
+                          fontSize: 12,
+                          cursor: "pointer",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 4,
+                        }}
+                      >
+                        <span style={{ fontSize: 22 }} aria-hidden>+</span>
+                        <span>הוסיפי דף</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => galleryInputRef.current?.click()}
+                        style={{
+                          background: "transparent",
+                          border: 0,
+                          color: "var(--muted)",
+                          fontSize: 11,
+                          cursor: "pointer",
+                          padding: "2px 0",
+                        }}
+                      >
+                        או מהגלריה
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <h2 style={{ marginTop: 0 }}>
+                  דף {activeIdx + 1} מתוך {pages.length}
+                </h2>
+                <p style={{ marginBottom: 16 }}>
+                  הטקסט צריך להיות בכיוון הקריאה הרגיל. אפשר לסובב או לחתוך אזור לזיהוי טוב יותר.
+                  {canAddMore && ` יש עוד ${MAX_PAGES - pages.length} מקומות לדפים נוספים.`}
+                </p>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={previewUrl} alt="תצוגה מקדימה" style={{ maxWidth: "100%", maxHeight: 380, borderRadius: 12, marginBottom: 16, objectFit: "contain", background: "#f4efe2" }} />
+                <img src={activePage.previewUrl} alt={`דף ${activeIdx + 1}`} style={{ maxWidth: "100%", maxHeight: 380, borderRadius: 12, marginBottom: 16, objectFit: "contain", background: "#f4efe2" }} />
               </>
             )}
           </div>
@@ -327,6 +516,7 @@ export default function PhotoImportPage() {
               <li>המצלמה ישרה מעל הדף (לא בזווית)</li>
               <li>הטקסט חד וממלא את המסגרת</li>
               <li>✂️ חתכי רק את אזור המתכון (בלי רקע / צלחת / מיקום מיותר)</li>
+              <li>לצילום ה-2 וה-3: אותה תאורה, אותו זווית — עוזר ל־AI להבין שזה המשך של אותו מתכון</li>
             </ul>
           </aside>
         </section>
@@ -335,15 +525,15 @@ export default function PhotoImportPage() {
       {stage === "loading" && (
         <section className="import-layout">
           <div className="upload-panel" style={{ textAlign: "center" }}>
-            {previewUrl && (
+            {activePage && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={previewUrl} alt="תמונה נבחרה" style={{ maxWidth: "100%", maxHeight: 260, borderRadius: 12, marginBottom: 16, objectFit: "contain" }} />
+              <img src={activePage.previewUrl} alt="תמונה נבחרה" style={{ maxWidth: "100%", maxHeight: 260, borderRadius: 12, marginBottom: 16, objectFit: "contain" }} />
             )}
             <svg aria-hidden="true" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ display: "block", margin: "0 auto 10px", animation: "spin 1s linear infinite" }}>
               <path d="M21 12a9 9 0 1 1-6.219-8.56" />
             </svg>
-            <h2>מחלץ מתכון…</h2>
-            <p>שלב 1: קורא את הטקסט מהתמונה · שלב 2: מארגן למבנה מתכון.</p>
+            <h2>מחלץ מתכון מ־{pages.length} {pages.length === 1 ? "דף" : "דפים"}…</h2>
+            <p>שלב 1: קורא את הטקסט מכל דף · שלב 2: מארגן למבנה מתכון אחד.</p>
           </div>
         </section>
       )}
@@ -351,18 +541,43 @@ export default function PhotoImportPage() {
       {stage === "review" && recipe && (
         <section className="review-layout">
           <div className="source-preview">
-            {previewUrl ? (
+            {activePage ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={previewUrl} alt="תמונת המקור" style={{ width: "100%", borderRadius: 12, objectFit: "contain", maxHeight: 320 }} />
+              <img src={activePage.previewUrl} alt="תמונת המקור" style={{ width: "100%", borderRadius: 12, objectFit: "contain", maxHeight: 320 }} />
             ) : (
               <div className="paper-preview"><span>תמונה לא זמינה</span></div>
             )}
-            <p>מקור שהועלה</p>
+            {pages.length > 1 && (
+              <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                {pages.map((p, idx) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setActiveIdx(idx)}
+                    aria-label={`דף ${idx + 1}`}
+                    style={{
+                      width: 52,
+                      height: 52,
+                      padding: 0,
+                      borderRadius: 8,
+                      overflow: "hidden",
+                      background: "#f4efe2",
+                      border: idx === activeIdx ? "2px solid #4d7c0f" : "1.5px solid #cfbfae",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.previewUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  </button>
+                ))}
+              </div>
+            )}
+            <p>{pages.length > 1 ? `מקור: ${pages.length} דפים` : "מקור שהועלה"}</p>
             {recipe.raw_text && (
               recipe.recognition_failed ? (
                 <div style={{ marginTop: 14 }}>
                   <p style={{ margin: "0 0 6px", fontWeight: 800, color: "#3f352b", fontSize: ".95rem" }}>
-                    📄 מה שהצלחנו לקרוא מהתמונה:
+                    📄 מה שהצלחנו לקרוא מהתמונות:
                   </p>
                   <pre style={{
                     margin: 0, padding: 14, borderRadius: 10,

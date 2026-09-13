@@ -290,6 +290,106 @@ export async function extractRecipe(
   }
 }
 
+/**
+ * Multi-page OCR pipeline. Runs the OCR stage on each page in parallel,
+ * concatenates the raw texts with clear page markers, and hands the union
+ * to the same text-structuring stage the single-page path uses.
+ *
+ * Cook-book cards frequently span two or three sides: ingredients on one,
+ * instructions on the next, notes on a third. Sending them one-by-one
+ * through the single-page endpoint would give three disjoint (and mostly
+ * empty) recipes; combining them upstream keeps the structuring step
+ * working from a complete document.
+ */
+export async function extractRecipeFromPages(
+  id: ProviderId,
+  key: string,
+  pages: Array<{ imageBase64: string; mimeType: string }>,
+): Promise<ExtractedRecipe> {
+  if (pages.length === 0) throw new Error('אין דפים לסריקה')
+  if (pages.length === 1) return extractRecipe(id, key, pages[0].imageBase64, pages[0].mimeType)
+
+  // ─── Stage 1: OCR each page in parallel ───
+  const ocrResults = await Promise.all(
+    pages.map((p) => ocrImageWithProvider(id, key, p.imageBase64, p.mimeType)),
+  )
+
+  const totalPages = pages.length
+  const combinedText = ocrResults
+    .map((r, i) => `─── דף ${i + 1} מתוך ${totalPages} ───\n${r.raw_text || '(לא הוצא טקסט מהדף)'}`)
+    .join('\n\n')
+
+  // Recipe is considered readable if ANY page was readable and the combined
+  // text isn't too sparse. A single unreadable page shouldn't kill the whole
+  // batch as long as the others have real content.
+  const anyReadable = ocrResults.some((r) => r.readable)
+  if (!anyReadable || isTooSparseToBeARecipe(combinedText)) {
+    return {
+      title: 'זיהוי נכשל',
+      description: null,
+      category: null,
+      servings: null,
+      prep_minutes: null,
+      cook_minutes: null,
+      ingredients: [],
+      steps: [],
+      raw_text: combinedText,
+      recognition_failed: true,
+      reason: 'לא זוהה טקסט משמעותי באף אחד מהדפים. נסי שוב עם תאורה טובה יותר וזווית ישרה.',
+      provider: `${id}:ocr-only:${totalPages}pages`,
+    }
+  }
+
+  // Same "too many [לא ברור]" gate — but computed on the combined text, so a
+  // single hard-to-read page in a batch of three doesn't fail the whole scan.
+  const unclear = unclearRatio(combinedText)
+  if (unclear > 0.35) {
+    return {
+      title: 'זיהוי חלקי מדי',
+      description: null,
+      category: null,
+      servings: null,
+      prep_minutes: null,
+      cook_minutes: null,
+      ingredients: [],
+      steps: [],
+      raw_text: combinedText,
+      recognition_failed: true,
+      reason: `יותר מ־${Math.round(unclear * 100)}% מהמילים בכל הדפים לא היו קריאות. הטקסט למטה הוא מה שכן נקרא — את יכולה למלא את השדות ידנית או לצלם מחדש בתאורה טובה יותר.`,
+      provider: `${id}:ocr-low-confidence:${totalPages}pages`,
+    }
+  }
+
+  // ─── Stage 2: structure the combined text into a single recipe ───
+  const structured = await extractRecipeFromText(id, key, combinedText, '')
+
+  const score = groundingScore(structured, combinedText)
+  if (score < 0.4) {
+    return {
+      title: 'זיהוי לא אמין',
+      description: null,
+      category: null,
+      servings: null,
+      prep_minutes: null,
+      cook_minutes: null,
+      ingredients: [],
+      steps: [],
+      raw_text: combinedText,
+      recognition_failed: true,
+      reason: `ה־AI ניסה לבנות מתכון מ־${totalPages} דפים אבל השדות שהוא הציע לא תואמים למה שנקרא (התאמה: ${Math.round(score * 100)}%). זה סימן להזיה. הטקסט למטה הוא מה שנקרא בפועל — מלאי ידנית מתוכו.`,
+      provider: `${id}:hallucination-detected:${totalPages}pages`,
+    }
+  }
+
+  return {
+    ...structured,
+    raw_text: combinedText,
+    recognition_failed: false,
+    reason: null,
+    provider: `${id}:two-stage:${totalPages}pages (grounding: ${Math.round(score * 100)}%)`,
+  }
+}
+
 async function ocrImageWithProvider(id: ProviderId, key: string, imageBase64: string, mimeType: string): Promise<OcrResult> {
   switch (id) {
     case 'anthropic': return ocrWithAnthropic(key, imageBase64, mimeType)

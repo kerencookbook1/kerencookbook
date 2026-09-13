@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getKeyCandidates } from '@/lib/ai-providers'
-import { extractRecipe } from '@/lib/provider-adapters'
+import { extractRecipeFromPages } from '@/lib/provider-adapters'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
+
+const MAX_PAGES = 3
+const MAX_BYTES_PER_PAGE = 8 * 1024 * 1024 // 8MB
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -19,24 +22,48 @@ export async function POST(request: Request) {
     )
   }
 
-  // Parse image
-  let imageBase64: string
-  let mimeType: string
+  // Collect image files from the form. Backward-compat: a single `image`
+  // field still works (older clients / anyone posting curl). Newer clients
+  // send `image1`, `image2`, `image3` for multi-page scans up to MAX_PAGES.
+  let pages: Array<{ imageBase64: string; mimeType: string }>
   try {
     const formData = await request.formData()
-    const image = formData.get('image')
-    if (!(image instanceof File)) {
-      return NextResponse.json({ error: 'שדה image חסר או לא תקין' }, { status: 400 })
+
+    const files: File[] = []
+    const single = formData.get('image')
+    if (single instanceof File) files.push(single)
+    for (let i = 1; i <= MAX_PAGES; i++) {
+      const v = formData.get(`image${i}`)
+      if (v instanceof File) files.push(v)
     }
-    if (image.size > 8 * 1024 * 1024) {
-      return NextResponse.json({ error: 'תמונה גדולה מדי (מקסימום 8MB)' }, { status: 413 })
+
+    if (files.length === 0) {
+      return NextResponse.json({ error: 'לא נשלחה תמונה' }, { status: 400 })
     }
-    const bytes = await image.arrayBuffer()
-    imageBase64 = Buffer.from(bytes).toString('base64')
-    mimeType = image.type || 'image/jpeg'
+    if (files.length > MAX_PAGES) {
+      return NextResponse.json(
+        { error: `אפשר לצלם עד ${MAX_PAGES} דפים בסריקה אחת` },
+        { status: 400 }
+      )
+    }
+
+    pages = []
+    for (const f of files) {
+      if (f.size > MAX_BYTES_PER_PAGE) {
+        return NextResponse.json(
+          { error: `תמונה גדולה מדי (מקסימום ${MAX_BYTES_PER_PAGE / 1024 / 1024}MB לדף)` },
+          { status: 413 }
+        )
+      }
+      const bytes = await f.arrayBuffer()
+      pages.push({
+        imageBase64: Buffer.from(bytes).toString('base64'),
+        mimeType: f.type || 'image/jpeg',
+      })
+    }
   } catch (err) {
     return NextResponse.json(
-      { error: 'לא ניתן לקרוא את התמונה', detail: String(err) },
+      { error: 'לא ניתן לקרוא את התמונות', detail: String(err) },
       { status: 400 }
     )
   }
@@ -44,7 +71,7 @@ export async function POST(request: Request) {
   const errors: string[] = []
   for (const { id, key } of candidates) {
     try {
-      const recipe = await extractRecipe(id, key, imageBase64, mimeType)
+      const recipe = await extractRecipeFromPages(id, key, pages)
       return NextResponse.json(recipe)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
