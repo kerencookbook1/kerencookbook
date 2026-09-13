@@ -136,12 +136,18 @@ export default function ImportVideoPage() {
       if (recipe?.sourceMetadata?.thumbnailUrl) {
         fd.append("imageUrl", recipe.sourceMetadata.thumbnailUrl);
       }
-      // Attribution — channel becomes author, YouTube (or filename) becomes source.
+      // Attribution — channel/handle becomes author; platform becomes source.
       if (recipe?.sourceMetadata?.author) {
         fd.append("author", recipe.sourceMetadata.author);
       }
-      if (recipe?.sourceMetadata?.sourceKind === 'youtube') {
-        fd.append("sourceName", "YouTube");
+      const platformName: Record<string, string> = {
+        youtube: 'YouTube',
+        tiktok: 'TikTok',
+        instagram: 'Instagram',
+      };
+      const platform = platformName[recipe?.sourceMetadata?.sourceKind ?? ''];
+      if (platform) {
+        fd.append("sourceName", platform);
       }
       if (recipe?.sourceMetadata?.sourceUrl) {
         fd.append("sourceUrl", recipe.sourceMetadata.sourceUrl);
@@ -174,7 +180,7 @@ export default function ImportVideoPage() {
         <Link href="/import" className="back-link">← הוספת מתכון</Link>
         <p className="eyebrow">ייבוא מוידאו</p>
         <h1>מוידאו לביצה על הצלחת</h1>
-        <p>הדביקי קישור ליוטיוב, או העלי קובץ אודיו/וידאו — ה־AI יזהה את המרכיבים והשלבים.</p>
+        <p>הדביקי קישור ל-YouTube · TikTok · Instagram, או העלי קובץ אודיו/וידאו — ה־AI יזהה את המרכיבים והשלבים.</p>
       </header>
 
       {stage === "input" && (
@@ -186,7 +192,7 @@ export default function ImportVideoPage() {
                 onClick={() => { setMode("url"); setError(null); }}
                 style={tabStyle(mode === "url")}
               >
-                🔗 קישור YouTube
+                🔗 קישור לסרטון
               </button>
               <button
                 type="button"
@@ -207,12 +213,12 @@ export default function ImportVideoPage() {
                     inputMode="url"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
-                    placeholder="https://www.youtube.com/watch?v=..."
+                    placeholder="youtube.com / tiktok.com / instagram.com/reel/..."
                     dir="ltr"
                     style={inputStyle}
                   />
                   <span style={{ display: "block", marginTop: 6, fontSize: ".85rem", color: "var(--muted)" }}>
-                    תומך ב-YouTube (כולל Shorts). אם לסרטון אין כתוביות בעברית או באנגלית, נציע לך להעלות קובץ.
+                    תומך ב-YouTube (כולל Shorts), TikTok ו-Instagram (Reels/פוסטים ציבוריים). אם אין כתוביות/תיאור — נציע לך להעלות קובץ אודיו.
                   </span>
                 </label>
               ) : (
@@ -283,14 +289,15 @@ export default function ImportVideoPage() {
           <aside className="provider-card">
             <div style={{ minHeight: 180, border: "2px dashed #cfbfae", borderRadius: 16, display: "grid", placeItems: "center", color: "var(--muted)", background: "#fdf9f4" }}>
               <span style={{ textAlign: "center", fontSize: ".9rem", padding: 12 }}>
-                🎬 YouTube / 🎙️ אודיו<br />
-                → תמלול<br />
+                🎬 YouTube · 📱 TikTok · 📸 Instagram<br />
+                🎙️ קובץ אודיו/וידאו<br />
+                → תמלול / קריאת תיאור<br />
                 → AI מחלץ מתכון
               </span>
             </div>
             <h2 style={{ marginTop: 20 }}>איך זה עובד</h2>
             <p>
-              ליוטיוב אני קורא את הכתוביות (חינם). לקובץ אודיו/וידאו — Whisper מתמלל אותו לעברית. בשני המקרים ה־AI קורא את הטקסט ומזהה שם, מרכיבים ושלבים.
+              ל-YouTube אני קורא את הכתוביות (חינם). ל-TikTok ו-Instagram — קורא את הכיתוב שהיוצר כתב מתחת לסרטון (זה המקום שבו רוב מתכוני הסרטונים מפורטים). לקובץ אודיו/וידאו — Whisper מתמלל אותו לעברית. בכל המקרים ה־AI קורא את הטקסט ומזהה שם, מרכיבים ושלבים.
             </p>
             <p className="privacy-note" style={{ marginTop: 12 }}>
               הכתובת/הקובץ נשלחים לספק ה־AI הפעיל שלך. תמונת ה-thumbnail של הסרטון תוצמד אוטומטית כתמונה ראשית.

@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       const source = pickSourceForUrl(url)
       if (!source) {
         return NextResponse.json(
-          { error: 'הכתובת אינה נתמכת. כרגע תומכים ב-YouTube; בקרוב יתווספו נוספים.' },
+          { error: 'הכתובת אינה נתמכת. תומכים ב-YouTube, TikTok ו-Instagram. בקרוב יתווספו נוספים.' },
           { status: 400 },
         )
       }
@@ -83,10 +83,17 @@ export async function POST(request: Request) {
       metadata = meta
       const t = await source.tryFetchTranscript(url)
       if (!t || !t.text) {
+        // Copy is per-platform because "no captions" means different things:
+        //   YouTube → captions weren't uploaded (upload audio to fall back)
+        //   TikTok / Instagram → post has no caption or is private
+        const kindErrors: Record<string, string> = {
+          youtube: 'לא נמצאו כתוביות לסרטון. הורידי אותו לקובץ MP3/MP4 והעלי כאן, ואני אתמלל בעזרת Whisper.',
+          tiktok: 'לא נמצא תיאור טקסטואלי לסרטון ב-TikTok, או שהוא פרטי. אם המתכון נאמר בסרטון עצמו — הורידי כקובץ אודיו והעלי כאן.',
+          instagram: 'לא נמצא תיאור טקסטואלי לפוסט ב-Instagram, או שהוא פרטי. אם המתכון נאמר בסרטון — הורידי כקובץ אודיו והעלי כאן.',
+        }
         return NextResponse.json(
           {
-            error:
-              'לא נמצאו כתוביות לסרטון. הורידי אותו לקובץ MP3/MP4 והעלי כאן, ואני אתמלל בעזרת Whisper.',
+            error: kindErrors[meta.sourceKind] || 'לא נמצא תוכן טקסטואלי לחלץ. העלי קובץ אודיו/וידאו במקום.',
             code: 'NO_CAPTIONS',
           },
           { status: 422 },
