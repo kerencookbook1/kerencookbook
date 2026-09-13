@@ -7,6 +7,8 @@ import { AddToShoppingButton } from '../../_components/add-to-shopping-button'
 import { resolveRecipeImageUrl } from '@/lib/recipe-image-url'
 import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeholder'
 import { IngredientListWithToggle } from '@/components/recipes/ingredient-list-with-toggle'
+import { StepTimerButton } from '@/components/recipes/step-timer-button'
+import { parseStepTimers } from '@/lib/step-timers'
 import { WhatsAppShareButton } from '@/components/recipes/whatsapp-share-button'
 import { NutritionCard } from '@/components/recipes/nutrition-card'
 
@@ -101,16 +103,38 @@ export default async function RecipePage({ params }: Props) {
 
   const stepsPanel = steps.length > 0 ? (
     <ol style={{ display: 'grid', gap: 20, margin: 0, paddingRight: 22 }}>
-      {steps.map((step, i) => (
-        <li key={step.id} style={{ lineHeight: 1.65 }}>
-          {step.title && (
-            <strong style={{ display: 'block', marginBottom: 4, color: 'var(--ink)' }}>
-              שלב {i + 1}: {step.title}
-            </strong>
-          )}
-          <p style={{ margin: 0, color: '#51473e' }}>{step.body}</p>
-        </li>
-      ))}
+      {steps.map((step, i) => {
+        // Detect timer expressions inside the step body ("3 דקות", "1½ שעות",
+        // "5-7 דק'") and emit one countdown button per hit. The `duration_seconds`
+        // column feeds a primary timer button that appears first when present.
+        const inlineTimers = parseStepTimers(step.body)
+        const timers: Array<{ seconds: number; label?: string }> = []
+        if (step.duration_seconds && step.duration_seconds > 0) {
+          timers.push({ seconds: step.duration_seconds })
+        }
+        for (const t of inlineTimers) {
+          if (!timers.some((existing) => Math.abs(existing.seconds - t.seconds) < 5)) {
+            timers.push({ seconds: t.seconds, label: t.label })
+          }
+        }
+        return (
+          <li key={step.id} style={{ lineHeight: 1.65 }}>
+            {step.title && (
+              <strong style={{ display: 'block', marginBottom: 4, color: 'var(--ink)' }}>
+                שלב {i + 1}: {step.title}
+              </strong>
+            )}
+            <p style={{ margin: 0, color: '#51473e' }}>{step.body}</p>
+            {timers.length > 0 && (
+              <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {timers.map((t, ti) => (
+                  <StepTimerButton key={ti} seconds={t.seconds} restLabel={t.label} />
+                ))}
+              </div>
+            )}
+          </li>
+        )
+      })}
     </ol>
   ) : (
     <p style={{ color: 'var(--muted)' }}>אין הוראות רשומות.</p>
