@@ -280,49 +280,152 @@ function parseIsoDuration(s: string | null): number | null {
   return hours * 60 + mins
 }
 
-function parseStringArray(v: unknown): string[] {
-  if (Array.isArray(v)) {
-    return v
-      .map((x) => (typeof x === 'string' ? x : typeof x === 'object' && x && 'text' in x ? String((x as Record<string, unknown>).text) : ''))
+/**
+ * Clean a chunk of recipe text that came out of JSON-LD:
+ *   - Decode `&amp;` / `&#40;` / `&#x28;` etc.
+ *   - Decode stray URL-encoded escapes like `%28` (foodsdictionary.co.il
+ *     leaks these into ingredient names).
+ *   - Turn `<br>`, `</br>`, `<br/>`, `<p>` into newlines.
+ *   - Strip any remaining HTML tags.
+ *   - Collapse whitespace.
+ * The result is safe to display verbatim in the UI.
+ */
+function cleanRecipeText(input: string): string {
+  let s = input
+
+  // Newlines from HTML block-level tags
+  s = s.replace(/<\s*br\s*\/?\s*>/gi, '\n')
+  s = s.replace(/<\s*\/\s*br\s*>/gi, '\n')
+  s = s.replace(/<\s*\/?\s*p\s*[^>]*>/gi, '\n')
+  s = s.replace(/<\s*li\s*[^>]*>/gi, '\n')
+  s = s.replace(/<\s*\/\s*li\s*>/gi, '')
+
+  // Strip any remaining tags
+  s = s.replace(/<[^>]+>/g, '')
+
+  // HTML entities: named
+  s = s
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
+  // Numeric decimal / hex entities
+  s = s.replace(/&#(\d+);/g, (_, n) => {
+    try { return String.fromCodePoint(parseInt(n, 10)) } catch { return _ }
+  })
+  s = s.replace(/&#x([0-9a-fA-F]+);/g, (_, n) => {
+    try { return String.fromCodePoint(parseInt(n, 16)) } catch { return _ }
+  })
+
+  // Percent-encoded characters — decode individually so a broken sequence
+  // doesn't nuke the rest of the string like decodeURIComponent would.
+  s = s.replace(/%[0-9A-Fa-f]{2}/g, (m) => {
+    try { return decodeURIComponent(m) } catch { return m }
+  })
+
+  // Collapse whitespace but keep newlines
+  s = s.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
+  return s
+}
+
+/** Strip leading "1.", "1)", "1 -" and similar step numbering from a line. */
+function stripLeadingNumber(line: string): string {
+  return line.replace(/^\s*\d+\s*[.)\-–]\s*/, '').trim()
+}
+
+/**
+ * Split one long recipe-instructions string into individual steps.
+ * The tricky case is a single string that already contains its own
+ * numbering ("1. ... 2. ... 3. ...") with `<br>` between the items —
+ * that's the shape foodsdictionary.co.il and several other Hebrew sites
+ * use. We normalize breaks to `\n`, then split by inline "N." markers
+ * when the string still has no line breaks after cleaning.
+ */
+function splitStepsString(input: string): string[] {
+  const cleaned = cleanRecipeText(input)
+  if (!cleaned) return []
+
+  let pieces = cleaned.split(/\r?\n+/).map((s) => s.trim()).filter(Boolean)
+
+  // If cleaning didn't produce multiple lines but the text still has "1." /
+  // "2." markers inline, split on those. Uses lookahead so the marker stays
+  // attached to its step (we strip it in the next pass).
+  if (pieces.length <= 1 && /\d+\s*[.)]\s*\S/.test(cleaned)) {
+    pieces = cleaned
+      .split(/(?=\s\d+\s*[.)]\s)/)
       .map((s) => s.trim())
       .filter(Boolean)
   }
-  if (typeof v === 'string') {
-    return v.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+
+  const steps = pieces
+    .map(stripLeadingNumber)
+    .filter((s) => s.length >= 2)
+
+  // Drop consecutive duplicates — some feeds echo the same step twice.
+  const dedup: string[] = []
+  for (const step of steps) {
+    if (dedup[dedup.length - 1] === step) continue
+    dedup.push(step)
   }
-  return []
+  return dedup
+}
+
+function parseStringArray(v: unknown): string[] {
+  const raw: string[] = []
+  if (Array.isArray(v)) {
+    for (const x of v) {
+      if (typeof x === 'string') raw.push(x)
+      else if (x && typeof x === 'object' && 'text' in x) {
+        raw.push(String((x as Record<string, unknown>).text ?? ''))
+      }
+    }
+  } else if (typeof v === 'string') {
+    raw.push(...v.split(/\r?\n/))
+  }
+  return raw
+    .map(cleanRecipeText)
+    .map((s) => s.trim())
+    .filter(Boolean)
 }
 
 function parseInstructions(v: unknown): string[] {
   if (!v) return []
-  if (typeof v === 'string') {
-    return v.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
-  }
+  if (typeof v === 'string') return splitStepsString(v)
   if (Array.isArray(v)) {
     const out: string[] = []
     for (const item of v) {
       if (typeof item === 'string') {
-        if (item.trim()) out.push(item.trim())
+        out.push(...splitStepsString(item))
       } else if (item && typeof item === 'object') {
         const obj = item as Record<string, unknown>
         const type = String(obj['@type'] ?? '').toLowerCase()
         if (type === 'howtosection' && Array.isArray(obj['itemListElement'])) {
           for (const sub of obj['itemListElement'] as unknown[]) {
             if (sub && typeof sub === 'object' && 'text' in sub) {
-              const t = String((sub as Record<string, unknown>).text ?? '').trim()
-              if (t) out.push(t)
+              out.push(...splitStepsString(String((sub as Record<string, unknown>).text ?? '')))
             }
           }
         } else if ('text' in obj) {
-          const t = String(obj['text'] ?? '').trim()
-          if (t) out.push(t)
+          out.push(...splitStepsString(String(obj['text'] ?? '')))
         } else if ('name' in obj) {
-          const t = String(obj['name'] ?? '').trim()
-          if (t) out.push(t)
+          out.push(...splitStepsString(String(obj['name'] ?? '')))
         }
       }
     }
-    return out
+    // Dedupe again across the merged output — a common cause of the "steps
+    // appear twice" bug we're fixing is a feed that puts the same block in
+    // both a top-level string and a nested HowToStep list.
+    const seen = new Set<string>()
+    const unique: string[] = []
+    for (const s of out) {
+      const key = s.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      unique.push(s)
+    }
+    return unique
   }
   return []
 }
