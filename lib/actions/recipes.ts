@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 import { recipeFormSchema } from '@/lib/validations/recipes'
 import type { IngredientItem, StepItem } from '@/lib/validations/recipes'
 import { isDietAuto } from '@/lib/diet'
+import type { Database } from '@/lib/supabase/types'
+
+type RecipeInsert = Database['public']['Tables']['recipes']['Insert']
 
 function overrideToDbValue(v: 'auto' | 'on' | 'off'): boolean | null {
   if (v === 'on') return true
@@ -67,30 +70,62 @@ export async function createRecipe(
     .upsert({ id: user.id, display_name: displayName }, { onConflict: 'id' })
   if (profileError) return { error: `יצירת פרופיל נכשלה: ${profileError.message}` }
 
-  const { data: recipe, error: recipeError } = await supabase
-    .from('recipes')
-    .insert({
-      owner_id: user.id,
-      title,
-      description: description || null,
-      category: category || null,
-      difficulty: difficulty || null,
-      rating: rating ?? null,
-      notes: notes || null,
-      prep_time: prepTime ?? null,
-      cook_time: cookTime ?? null,
-      servings: servings ?? null,
-      author: author?.trim() || null,
-      source_name: sourceName?.trim() || null,
-      source_url: sourceUrl?.trim() || null,
-      source_photo_path: sourcePhotoPath?.trim() || null,
-      is_diet_auto: dietAuto,
-      is_diet_override: dietOverride,
-    })
-    .select('id')
-    .single()
+  // Attempt full insert including the newer attribution columns. If the DB
+  // schema is behind (migrations 0009/0010 not run), Supabase reports
+  // "column X does not exist" — we detect that and retry without the
+  // missing columns so the recipe still saves. Any other error is surfaced
+  // to the user with its actual message instead of a generic string.
+  const fullPayload: RecipeInsert = {
+    owner_id: user.id,
+    title,
+    description: description || null,
+    category: category || null,
+    difficulty: difficulty || null,
+    rating: rating ?? null,
+    notes: notes || null,
+    prep_time: prepTime ?? null,
+    cook_time: cookTime ?? null,
+    servings: servings ?? null,
+    author: author?.trim() || null,
+    source_name: sourceName?.trim() || null,
+    source_url: sourceUrl?.trim() || null,
+    source_photo_path: sourcePhotoPath?.trim() || null,
+    is_diet_auto: dietAuto,
+    is_diet_override: dietOverride,
+  }
 
-  if (recipeError || !recipe) return { error: 'שגיאה ביצירת המתכון' }
+  const ATTRIBUTION_COLUMNS = ['author', 'source_name', 'source_url', 'source_photo_path'] as const
+
+  let insertRes = await supabase.from('recipes').insert(fullPayload).select('id').single()
+
+  if (insertRes.error) {
+    const missing = /column\s+"?(\w+)"?\s+.*does\s+not\s+exist/i.exec(insertRes.error.message)?.[1]
+    if (missing && ATTRIBUTION_COLUMNS.includes(missing as typeof ATTRIBUTION_COLUMNS[number])) {
+      // Migrations 0009/0010 not yet applied — retry without the attribution columns.
+      const retryPayload = { ...fullPayload }
+      for (const k of ATTRIBUTION_COLUMNS) delete retryPayload[k as keyof RecipeInsert]
+      insertRes = await supabase.from('recipes').insert(retryPayload).select('id').single()
+      if (!insertRes.error) {
+        console.warn(
+          `[createRecipe] attribution columns missing from DB — recipe saved without them.
+Run this in Supabase SQL Editor to re-enable them:
+  ALTER TABLE recipes ADD COLUMN IF NOT EXISTS author            TEXT;
+  ALTER TABLE recipes ADD COLUMN IF NOT EXISTS source_name       TEXT;
+  ALTER TABLE recipes ADD COLUMN IF NOT EXISTS source_url        TEXT;
+  ALTER TABLE recipes ADD COLUMN IF NOT EXISTS source_photo_path TEXT;`
+        )
+      }
+    }
+  }
+
+  const { data: recipe, error: recipeError } = insertRes
+
+  if (recipeError || !recipe) {
+    console.error('[createRecipe] insert failed:', recipeError)
+    return {
+      error: `שגיאה ביצירת המתכון: ${recipeError?.message ?? 'לא ידוע'}`,
+    }
+  }
 
   if (ingredients.length > 0) {
     await supabase.from('ingredients').insert(
