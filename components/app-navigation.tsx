@@ -25,13 +25,13 @@ const items: NavItem[] = [
   // Recipes — "הוספת מתכון" first, then "שפים" below it (per user request 2026-09-12)
   { href: "/recipes",  label: "המתכונים שלי", mobileLabel: "מתכונים", icon: "book",     mobile: true,  desktop: true, section: "מתכונים" },
   { href: "/import",   label: "הוספת מתכון",  mobileLabel: "הוספה",   icon: "add",      mobile: true,  desktop: true, highlight: true },
-  { href: "/chefs",    label: "שפים",         mobileLabel: "שפים",    icon: "chef",     mobile: false, desktop: true },
-  // Tools
-  { href: "/pantry",   label: "מה יש לי בבית?", icon: "chef",   mobile: false, desktop: true, section: "כלים" },
+  { href: "/chefs",    label: "שפים",         mobileLabel: "שפים",    icon: "chef",     mobile: true,  desktop: true },
+  // Tools — all reachable from mobile too (bottom nav scrolls horizontally when needed)
+  { href: "/pantry",   label: "מה יש לי בבית?", mobileLabel: "במזווה", icon: "chef",   mobile: true,  desktop: true, section: "כלים" },
   { href: "/shopping", label: "רשימת קניות",  mobileLabel: "קניות",   icon: "cart",     mobile: true,  desktop: true },
-  { href: "/calories", label: "מחשבון קלוריות", mobileLabel: "קלוריות", icon: "flame",  mobile: false, desktop: true },
-  { href: "/scale",    label: "התאמת מנות",    mobileLabel: "מנות",   icon: "scale",   mobile: false, desktop: true },
-  { href: "/meals",    label: "תכנון ארוחות", icon: "calendar", mobile: false, desktop: true },
+  { href: "/calories", label: "מחשבון קלוריות", mobileLabel: "קלוריות", icon: "flame",  mobile: true,  desktop: true },
+  { href: "/scale",    label: "התאמת מנות",    mobileLabel: "מנות",   icon: "scale",   mobile: true,  desktop: true },
+  { href: "/meals",    label: "תכנון ארוחות",  mobileLabel: "ארוחות", icon: "calendar", mobile: true,  desktop: true },
 ];
 
 // Rendered separately at the bottom of the desktop sidebar (above logout).
