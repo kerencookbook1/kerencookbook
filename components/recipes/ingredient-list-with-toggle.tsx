@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { convertToMetric, isImperialAmount } from '@/lib/unit-conversion'
+import { IngredientSubstituteButton } from './ingredient-substitute-button'
 
 export type IngredientDisplay = {
   amount: string | null
@@ -11,6 +12,7 @@ export type IngredientDisplay = {
 
 type Props = {
   ingredients: IngredientDisplay[]
+  recipeTitle?: string
 }
 
 /**
@@ -18,8 +20,9 @@ type Props = {
  * list uses an imperial unit (cup / oz / lb / °F / inch), the toggle is
  * hidden — no reason to clutter the UI on already-metric recipes.
  */
-export function IngredientListWithToggle({ ingredients }: Props) {
+export function IngredientListWithToggle({ ingredients, recipeTitle }: Props) {
   const [metric, setMetric] = useState(true)
+  const otherIngredients = useMemo(() => ingredients.map((i) => i.name), [ingredients])
 
   const hasImperial = useMemo(
     () => ingredients.some((ing) => isImperialAmount(ing.amount ?? '', ing.unit ?? '')),
@@ -58,7 +61,7 @@ export function IngredientListWithToggle({ ingredients }: Props) {
               key={`${ing.name}-${i}`}
               style={{
                 display: 'flex',
-                alignItems: 'baseline',
+                alignItems: 'center',
                 gap: 12,
                 padding: '10px 12px',
                 background: 'var(--surface, #ffffff)',
@@ -83,25 +86,30 @@ export function IngredientListWithToggle({ ingredients }: Props) {
                   {shown.unit}
                 </span>
               )}
-              <span style={{ color: 'var(--ink, #171717)', fontSize: '.95rem' }}>
+              <span style={{ color: 'var(--ink, #171717)', fontSize: '.95rem', flex: 1, minWidth: 0 }}>
                 {ing.name}
               </span>
               {shown.converted && (
                 <span
                   title={`מקור: ${original.amount} ${original.unit}`}
                   style={{
-                    marginInlineStart: 'auto',
                     fontSize: '.7rem',
                     color: 'var(--muted, #525252)',
                     background: 'var(--terracotta-bg, #ecfccb)',
                     padding: '2px 6px',
                     borderRadius: 999,
                     fontWeight: 700,
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   ← {original.amount} {original.unit}
                 </span>
               )}
+              <IngredientSubstituteButton
+                ingredientName={ing.name}
+                recipeTitle={recipeTitle}
+                otherIngredients={otherIngredients}
+              />
             </li>
           )
         })}

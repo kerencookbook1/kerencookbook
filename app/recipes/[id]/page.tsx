@@ -72,6 +72,7 @@ export default async function RecipePage({ params }: Props) {
         <section>
           <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '1.5rem', marginBottom: 14 }}>מרכיבים</h2>
           <IngredientListWithToggle
+            recipeTitle={recipe.title}
             ingredients={ingredients.map((ing) => ({
               amount: ing.amount,
               unit: ing.unit,
