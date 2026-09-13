@@ -94,11 +94,25 @@ export function formatDuration(totalSeconds: number): string {
  */
 export function parseStepTimers(body: string): StepTimer[] {
   if (!body || !body.trim()) return []
+  try {
+    return parseStepTimersInner(body)
+  } catch (err) {
+    // Never crash the recipe page over a parser edge case — better to show
+    // no timer buttons than an error boundary.
+    console.error('[step-timers] parse failed:', err)
+    return []
+  }
+}
+
+function parseStepTimersInner(body: string): StepTimer[] {
 
   // Master regex: optional fraction (glyph OR Hebrew word) OR number, then a unit.
   // We build it dynamically to keep the Hebrew and English variants readable.
   const unit = [HEB_HOUR.source, HEB_MIN.source, HEB_SEC.source, EN_HOUR.source, EN_MIN.source, EN_SEC.source].join('|')
-  const glyphFrac = Object.keys(FRACTION_GLYPHS).map((g) => `\\${g}`).join('')
+  // Unicode fraction glyphs — inside a character class they don't need
+  // escaping (and escaping them under the /u flag actually throws
+  // "Invalid escape"). Just interpolate them raw.
+  const glyphFrac = Object.keys(FRACTION_GLYPHS).join('')
   const hebFracWord = Object.keys(HEBREW_FRACTION_WORDS)
     .sort((a, b) => b.length - a.length)  // longest first
     .join('|')
