@@ -10,6 +10,7 @@ import { IngredientListWithToggle } from '@/components/recipes/ingredient-list-w
 import { StepTimerButton } from '@/components/recipes/step-timer-button'
 import { parseStepTimers } from '@/lib/step-timers'
 import { WhatsAppShareButton } from '@/components/recipes/whatsapp-share-button'
+import { RebuildRecipeButton } from '@/components/recipes/rebuild-recipe-button'
 import { NutritionCard } from '@/components/recipes/nutrition-card'
 
 type Props = { params: Promise<{ id: string }> }
@@ -364,6 +365,9 @@ export default async function RecipePage({ params }: Props) {
                 <span aria-hidden="true">🔗</span>
                 <span>{recipe.source_name ? `לאתר המקור · ${recipe.source_name}` : 'לאתר המקור'} ↗</span>
               </a>
+            )}
+            {recipe.source_url && (
+              <RebuildRecipeButton recipeId={id} sourceName={recipe.source_name ?? null} />
             )}
             {!recipe.source_url && recipe.source_photo_path && (
               <a

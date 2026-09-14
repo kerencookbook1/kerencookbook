@@ -477,20 +477,75 @@ function extractOgImage(html: string, baseUrl: string): string | undefined {
    ───────────────────────────────────────────────────── */
 export function stripHtml(html: string): string {
   return html
-    // remove full <script>/<style> blocks including content
-    .replace(/<(script|style|noscript|iframe)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
-    // remove all remaining tags
+    // 1. Nuke full non-content blocks entirely (script/style/iframe never carry recipe text)
+    .replace(/<(script|style|noscript|iframe|template|svg)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    // 2. Nuke site chrome so the AI doesn't ingest navigation, cookie banners,
+    //    "related recipes" rails, social share widgets, comments, footer credits, etc.
+    //    These blocks routinely contaminate extraction on Hebrew media sites
+    //    (foodsdictionary, ynet, mako, walla) with English boilerplate + irrelevant Hebrew.
+    .replace(/<(nav|footer|aside|header)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<(button|form|label|input|select|textarea)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    // 3. Class/id-based noise (best-effort — matches common patterns).
+    //    Non-greedy match up to the matching closing tag; a false negative
+    //    just leaves the noise in, doesn't corrupt anything.
+    .replace(
+      /<(\w+)\b[^>]*(?:class|id)\s*=\s*"[^"]*(?:menu|navbar|navigation|footer|sidebar|related|share|comment|newsletter|subscribe|cookie|breadcrumb|byline|credit|photograph|byline|author-box|pagination|social|widget|advert|banner|popup|modal|toolbar|tags?-list|meta-info)[^"]*"[^>]*>[\s\S]*?<\/\1>/gi,
+      ' ',
+    )
+    // 4. Remove all remaining tags
     .replace(/<[^>]+>/g, ' ')
-    // decode a few common entities
+    // 5. Decode HTML entities (named + numeric)
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
-    // collapse whitespace
+    .replace(/&#(\d+);/g, (_, n) => { try { return String.fromCodePoint(parseInt(n, 10)) } catch { return _ } })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, n) => { try { return String.fromCodePoint(parseInt(n, 16)) } catch { return _ } })
+    // 6. Collapse whitespace
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+/**
+ * Post-processing filter for AI-returned step arrays. Kicks out lines that
+ * clearly aren't recipe instructions:
+ *   - Very short (< 15 chars — a real step is at least a sentence)
+ *   - Look like a photo/edit/writer credit ("צילום: ...", "עורך: ...", "by ...")
+ *   - Look like nav/CTA text ("קרא עוד", "read more", "לחצי כאן")
+ *   - Pure English inside a Hebrew recipe (site chrome that snuck through)
+ *   - Look like tag / hashtag / URL only
+ * Ingredients get the same treatment so noise doesn't slip into that array.
+ */
+export function filterNoiseSteps(steps: string[], recipeLooksHebrew: boolean): string[] {
+  return steps
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .filter((s) => s.length >= 15)
+    .filter((s) => !/^(?:צילום|צלם|עורכ[הת]|כתב[הת]?|מגישה?|הצג|תוגית|תגיות|קטגורי[הת]|קרא\s+עוד|read\s+more|click\s+here|לחצ[יו]\s+כאן|שתפ[יו]|share\s+this|subscribe|register|log(?:\s+)?in|sign(?:\s+)?up|home\s*page|תפריט|about\s+us|contact\s+us|privacy\s+policy|copyright)/i.test(s))
+    .filter((s) => !/^\s*(?:by|מאת)\s+\S+\s*$/i.test(s))
+    .filter((s) => !/^\s*(?:https?:\/\/|www\.)/i.test(s))
+    .filter((s) => !/^\s*#\S+\s*$/i.test(s))
+    .filter((s) => {
+      if (!recipeLooksHebrew) return true
+      const hebChars = (s.match(/[֐-׿]/g) || []).length
+      const latinChars = (s.match(/[A-Za-z]/g) || []).length
+      // Reject "pure English" bits when the surrounding recipe is Hebrew.
+      if (hebChars === 0 && latinChars > 5) return false
+      return true
+    })
+}
+
+/**
+ * Cheap language sniff — returns true if the given text contains more
+ * Hebrew letters than Latin letters (or has any Hebrew at all when Latin
+ * is scarce). Used to gate the "reject pure-English" heuristic.
+ */
+export function looksHebrew(text: string): boolean {
+  const heb = (text.match(/[֐-׿]/g) || []).length
+  const lat = (text.match(/[A-Za-z]/g) || []).length
+  return heb > lat || (heb > 0 && lat < 20)
 }
 
 /* ─────────────────────────────────────────────────────
@@ -528,8 +583,16 @@ export async function importRecipeFromUrl(
   for (const { id, key } of candidates) {
     try {
       const recipe = await extractRecipeFromText(id, key, text, url.toString())
+      // Post-process: kick out credit lines, English boilerplate, "read more"
+      // links, hashtags, and other noise that leaked through from the page
+      // shell into the AI's step + ingredient output.
+      const hebrew = looksHebrew(recipe.title + ' ' + recipe.ingredients.join(' '))
+      const cleanedIngredients = filterNoiseSteps(recipe.ingredients, hebrew)
+      const cleanedSteps = filterNoiseSteps(recipe.steps, hebrew)
       return {
         ...recipe,
+        ingredients: cleanedIngredients.length ? cleanedIngredients : recipe.ingredients,
+        steps: cleanedSteps.length ? cleanedSteps : recipe.steps,
         source_url: url.toString(),
         source_site: safeHostname(url.toString()),
         image_url: ogImage,
