@@ -42,8 +42,29 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
   const [servings, setServings] = useState(defaultServings || 4)
   const [checked, setChecked] = useState<Record<string, boolean>>({})
   const [ingredientsOpen, setIngredientsOpen] = useState(false)
+  // User's preference for keeping the screen on. Defaults to true on first
+  // visit (cooking usually benefits from a lit screen), then persists in
+  // localStorage so once she turns it off she's not fighting it every time.
+  const [wakeLockPref, setWakeLockPref] = useState<boolean>(true)
   const [wakeLockOn, setWakeLockOn] = useState(false)
+  const [wakeLockUnsupported, setWakeLockUnsupported] = useState(false)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const stored = window.localStorage.getItem('cook.keepScreenOn')
+    if (stored === '0') setWakeLockPref(false)
+    else if (stored === '1') setWakeLockPref(true)
+    if (!('wakeLock' in navigator)) setWakeLockUnsupported(true)
+  }, [])
+
+  function toggleWakeLockPref() {
+    setWakeLockPref((prev) => {
+      const next = !prev
+      try { window.localStorage.setItem('cook.keepScreenOn', next ? '1' : '0') } catch {}
+      return next
+    })
+  }
   const [ttsSupported, setTtsSupported] = useState<boolean | null>(null)
   const [readingIdx, setReadingIdx] = useState<number | null>(null)
   const [ttsPaused, setTtsPaused] = useState(false)
@@ -58,12 +79,17 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
     }
   }, [])
 
-  // Wake lock — keep the screen on while cooking
+  // Wake lock — keep the screen on while cooking. Acquires/releases based on
+  // the user's stored preference so she can flip it any time via the header
+  // toggle. Re-acquires automatically when the tab becomes visible again
+  // (the browser drops wake locks whenever the tab backgrounds).
   useEffect(() => {
     let cancelled = false
     const nav = navigator as NavigatorWithWakeLock
+
     async function acquire() {
       if (!nav.wakeLock) return
+      if (wakeLockRef.current) return
       try {
         const sentinel = await nav.wakeLock.request('screen')
         if (cancelled) {
@@ -72,21 +98,39 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
         }
         wakeLockRef.current = sentinel
         setWakeLockOn(true)
-        sentinel.addEventListener('release', () => setWakeLockOn(false))
-      } catch { /* user gesture required */ }
+        sentinel.addEventListener('release', () => {
+          if (wakeLockRef.current === sentinel) {
+            wakeLockRef.current = null
+            setWakeLockOn(false)
+          }
+        })
+      } catch { /* user gesture required or blocked */ }
     }
-    acquire()
+    async function release() {
+      if (!wakeLockRef.current) {
+        setWakeLockOn(false)
+        return
+      }
+      try { await wakeLockRef.current.release() } catch {}
+      wakeLockRef.current = null
+      setWakeLockOn(false)
+    }
+
+    if (wakeLockPref) acquire()
+    else release()
+
     const onVisibility = () => {
-      if (document.visibilityState === 'visible' && !wakeLockRef.current) acquire()
+      if (wakeLockPref && document.visibilityState === 'visible' && !wakeLockRef.current) {
+        acquire()
+      }
     }
     document.addEventListener('visibilitychange', onVisibility)
     return () => {
       cancelled = true
       document.removeEventListener('visibilitychange', onVisibility)
-      wakeLockRef.current?.release().catch(() => {})
-      wakeLockRef.current = null
+      release()
     }
-  }, [])
+  }, [wakeLockPref])
 
   const doneCount = steps.filter((s) => checked[s.id]).length
   const ratio = servings / (defaultServings || 4)
@@ -197,13 +241,32 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
               {steps.length} שלבים · {doneCount} סומנו
             </p>
           </div>
-          {wakeLockOn && (
-            <span
-              className="hidden sm:inline-flex items-center gap-1 rounded-md bg-lime-100 px-2 py-1 text-[0.7rem] font-semibold text-lime-700"
-              title="המסך יישאר דלוק"
+          {!wakeLockUnsupported && (
+            <button
+              type="button"
+              onClick={toggleWakeLockPref}
+              aria-pressed={wakeLockPref}
+              title={
+                wakeLockPref
+                  ? wakeLockOn
+                    ? 'המסך יישאר דלוק — לחצי לכיבוי'
+                    : 'המסך יישאר דלוק (מבקש הרשאה)'
+                  : 'המסך ייכבה כרגיל — לחצי להשארה דלוק'
+              }
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold shadow-sm transition"
+              style={{
+                background: wakeLockPref ? (wakeLockOn ? '#EAF1E3' : '#FEF3D4') : '#f5f5f4',
+                color: wakeLockPref ? (wakeLockOn ? '#3f6212' : '#8a5c00') : '#525252',
+                border: `1.5px solid ${wakeLockPref ? (wakeLockOn ? '#4d7c0f' : '#d4a01a') : '#d4d4d4'}`,
+              }}
             >
-              💡 מסך דלוק
-            </span>
+              <span aria-hidden style={{ fontSize: '.95rem' }}>
+                {wakeLockPref ? (wakeLockOn ? '💡' : '⏳') : '🌙'}
+              </span>
+              <span>
+                {wakeLockPref ? (wakeLockOn ? 'מסך דלוק' : 'מבקש...') : 'מסך רגיל'}
+              </span>
+            </button>
           )}
         </div>
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
