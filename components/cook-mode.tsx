@@ -167,12 +167,35 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
     )
   }
 
-  const speakFrom = useCallback((idx: number) => {
+  // Track whether the read-aloud is meant to continue to the next step when
+  // the current one ends. Set to true whenever the user hits play; cleared
+  // by stopSpeech(). When `pause` is triggered the value stays true so
+  // resume knows to keep going through the chain.
+  const autoAdvanceRef = useRef(false)
+
+  const speakStep = useCallback((idx: number) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
     const s = steps[idx]
-    if (!s) return
+    if (!s) {
+      // Reached the end of the recipe.
+      autoAdvanceRef.current = false
+      readingIdxRef.current = null
+      setReadingIdx(null)
+      setTtsPaused(false)
+      return
+    }
+
+    // Cancel any pending utterances before queueing the next one — otherwise
+    // Chrome / Safari sometimes concatenate two into a single speech chunk
+    // and swallow the step number.
     window.speechSynthesis.cancel()
-    const text = [s.title, s.body].filter(Boolean).join('. ')
+
+    // "שלב 3. מטגנים את הבצל בשמן ..." — the step number is spoken so the
+    // cook can tell which one they're on without looking at the screen.
+    const prefix = `שלב ${idx + 1}. `
+    const heading = s.title ? `${s.title}. ` : ''
+    const text = `${prefix}${heading}${s.body}`
+
     const u = new SpeechSynthesisUtterance(text)
     const voice = pickHebrewVoice()
     if (voice) u.voice = voice
@@ -180,16 +203,27 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
     u.pitch = 1
     u.lang = 'he-IL'
     u.onend = () => {
-      if (readingIdxRef.current === idx) {
-        setReadingIdx(null)
-        setTtsPaused(false)
-      }
+      // The current utterance may end because the user hit "stop" (cancel),
+      // in which case autoAdvance was already cleared. Otherwise, chain on
+      // to the next step.
+      if (!autoAdvanceRef.current) return
+      if (readingIdxRef.current !== idx) return
+      // Short breath between steps so they don't run together.
+      window.setTimeout(() => {
+        if (autoAdvanceRef.current) speakStep(idx + 1)
+      }, 350)
     }
+
     setReadingIdx(idx)
     readingIdxRef.current = idx
     setTtsPaused(false)
     window.speechSynthesis.speak(u)
   }, [steps])
+
+  const speakFrom = useCallback((idx: number) => {
+    autoAdvanceRef.current = true
+    speakStep(idx)
+  }, [speakStep])
 
   function pauseSpeech() {
     window.speechSynthesis.pause()
@@ -200,6 +234,9 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
     setTtsPaused(false)
   }
   function stopSpeech() {
+    // Clear the chain first so the current utterance's onend handler
+    // doesn't kick off the next step behind our back.
+    autoAdvanceRef.current = false
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel()
     }
@@ -352,13 +389,51 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
           איך מכינים
         </h2>
         {ttsSupported && (
-          <button
-            type="button"
-            onClick={() => (readingIdx === null ? speakFrom(0) : ttsPaused ? resumeSpeech() : stopSpeech())}
-            className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-sky-500 hover:text-sky-700"
-          >
-            {readingIdx === null ? '🔊 הקרא' : ttsPaused ? '▶ המשך' : '■ עצור'}
-          </button>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {readingIdx === null ? (
+              <button
+                type="button"
+                onClick={() => speakFrom(0)}
+                className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-bold text-sky-800 hover:border-sky-500"
+                aria-label="הקרא את כל השלבים לפי הסדר"
+              >
+                🔊 הקרא את כל השלבים
+              </button>
+            ) : (
+              <>
+                <span
+                  aria-live="polite"
+                  className="rounded-full bg-sky-100 px-2 py-1 text-[0.65rem] font-bold text-sky-900"
+                >
+                  קורא שלב {readingIdx + 1}/{steps.length}
+                </span>
+                {ttsPaused ? (
+                  <button
+                    type="button"
+                    onClick={resumeSpeech}
+                    className="rounded-full border border-sky-500 bg-white px-3 py-1.5 text-xs font-bold text-sky-800 hover:bg-sky-50"
+                  >
+                    ▶ המשך
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={pauseSpeech}
+                    className="rounded-full border border-amber-400 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 hover:bg-amber-100"
+                  >
+                    ⏸ השהה
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={stopSpeech}
+                  className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-bold text-neutral-700 hover:border-neutral-400"
+                >
+                  ■ עצור
+                </button>
+              </>
+            )}
+          </div>
         )}
       </div>
 

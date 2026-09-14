@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { formatDuration } from '@/lib/step-timers'
 
 type Props = {
@@ -21,16 +21,73 @@ export function StepTimerButton({ seconds, restLabel }: Props) {
   const [status, setStatus] = useState<'idle' | 'running' | 'paused' | 'done'>('idle')
   const [remaining, setRemaining] = useState<number>(seconds)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const alertLoopRef = useRef<number | null>(null)
 
-  // Preload the beep so it plays on the first finish without a fetch stall.
+  // Preload the alert beep so the first fire doesn't stall on a fetch.
   useEffect(() => {
     if (typeof window === 'undefined') return
-    // Short 800Hz sine → data URL; 1s beep at 44.1kHz.
-    // Encoded once at module scope by the helper below.
     audioRef.current = new Audio(BEEP_DATA_URL)
     audioRef.current.preload = 'auto'
-    audioRef.current.volume = 0.7
+    audioRef.current.volume = 1
   }, [])
+
+  // Fire a burst of beeps + vibrations so the user can't miss it — even if
+  // they walked into the next room. Repeats every ~1.4 s until the user
+  // interacts with the button (which sets status back to idle) or 20 s
+  // elapses (safety cap so a forgotten timer doesn't beep forever).
+  const startAlertLoop = useCallback(() => {
+    if (typeof window === 'undefined') return
+    let count = 0
+    const maxRepeats = 14 // ~20 s of alerts
+    const fire = () => {
+      // Rapid triple-beep: play → 350ms → play → 350ms → play
+      const bank = audioRef.current
+      const doBeep = (delay: number) => {
+        window.setTimeout(() => {
+          try {
+            if (!bank) return
+            bank.currentTime = 0
+            bank.play().catch(() => {})
+          } catch {}
+        }, delay)
+      }
+      doBeep(0)
+      doBeep(350)
+      doBeep(700)
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          (navigator as Navigator & { vibrate?: (p: number[] | number) => boolean }).vibrate?.([500, 150, 500, 150, 500])
+        } catch {}
+      }
+    }
+    fire()
+    alertLoopRef.current = window.setInterval(() => {
+      count++
+      if (count >= maxRepeats) {
+        stopAlertLoop()
+        return
+      }
+      fire()
+    }, 1400)
+  }, [])
+
+  const stopAlertLoop = useCallback(() => {
+    if (alertLoopRef.current != null) {
+      clearInterval(alertLoopRef.current)
+      alertLoopRef.current = null
+    }
+    try {
+      if (audioRef.current) audioRef.current.pause()
+    } catch {}
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        (navigator as Navigator & { vibrate?: (p: number[] | number) => boolean }).vibrate?.(0)
+      } catch {}
+    }
+  }, [])
+
+  // Cleanup on unmount so a beep-loop from an unmounted card can't keep firing.
+  useEffect(() => stopAlertLoop, [stopAlertLoop])
 
   useEffect(() => {
     if (status !== 'running') return
@@ -39,23 +96,14 @@ export function StepTimerButton({ seconds, restLabel }: Props) {
         if (r <= 1) {
           clearInterval(t)
           setStatus('done')
-          try {
-            audioRef.current?.play()
-          } catch {
-            // Autoplay policy may block on first interaction; safe to ignore.
-          }
-          if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-            try {
-              (navigator as Navigator & { vibrate?: (p: number[] | number) => boolean }).vibrate?.([300, 100, 300])
-            } catch {}
-          }
+          startAlertLoop()
           return 0
         }
         return r - 1
       })
     }, 1000)
     return () => clearInterval(t)
-  }, [status])
+  }, [status, startAlertLoop])
 
   function toggle() {
     if (status === 'idle') {
@@ -66,6 +114,8 @@ export function StepTimerButton({ seconds, restLabel }: Props) {
     } else if (status === 'paused') {
       setStatus('running')
     } else if (status === 'done') {
+      // Acknowledging the alert — silence the beep loop and reset for another run.
+      stopAlertLoop()
       setRemaining(seconds)
       setStatus('idle')
     }
@@ -73,6 +123,7 @@ export function StepTimerButton({ seconds, restLabel }: Props) {
 
   function reset(e: React.MouseEvent) {
     e.stopPropagation()
+    stopAlertLoop()
     setStatus('idle')
     setRemaining(seconds)
   }
