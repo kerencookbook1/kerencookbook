@@ -26,19 +26,21 @@ type Props = {
 }
 
 /**
- * Full-screen, one-step-at-a-time cook mode inspired by myrecipebook.co.il.
- * The user sees exactly one step at a time in a large card, with any timers
- * for that step laid out as big countdown chips. Prev/Next buttons at the
- * bottom advance through the recipe; a progress bar tracks position. An
- * ingredients drawer at the top toggles open when the cook needs to double-
- * check a quantity.
+ * Cook mode — all steps on ONE scrollable page. Each step gets a big number
+ * badge and a readable body. When the step mentions a cooking duration, a
+ * standalone "טיימר N דק'" button appears BETWEEN this step and the next,
+ * matching the layout the user showed from myrecipebook.co.il.
  *
- * Preserves the previous mode's TTS ("read aloud") and wake-lock features.
+ * Timers use the shared StepTimerButton (countdown, beep, vibrate). Timer
+ * chips extracted from the DB's duration_seconds and from inline text like
+ * "עד 5 דקות" are de-duplicated so each real timer appears once.
+ *
+ * Also preserves: TTS ("read aloud"), the wake-lock, per-serving scaling,
+ * step check-off, and the collapsible ingredients drawer.
  */
 export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultServings }: Props) {
   const [servings, setServings] = useState(defaultServings || 4)
   const [checked, setChecked] = useState<Record<string, boolean>>({})
-  const [currentIdx, setCurrentIdx] = useState(0)
   const [ingredientsOpen, setIngredientsOpen] = useState(false)
   const [wakeLockOn, setWakeLockOn] = useState(false)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
@@ -86,56 +88,30 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
     }
   }, [])
 
-  const currentStep = steps[currentIdx] ?? null
   const doneCount = steps.filter((s) => checked[s.id]).length
   const ratio = servings / (defaultServings || 4)
+  const progressPct = steps.length ? (doneCount / steps.length) * 100 : 0
 
-  // Timers detected in the current step body (plus the DB duration_seconds)
-  const currentTimers = useMemo(() => {
-    if (!currentStep) return [] as Array<{ seconds: number; label?: string }>
-    const list: Array<{ seconds: number; label?: string }> = []
-    if (currentStep.duration_seconds && currentStep.duration_seconds > 0) {
-      list.push({ seconds: currentStep.duration_seconds })
-    }
-    for (const t of parseStepTimers(currentStep.body)) {
-      if (!list.some((existing) => Math.abs(existing.seconds - t.seconds) < 5)) {
-        list.push({ seconds: t.seconds, label: t.label })
+  // Pre-compute timers for every step so we can render them between steps.
+  const stepTimers = useMemo(
+    () => steps.map((s) => {
+      const list: Array<{ seconds: number; label?: string }> = []
+      if (s.duration_seconds && s.duration_seconds > 0) {
+        list.push({ seconds: s.duration_seconds })
       }
-    }
-    return list
-  }, [currentStep])
+      for (const t of parseStepTimers(s.body)) {
+        if (!list.some((existing) => Math.abs(existing.seconds - t.seconds) < 5)) {
+          list.push({ seconds: t.seconds, label: t.label })
+        }
+      }
+      return list
+    }),
+    [steps],
+  )
 
-  function goPrev() {
-    setCurrentIdx((i) => Math.max(0, i - 1))
-    stopSpeech()
+  function toggleCheck(stepId: string) {
+    setChecked((prev) => ({ ...prev, [stepId]: !prev[stepId] }))
   }
-
-  function goNext() {
-    if (currentStep && !checked[currentStep.id]) {
-      // Mark the current step done when advancing.
-      setChecked((prev) => ({ ...prev, [currentStep.id]: true }))
-    }
-    setCurrentIdx((i) => Math.min(steps.length - 1, i + 1))
-    stopSpeech()
-  }
-
-  function toggleCheck() {
-    if (!currentStep) return
-    setChecked((prev) => ({ ...prev, [currentStep.id]: !prev[currentStep.id] }))
-  }
-
-  // Keyboard: arrow left/right to navigate (RTL), space to check
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.target && (e.target as HTMLElement).tagName === 'INPUT') return
-      if (e.key === 'ArrowLeft') goNext()
-      else if (e.key === 'ArrowRight') goPrev()
-      else if (e.key === ' ') { e.preventDefault(); toggleCheck() }
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIdx, currentStep])
 
   function pickHebrewVoice(): SpeechSynthesisVoice | null {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null
@@ -199,31 +175,26 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
     )
   }
 
-  const progressPct = ((currentIdx + 1) / steps.length) * 100
-  const isLast = currentIdx === steps.length - 1
-  const isFirst = currentIdx === 0
-
   return (
     <main
-      className="mx-auto flex min-h-[100dvh] max-w-3xl flex-col px-4 pb-24 pt-4 sm:px-6"
+      className="mx-auto max-w-3xl px-4 pb-16 pt-4 sm:px-6"
       dir="rtl"
-      style={{ background: 'var(--canvas, #fafaf9)' }}
+      style={{ background: 'var(--canvas, #fafaf9)', minHeight: '100dvh' }}
     >
-      {/* ── Header with progress ── */}
+      {/* ── Sticky header with progress ── */}
       <header className="sticky top-0 z-10 -mx-4 border-b border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
         <div className="flex items-center gap-3">
           <Link
             href={`/recipes/${recipeId}`}
             className="rounded-full border border-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-neutral-300"
             aria-label="חזרה למתכון"
-            title="חזרה למתכון"
           >
             ← יציאה
           </Link>
           <div className="flex-1 min-w-0">
-            <p className="truncate text-xs font-semibold text-neutral-500">{recipeTitle}</p>
-            <p className="mt-0.5 text-[0.7rem] font-bold text-lime-700">
-              שלב {currentIdx + 1} מתוך {steps.length} · {doneCount} סומנו
+            <p className="truncate text-sm font-bold text-neutral-900">{recipeTitle}</p>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              {steps.length} שלבים · {doneCount} סומנו
             </p>
           </div>
           {wakeLockOn && (
@@ -231,7 +202,7 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
               className="hidden sm:inline-flex items-center gap-1 rounded-md bg-lime-100 px-2 py-1 text-[0.7rem] font-semibold text-lime-700"
               title="המסך יישאר דלוק"
             >
-              💡
+              💡 מסך דלוק
             </span>
           )}
         </div>
@@ -243,8 +214,19 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
         </div>
       </header>
 
+      {/* ── Recipe title ── */}
+      <h1
+        className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl"
+        style={{ fontFamily: 'Georgia, serif', color: '#2A2620' }}
+      >
+        {recipeTitle}
+      </h1>
+      <p className="mt-2 text-sm font-semibold text-neutral-500">
+        {steps.length} שלבים
+      </p>
+
       {/* ── Collapsible ingredients drawer ── */}
-      <section className="mt-3">
+      <section className="mt-4">
         <button
           type="button"
           onClick={() => setIngredientsOpen((v) => !v)}
@@ -301,104 +283,117 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
         )}
       </section>
 
-      {/* ── The single, big step card ── */}
-      {currentStep && (
-        <section
-          key={currentStep.id}
-          className="mt-4 flex-1 rounded-2xl border-2 border-neutral-200 bg-white p-6 shadow-md sm:p-8"
-          style={{
-            animation: 'stepCardIn .28s cubic-bezier(.2,.7,.2,1) both',
-          }}
-        >
-          <style>{`
-            @keyframes stepCardIn {
-              from { opacity: 0; transform: translateY(6px); }
-              to   { opacity: 1; transform: none; }
-            }
-          `}</style>
-
-          {/* Big step number badge */}
-          <div className="flex items-start justify-between gap-4">
-            <div
-              className="grid h-14 w-14 shrink-0 place-items-center rounded-full text-2xl font-black text-white shadow-md"
-              style={{ background: 'var(--terracotta-dark, #4d7c0f)' }}
-              aria-hidden
-            >
-              {currentIdx + 1}
-            </div>
-            {ttsSupported && (
-              <button
-                type="button"
-                onClick={() => (readingIdx === currentIdx ? (ttsPaused ? resumeSpeech() : pauseSpeech()) : speakFrom(currentIdx))}
-                className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-sm hover:border-sky-500 hover:text-sky-700"
-                aria-label={readingIdx === currentIdx ? (ttsPaused ? 'המשך הקראה' : 'השהה הקראה') : 'הקרא את השלב'}
-              >
-                {readingIdx === currentIdx
-                  ? ttsPaused ? '▶ המשך' : '⏸ השהה'
-                  : '🔊 הקרא'}
-              </button>
-            )}
-          </div>
-
-          {currentStep.title && (
-            <p className="mt-4 text-lg font-bold text-lime-700 sm:text-xl">{currentStep.title}</p>
-          )}
-
-          <p
-            className="mt-3 whitespace-pre-wrap text-lg leading-relaxed text-neutral-900 sm:text-xl"
-            style={{ fontFamily: 'Georgia, serif' }}
+      {/* ── "איך מכינים" header ── */}
+      <div className="mt-10 mb-4 flex items-baseline justify-between">
+        <h2 className="text-2xl font-bold text-neutral-900" style={{ fontFamily: 'Georgia, serif' }}>
+          איך מכינים
+        </h2>
+        {ttsSupported && (
+          <button
+            type="button"
+            onClick={() => (readingIdx === null ? speakFrom(0) : ttsPaused ? resumeSpeech() : stopSpeech())}
+            className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-sky-500 hover:text-sky-700"
           >
-            {currentStep.body}
-          </p>
+            {readingIdx === null ? '🔊 הקרא' : ttsPaused ? '▶ המשך' : '■ עצור'}
+          </button>
+        )}
+      </div>
 
-          {/* Prominent timer chip(s) */}
-          {currentTimers.length > 0 && (
-            <div className="mt-6 flex flex-wrap items-center gap-3 rounded-xl bg-lime-50 p-4 border border-lime-200">
-              <span className="text-sm font-bold text-lime-800">⏱ טיימרים לשלב זה:</span>
-              {currentTimers.map((t, i) => (
-                <StepTimerButton key={i} seconds={t.seconds} restLabel={t.label} />
-              ))}
-            </div>
-          )}
+      {/* ── All steps rendered in sequence, with timers between them ── */}
+      <ol className="grid gap-8 list-none pr-0" style={{ padding: 0, margin: 0 }}>
+        {steps.map((step, idx) => {
+          const isChecked = !!checked[step.id]
+          const timers = stepTimers[idx] ?? []
+          const isLast = idx === steps.length - 1
+          return (
+            <li key={step.id}>
+              <div className="flex items-start gap-4">
+                <button
+                  type="button"
+                  onClick={() => toggleCheck(step.id)}
+                  aria-pressed={isChecked}
+                  aria-label={isChecked ? `בטל סימון שלב ${idx + 1}` : `סמן שלב ${idx + 1} כהושלם`}
+                  className="grid shrink-0 place-items-center rounded-full font-black transition"
+                  style={{
+                    width: 48,
+                    height: 48,
+                    fontSize: '1.35rem',
+                    background: isChecked ? '#4d7c0f' : 'transparent',
+                    color: isChecked ? '#fff' : '#4d7c0f',
+                    border: isChecked ? '2px solid #4d7c0f' : '2px solid #4d7c0f',
+                    boxShadow: isChecked ? '0 2px 6px rgba(77,124,15,.3)' : 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {isChecked ? '✓' : idx + 1}
+                </button>
+                <div className="flex-1 min-w-0 pt-1">
+                  {step.title && (
+                    <p className="mb-2 text-base font-bold text-lime-800">{step.title}</p>
+                  )}
+                  <p
+                    className={`whitespace-pre-wrap text-lg leading-relaxed sm:text-xl ${isChecked ? 'text-neutral-400 line-through' : 'text-neutral-900'}`}
+                    style={{ fontFamily: 'Georgia, serif' }}
+                  >
+                    {step.body}
+                  </p>
+                </div>
+              </div>
 
-          {/* Check done + navigation */}
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 pt-5">
-            <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-neutral-700">
-              <input
-                type="checkbox"
-                checked={!!checked[currentStep.id]}
-                onChange={toggleCheck}
-                className="h-5 w-5 rounded border-neutral-300 accent-lime-600"
-              />
-              סמן שלב זה כהושלם
-            </label>
-          </div>
-        </section>
-      )}
+              {/* Timers appear BETWEEN this step and the next, on their own row */}
+              {timers.length > 0 && (
+                <div
+                  className="mt-5 flex flex-wrap items-center gap-3 rounded-xl px-4 py-3"
+                  style={{
+                    background: '#EAF1E3',
+                    border: '1px solid rgba(77,124,15,.25)',
+                    marginInlineStart: 64,
+                  }}
+                >
+                  <span
+                    className="text-sm font-bold"
+                    style={{ color: '#3f6212' }}
+                  >
+                    ⏱ טיימר{timers.length > 1 ? 'ים' : ''}:
+                  </span>
+                  {timers.map((t, ti) => (
+                    <StepTimerButton key={ti} seconds={t.seconds} restLabel={t.label} />
+                  ))}
+                </div>
+              )}
 
-      {/* ── Bottom nav bar ── */}
-      <nav
-        className="fixed inset-x-0 bottom-0 z-20 mx-auto flex max-w-3xl items-center gap-3 border-t border-neutral-200 bg-white/95 p-3 backdrop-blur sm:px-6"
-        aria-label="ניווט שלבים"
-      >
+              {/* Divider between steps (except after last) */}
+              {!isLast && (
+                <div
+                  aria-hidden
+                  style={{
+                    height: 1,
+                    background: 'linear-gradient(90deg, transparent, rgba(77,124,15,.15), transparent)',
+                    marginTop: 32,
+                  }}
+                />
+              )}
+            </li>
+          )
+        })}
+      </ol>
+
+      {/* ── Bottom actions ── */}
+      <div className="mt-14 flex flex-wrap gap-3">
+        <Link
+          href={`/recipes/${recipeId}`}
+          className="flex-1 rounded-lg border border-neutral-200 bg-white px-4 py-3 text-center text-sm font-semibold text-neutral-700 shadow-sm hover:border-lime-500 hover:text-lime-700"
+        >
+          חזרה למתכון
+        </Link>
         <button
           type="button"
-          onClick={goPrev}
-          disabled={isFirst}
-          className="min-w-24 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold text-neutral-700 shadow-sm transition hover:border-neutral-300 disabled:opacity-40"
+          onClick={() => setChecked({})}
+          className="rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 shadow-sm hover:border-neutral-300"
         >
-          → הקודם
+          נקה סימונים
         </button>
-        <button
-          type="button"
-          onClick={goNext}
-          disabled={isLast}
-          className="flex-1 rounded-xl bg-lime-700 px-4 py-4 text-base font-bold text-white shadow-md transition hover:bg-lime-800 active:scale-95 disabled:opacity-40"
-          style={{ minHeight: 56 }}
-        >
-          {isLast ? '✓ סיימתי לבשל' : 'לשלב הבא ←'}
-        </button>
-      </nav>
+      </div>
     </main>
   );
 }
