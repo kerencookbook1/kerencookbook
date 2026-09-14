@@ -33,8 +33,8 @@ const SOURCES = [
   },
   {
     number: '05',
-    title: 'ייבוא מוידאו',
-    description: 'קישור ליוטיוב או קובץ אודיו — AI יזהה את המתכון.',
+    title: 'ייבוא מוידאו · YouTube · TikTok · Instagram',
+    description: 'קישור לסרטון מיוטיוב, טיקטוק, אינסטגרם או קובץ אודיו — AI יזהה את המתכון מהתיאור או מהתמלול.',
     href: '/import/video',
     primary: false,
   },
