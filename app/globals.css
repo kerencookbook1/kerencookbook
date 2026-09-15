@@ -366,24 +366,26 @@ a, [role="button"] { cursor: pointer; }
   .app-navigation {
     position: fixed; z-index: 20; right: 0; bottom: 0; left: 0;
     display: flex; height: calc(74px + env(safe-area-inset-bottom));
-    align-items: center; justify-content: space-around; gap: 2px;
-    border-top: 1px solid #e9e1d8;
+    align-items: center; justify-content: flex-start; gap: 2px;
+    border-top: 1px solid rgba(0, 0, 0, 0.22);
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-    background: rgb(255 253 249 / 96%);
-    box-shadow: 0 -6px 20px rgb(72 50 30 / 7%);
-    backdrop-filter: blur(12px);
+    /* Match the desktop sidebar's green gradient so the app has one
+       consistent visual language between form factors (requested 2026-09-15). */
+    background: linear-gradient(180deg, #26583a 0%, #1a4229 58%, #143521 100%);
+    color: #f0e6d0;
+    box-shadow: 0 -6px 20px rgb(20 40 25 / 30%);
   }
-  /* Belt-and-braces: hide the desktop-only sidebar-bottom on mobile — it
-     contains a second profile link + logout that should never render here.
-     The rule at :root already declares display:none, but keeping this
-     explicit prevents cache/state issues. */
+  /* Everything that belongs to the desktop sidebar shell is hidden on mobile.
+     Also hide the topSection ("בית") wrapper — it's the same Home link that
+     already appears inside navigation-items, so leaving it visible produced
+     a duplicate + a "pinned" Home tile alongside the scrolling row. */
   .app-navigation .sidebar-bottom { display: none !important; }
-  .sidebar-brand, .navigation-sections, .sidebar-logout, .sidebar-bottom, .sidebar-search-btn { display: none; }
+  .sidebar-brand, .navigation-sections, .sidebar-logout, .sidebar-bottom,
+  .sidebar-search-btn, .app-navigation > .nav-section { display: none; }
   .navigation-items {
     display: flex; width: 100%; align-items: stretch; justify-content: flex-start; gap: 2px;
-    /* Horizontal scroll when more than ~5 items so every sidebar entry
-       stays reachable from the bottom bar (chefs, pantry, calories, scale,
-       meals were previously hidden). Hide the scrollbar for a cleaner look. */
+    /* Horizontal scroll (RTL means the row extends to the LEFT as you swipe).
+       All items scroll together — nothing is pinned. */
     overflow-x: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -394,21 +396,31 @@ a, [role="button"] { cursor: pointer; }
     flex: 0 0 auto;
     flex-direction: column; align-items: center; justify-content: center;
     gap: 4px; border-radius: 10px; padding: 4px 6px;
-    color: #62574c; font-size: .72rem; font-weight: 700; text-align: center;
+    color: rgba(240, 230, 208, 0.82);
+    font-size: .72rem; font-weight: 700; text-align: center;
     text-decoration: none; border: 0; background: transparent; cursor: pointer;
     white-space: nowrap;
   }
   .sidebar-link > span { display: block; line-height: 1; }
-  .sidebar-link.is-active { color: var(--terracotta); background: transparent; box-shadow: none; font-weight: 800; }
-  .sidebar-link.is-active svg { color: var(--terracotta); }
+  .sidebar-link.is-active {
+    color: #ffffff; background: rgba(247, 234, 208, 0.14);
+    box-shadow: inset 0 3px 0 #ffc885;
+    font-weight: 800;
+  }
+  .sidebar-link.is-active svg { color: #ffffff; }
   .sidebar-link.is-add {
-    margin: 0; background: transparent; box-shadow: none; color: var(--terracotta); font-weight: 800;
+    margin: 0; background: transparent; box-shadow: none;
+    color: #ffffff; font-weight: 800;
   }
   .sidebar-link.is-add svg {
     padding: 5px; border-radius: 10px;
-    background: var(--terracotta); color: white;
+    background: linear-gradient(135deg, #ff8b3a, var(--terracotta));
+    color: white;
+    box-shadow: 0 4px 10px rgb(216 75 50 / 40%);
   }
-  .sidebar-link.is-add.is-active svg { background: var(--terracotta-dark); }
+  .sidebar-link.is-add.is-active svg {
+    background: linear-gradient(135deg, #ffa155, var(--terracotta-dark));
+  }
   .reference-home { padding-bottom: 20px; }
 }
 
