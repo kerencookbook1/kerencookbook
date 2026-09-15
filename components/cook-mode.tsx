@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { parseStepTimers } from "@/lib/step-timers";
 import { StepTimerButton } from "@/components/recipes/step-timer-button";
+import { improveHebrewForTts, listHebrewVoices, pickBestHebrewVoice } from "@/lib/tts-hebrew";
 
 type WakeLockSentinel = {
   released: boolean;
@@ -69,15 +70,35 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
   const [readingIdx, setReadingIdx] = useState<number | null>(null)
   const [ttsPaused, setTtsPaused] = useState(false)
   const readingIdxRef = useRef<number | null>(null)
+  // Hebrew voice roster + user's persisted pick. Browsers load voices
+  // asynchronously — the `voiceschanged` event fires when the list is ready.
+  const [hebrewVoices, setHebrewVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [voicePref, setVoicePref] = useState<string | null>(null)
 
   useEffect(() => {
     setTtsSupported(typeof window !== 'undefined' && 'speechSynthesis' in window)
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+
+    const stored = window.localStorage.getItem('cook.ttsVoiceUri')
+    if (stored) setVoicePref(stored)
+
+    const loadVoices = () => {
+      const heb = listHebrewVoices(window.speechSynthesis.getVoices())
+      setHebrewVoices(heb)
+    }
+    loadVoices()
+    window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
+
     return () => {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel()
-      }
+      window.speechSynthesis.removeEventListener('voiceschanged', loadVoices)
+      window.speechSynthesis.cancel()
     }
   }, [])
+
+  function chooseVoice(uri: string) {
+    setVoicePref(uri)
+    try { window.localStorage.setItem('cook.ttsVoiceUri', uri) } catch {}
+  }
 
   // Wake lock — keep the screen on while cooking. Acquires/releases based on
   // the user's stored preference so she can flip it any time via the header
@@ -159,12 +180,7 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
 
   function pickHebrewVoice(): SpeechSynthesisVoice | null {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null
-    const voices = window.speechSynthesis.getVoices()
-    return (
-      voices.find((v) => v.lang.toLowerCase().startsWith('he')) ??
-      voices.find((v) => v.lang.toLowerCase().startsWith('iw')) ??
-      null
-    )
+    return pickBestHebrewVoice(window.speechSynthesis.getVoices(), voicePref)
   }
 
   // Track whether the read-aloud is meant to continue to the next step when
@@ -191,10 +207,11 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
     window.speechSynthesis.cancel()
 
     // "שלב 3. מטגנים את הבצל בשמן ..." — the step number is spoken so the
-    // cook can tell which one they're on without looking at the screen.
+    // cook can tell which one they're on without looking at the screen. The
+    // body is preprocessed so ½ / °C / ק״ג / דק׳ come out sounding natural.
     const prefix = `שלב ${idx + 1}. `
-    const heading = s.title ? `${s.title}. ` : ''
-    const text = `${prefix}${heading}${s.body}`
+    const heading = s.title ? `${improveHebrewForTts(s.title)}. ` : ''
+    const text = `${prefix}${heading}${improveHebrewForTts(s.body)}`
 
     const u = new SpeechSynthesisUtterance(text)
     const voice = pickHebrewVoice()
@@ -218,7 +235,7 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
     readingIdxRef.current = idx
     setTtsPaused(false)
     window.speechSynthesis.speak(u)
-  }, [steps])
+  }, [steps, voicePref])
 
   const speakFrom = useCallback((idx: number) => {
     autoAdvanceRef.current = true
@@ -390,6 +407,24 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
         </h2>
         {ttsSupported && (
           <div className="flex flex-wrap items-center gap-1.5">
+            {hebrewVoices.length > 1 && (
+              <label className="flex items-center gap-1 text-[0.7rem] font-semibold text-neutral-600">
+                <span aria-hidden>🎙️</span>
+                <select
+                  value={voicePref ?? hebrewVoices[0]?.voiceURI ?? ''}
+                  onChange={(e) => chooseVoice(e.target.value)}
+                  aria-label="בחירת קול לקריאה"
+                  className="rounded-full border border-neutral-300 bg-white px-2 py-1 text-[0.7rem] font-semibold text-neutral-800"
+                  style={{ maxWidth: 200 }}
+                >
+                  {hebrewVoices.map((v) => (
+                    <option key={v.voiceURI} value={v.voiceURI}>
+                      {friendlyVoiceName(v)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             {readingIdx === null ? (
               <button
                 type="button"
@@ -534,4 +569,20 @@ export function CookMode({ recipeId, recipeTitle, ingredients, steps, defaultSer
       </div>
     </main>
   );
+}
+
+/**
+ * Turn the noisy voice.name ("Microsoft Asaf - Hebrew (Israel)") into a short
+ * label the user can scan quickly in the dropdown.
+ */
+function friendlyVoiceName(v: SpeechSynthesisVoice): string {
+  const raw = v.name || 'קול'
+  const lower = raw.toLowerCase()
+  if (lower.includes('carmit')) return 'Carmit (Apple)'
+  if (lower.includes('avri')) return 'Avri (Microsoft Neural)'
+  if (lower.includes('hila')) return 'Hila (Microsoft Neural)'
+  if (lower.includes('asaf')) return 'Asaf (Microsoft)'
+  if (lower.includes('google')) return 'Google עברית'
+  // Fall back to the OS-supplied name, trimmed of the language suffix.
+  return raw.replace(/\s*[-–]\s*(hebrew|iw|he[- ]il).*$/i, '').trim() || raw
 }
