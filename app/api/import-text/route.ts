@@ -27,6 +27,7 @@ export async function POST(request: Request) {
   if (text.length > MAX_TEXT_LENGTH) {
     return NextResponse.json({ error: `הטקסט ארוך מדי (מקסימום ${MAX_TEXT_LENGTH} תווים)` }, { status: 413 })
   }
+  const translateToHebrew = (body as { translateToHebrew?: unknown }).translateToHebrew === true
 
   const candidates = await getKeyCandidates()
   if (candidates.length === 0) {
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
   const errors: string[] = []
   for (const { id, key } of candidates) {
     try {
-      const recipe = await extractRecipeFromText(id, key, text.trim(), '')
+      const recipe = await extractRecipeFromText(id, key, text.trim(), '', { translateToHebrew })
       return NextResponse.json(recipe)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)

@@ -137,7 +137,7 @@ export default function ImportVideoPage() {
       const res = await fetch("/api/import-text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, translateToHebrew: true }),
       });
       const data = await res.json();
       if (!res.ok) {

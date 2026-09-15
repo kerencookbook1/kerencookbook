@@ -91,7 +91,7 @@ export async function POST(request: Request) {
           const google = candidates.find((c) => c.id === 'google')
           if (google) {
             try {
-              const recipe = await extractRecipeFromYoutubeUrlWithGemini(google.key, url)
+              const recipe = await extractRecipeFromYoutubeUrlWithGemini(google.key, url, { translateToHebrew: true })
               if (!recipe.recognition_failed && recipe.ingredients.length >= 2) {
                 return NextResponse.json({
                   ...recipe,
@@ -191,7 +191,7 @@ export async function POST(request: Request) {
   const errors: string[] = []
   for (const { id, key } of candidates) {
     try {
-      const recipe = await extractRecipeFromText(id, key, enrichedText.trim(), sourceUrl)
+      const recipe = await extractRecipeFromText(id, key, enrichedText.trim(), sourceUrl, { translateToHebrew: true })
       return NextResponse.json({
         ...recipe,
         sourceMetadata: {

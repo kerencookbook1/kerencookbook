@@ -558,13 +558,42 @@ const TEXT_SYSTEM_PROMPT = `אתה מומחה בזיהוי מתכונים מטק
   "steps": ["שלב 1", "שלב 2", ...]
 }`
 
+/**
+ * Extra prompt appended when the caller wants the output localized to Hebrew
+ * with Israeli metric units — used for TikTok / Instagram / YouTube imports
+ * where the caption is often English. The URL importer for Israeli recipe
+ * sites keeps the original language and does NOT set this.
+ */
+export const HEBREW_LOCALIZATION_INSTRUCTIONS = `
+
+**דרישת שפה ויחידות (חובה):**
+- אם המתכון באנגלית או בכל שפה שאינה עברית — תרגמי אותו לעברית שוטפת: שם המתכון, המרכיבים, השלבים, התיאור. השאירי במקור רק שמות מותגים או שמות פרטיים.
+- המירי יחידות מדידה למידות שנהוגות בישראל. ערכי המרה סטנדרטיים:
+  · 1 cup = 240 מ״ל (או 240 גרם למים; לחומרים אחרים חשבי לפי צפיפות סבירה — קמח cup ≈ 130 גרם, סוכר cup ≈ 200 גרם, חמאה cup ≈ 227 גרם)
+  · 1 tablespoon (tbsp) = 15 מ״ל
+  · 1 teaspoon (tsp) = 5 מ״ל
+  · 1 ounce (oz) = 28 גרם  |  1 fl oz = 30 מ״ל
+  · 1 pound (lb) = 454 גרם
+  · 1 pint = 480 מ״ל  |  1 quart = 950 מ״ל  |  1 gallon = 3.8 ליטר
+  · פרנהייט → צלזיוס: (F − 32) × 5/9, עגלי ל־5 הקרובים (למשל 350°F → 175°C)
+  · אינץ׳ → ס״מ: אינץ׳ × 2.54, עגלי ל־0.5 ס״מ הקרובים
+- כתבי את הכמות המומרת ישירות במרכיב, בלי לציין את הערך המקורי בסוגריים. למשל "2 כוסות קמח" יהפוך ל־"260 גרם קמח", לא "260 גרם קמח (2 כוסות)".
+- אם היחידה במקור כבר מטרית (גרם / מ״ל / ליטר / צלזיוס) — השאירי כמו שהיא.
+
+**כיסוי מלא של תוכן הכיתוב (חובה, קריטי):**
+- במתכונים מ־TikTok/Instagram/YouTube הכותב לרוב מפרט את המתכון בכמה חלקים ("For the sauce:", "For the topping:", "לרוטב:", "לזיגוג:"). חובה לכלול את כל החלקים ואת כל המרכיבים והשלבים של כל חלק, ולא רק את החלק הראשי.
+- אם יש תת־כותרות של קטעים (למשל "**Sauce**"), הפכי אותן לשלב ראשון של אותו חלק בעברית (למשל "לרוטב:") כדי לשמר את המבנה.
+- אל תדלגי על שלבים בסוף הכיתוב גם אם הם מופיעים אחרי הערות/hashtags/תיוגים — המשיכי לסרוק עד סוף הטקסט.`
+
 export async function extractRecipeFromText(
   id: ProviderId,
   key: string,
   text: string,
-  sourceUrl: string
+  sourceUrl: string,
+  options?: { translateToHebrew?: boolean },
 ): Promise<ExtractedRecipe> {
-  const userMsg = `URL של הדף: ${sourceUrl}\n\nתוכן הדף (טקסט בלבד):\n\n${text}\n\nחלץ מתוך זה את המתכון והחזר JSON תקף בלבד.`
+  const localization = options?.translateToHebrew ? HEBREW_LOCALIZATION_INSTRUCTIONS : ''
+  const userMsg = `URL של הדף: ${sourceUrl}\n\nתוכן הדף (טקסט בלבד):\n\n${text}\n\nחלץ מתוך זה את המתכון והחזר JSON תקף בלבד.${localization}`
   switch (id) {
     case 'anthropic':
       return extractTextWithAnthropic(key, userMsg)
@@ -674,8 +703,12 @@ const YOUTUBE_VIDEO_SYSTEM_PROMPT = `אתה מומחה בזיהוי מתכוני
 export async function extractRecipeFromYoutubeUrlWithGemini(
   key: string,
   youtubeUrl: string,
+  options?: { translateToHebrew?: boolean },
 ): Promise<ExtractedRecipe> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(key)}`
+  const userText = options?.translateToHebrew
+    ? `צפי בסרטון וחלצי את המתכון. החזירי JSON תקף בלבד.${HEBREW_LOCALIZATION_INSTRUCTIONS}`
+    : 'צפי בסרטון וחלצי את המתכון. החזירי JSON תקף בלבד.'
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -686,7 +719,7 @@ export async function extractRecipeFromYoutubeUrlWithGemini(
           role: 'user',
           parts: [
             { fileData: { fileUri: youtubeUrl, mimeType: 'video/mp4' } },
-            { text: 'צפי בסרטון וחלצי את המתכון. החזירי JSON תקף בלבד.' },
+            { text: userText },
           ],
         },
       ],
