@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getKeyCandidates } from '@/lib/ai-providers'
-import { extractRecipeFromText } from '@/lib/provider-adapters'
+import { extractRecipeFromText, extractRecipeFromYoutubeUrlWithGemini } from '@/lib/provider-adapters'
 import { pickSourceForUrl } from '@/lib/video-import/sources'
 import { transcribeWithWhisper } from '@/lib/video-import/whisper'
 
@@ -83,18 +83,43 @@ export async function POST(request: Request) {
       metadata = meta
       const t = await source.tryFetchTranscript(url)
       if (!t || !t.text) {
+        // YouTube without captions: try Gemini video understanding as a free
+        // fallback (Gemini can consume public YouTube URIs directly). If the
+        // user has a Google key we short-circuit here and return the recipe;
+        // otherwise fall through to the platform-specific error.
+        if (meta.sourceKind === 'youtube') {
+          const google = candidates.find((c) => c.id === 'google')
+          if (google) {
+            try {
+              const recipe = await extractRecipeFromYoutubeUrlWithGemini(google.key, url)
+              if (!recipe.recognition_failed && recipe.ingredients.length >= 2) {
+                return NextResponse.json({
+                  ...recipe,
+                  sourceMetadata: {
+                    ...meta,
+                    requiredAudioTranscription: false,
+                    transcriptChars: 0,
+                  },
+                })
+              }
+            } catch (geminiErr) {
+              console.warn('[import-video] Gemini video fallback failed:', geminiErr)
+            }
+          }
+        }
         // Copy is per-platform because "no captions" means different things:
         //   YouTube → captions weren't uploaded (upload audio to fall back)
         //   TikTok / Instagram → post has no caption or is private
         const kindErrors: Record<string, string> = {
-          youtube: 'לא נמצאו כתוביות לסרטון. הורידי אותו לקובץ MP3/MP4 והעלי כאן, ואני אתמלל בעזרת Whisper.',
-          tiktok: 'לא נמצא תיאור טקסטואלי לסרטון ב-TikTok, או שהוא פרטי. אם המתכון נאמר בסרטון עצמו — הורידי כקובץ אודיו והעלי כאן.',
-          instagram: 'לא נמצא תיאור טקסטואלי לפוסט ב-Instagram, או שהוא פרטי. אם המתכון נאמר בסרטון — הורידי כקובץ אודיו והעלי כאן.',
+          youtube: 'לא נמצאו כתוביות לסרטון. הוסיפי מפתח Google AI בהגדרות (Gemini יצפה ישירות בסרטון), או הורידי אותו לקובץ MP3/MP4 והעלי כאן.',
+          tiktok: 'לא נמצא תיאור טקסטואלי לסרטון ב-TikTok, או שהוא פרטי. הדביקי כאן את הטקסט שמופיע מתחת לסרטון, או הורידי כקובץ אודיו והעלי.',
+          instagram: 'לא נמצא תיאור טקסטואלי לפוסט ב-Instagram, או שהוא פרטי. הדביקי כאן את הטקסט שמופיע מתחת לפוסט, או הורידי כקובץ אודיו והעלי.',
         }
         return NextResponse.json(
           {
             error: kindErrors[meta.sourceKind] || 'לא נמצא תוכן טקסטואלי לחלץ. העלי קובץ אודיו/וידאו במקום.',
             code: 'NO_CAPTIONS',
+            sourceKind: meta.sourceKind,
           },
           { status: 422 },
         )

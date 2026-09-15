@@ -35,7 +35,12 @@ type ExtractedRecipe = {
   sourceMetadata?: SourceMetadata;
 };
 
-type Mode = "url" | "file";
+type Mode = "url" | "file" | "paste";
+
+type PastePrompt = {
+  sourceKind: "tiktok" | "instagram";
+  sourceUrl: string;
+};
 
 const MAX_UPLOAD_MB = 25;
 
@@ -52,6 +57,8 @@ export default function ImportVideoPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [dietOverride, setDietOverride] = useState<DietOverride>("auto");
+  const [pastePrompt, setPastePrompt] = useState<PastePrompt | null>(null);
+  const [pastedCaption, setPastedCaption] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const ingredientNames = useMemo(
@@ -75,9 +82,18 @@ export default function ImportVideoPage() {
       const res = await fetch("/api/import-video", { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) {
-        // NO_CAPTIONS is a soft error — invite the user to upload the file.
+        // NO_CAPTIONS on TikTok / Instagram → open inline paste box for the
+        // caption text (TikTok blocks server-side fetch of og:description).
+        // NO_CAPTIONS on YouTube → invite the user to upload the audio file.
         if (data?.code === "NO_CAPTIONS") {
-          setMode("file");
+          const kind = data?.sourceKind;
+          if (kind === "tiktok" || kind === "instagram") {
+            setPastePrompt({ sourceKind: kind, sourceUrl: url.trim() });
+            setPastedCaption("");
+            setMode("paste");
+          } else {
+            setMode("file");
+          }
           setError(data.error || "אין כתוביות. אפשר להעלות קובץ אודיו/וידאו במקום.");
         } else {
           setError(data?.error || `שגיאה ${res.status}`);
@@ -102,7 +118,60 @@ export default function ImportVideoPage() {
     setRecipe(null);
     setError(null);
     setSaveError(null);
+    setPastePrompt(null);
+    setPastedCaption("");
     setStage("input");
+  }
+
+  async function handleExtractFromPaste(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pastePrompt) return;
+    const text = pastedCaption.trim();
+    if (text.length < 20) {
+      setError("הטקסט קצר מדי. הדביקי את הכיתוב המלא שמופיע מתחת לסרטון.");
+      return;
+    }
+    setError(null);
+    setStage("loading");
+    try {
+      const res = await fetch("/api/import-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error || `שגיאה ${res.status}`);
+        setStage("input");
+        return;
+      }
+      const platformName: Record<PastePrompt["sourceKind"], string> = {
+        tiktok: "TikTok",
+        instagram: "Instagram",
+      };
+      const extracted: ExtractedRecipe = {
+        ...data,
+        sourceMetadata: {
+          sourceKind: pastePrompt.sourceKind,
+          sourceUrl: pastePrompt.sourceUrl,
+          title: data.title ?? null,
+          author: data.author ?? null,
+          thumbnailUrl: null,
+          requiredAudioTranscription: false,
+          transcriptChars: text.length,
+        },
+      };
+      // Enrich with sourceName hint so save-flow attributes properly.
+      extracted.description = extracted.description ?? `מקור: ${platformName[pastePrompt.sourceKind]}`;
+      setRecipe(extracted);
+      setTitle(extracted.title || "");
+      setIngredients((extracted.ingredients || []).join("\n"));
+      setSteps((extracted.steps || []).map((s, i) => `${i + 1}. ${s}`).join("\n"));
+      setStage("review");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setStage("input");
+    }
   }
 
   async function handleSave() {
@@ -186,23 +255,85 @@ export default function ImportVideoPage() {
       {stage === "input" && (
         <div className="import-layout">
           <div className="upload-panel">
-            <div style={{ display: "flex", gap: 6, background: "#f3ece0", padding: 4, borderRadius: 12, marginBottom: 18 }}>
-              <button
-                type="button"
-                onClick={() => { setMode("url"); setError(null); }}
-                style={tabStyle(mode === "url")}
-              >
-                🔗 קישור לסרטון
-              </button>
-              <button
-                type="button"
-                onClick={() => { setMode("file"); setError(null); }}
-                style={tabStyle(mode === "file")}
-              >
-                🎙️ קובץ אודיו/וידאו
-              </button>
-            </div>
+            {mode !== "paste" && (
+              <div style={{ display: "flex", gap: 6, background: "#f3ece0", padding: 4, borderRadius: 12, marginBottom: 18 }}>
+                <button
+                  type="button"
+                  onClick={() => { setMode("url"); setError(null); }}
+                  style={tabStyle(mode === "url")}
+                >
+                  🔗 קישור לסרטון
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMode("file"); setError(null); }}
+                  style={tabStyle(mode === "file")}
+                >
+                  🎙️ קובץ אודיו/וידאו
+                </button>
+              </div>
+            )}
 
+            {mode === "paste" && pastePrompt ? (
+              <form onSubmit={handleExtractFromPaste} style={{ display: "grid", gap: 14 }}>
+                <div style={{
+                  padding: 12,
+                  borderRadius: 12,
+                  background: "#fff8ea",
+                  border: "1px solid #f2d68a",
+                  fontSize: ".9rem",
+                  lineHeight: 1.55,
+                }}>
+                  <strong>אי אפשר לקרוא אוטומטית את הכיתוב מ־{pastePrompt.sourceKind === "tiktok" ? "TikTok" : "Instagram"}</strong>
+                  <div style={{ marginTop: 4, color: "#6b4a00" }}>
+                    הפלטפורמה חוסמת בקשות שרת. פתחי את הפוסט, העתיקי את הטקסט שמתחת לסרטון (השם והמרכיבים), והדביקי כאן — ה־AI יסדר אותו למתכון תוך שניות.
+                  </div>
+                </div>
+                <label htmlFor="pasted-caption" style={{ fontWeight: 800 }}>
+                  הכיתוב של הפוסט
+                  <textarea
+                    id="pasted-caption"
+                    value={pastedCaption}
+                    onChange={(e) => setPastedCaption(e.target.value)}
+                    placeholder={"למשל:\n\nעוגיות שוקולד צ'יפס 🍪\n\nמצרכים:\n2 כוסות קמח\n1 כוס חמאה\n1/2 כוס סוכר חום\n...\n\nהוראות:\n1. לחמם תנור ל־180°C\n2. לערבב את החמאה עם הסוכר...\n"}
+                    rows={12}
+                    style={{
+                      ...inputStyle,
+                      resize: "vertical",
+                      fontFamily: "inherit",
+                      minHeight: 240,
+                    }}
+                  />
+                  <span style={{ display: "block", marginTop: 6, fontSize: ".85rem", color: "var(--muted)" }}>
+                    טיפ: בפוסט של TikTok/Instagram יש כפתור "עוד" — לחצי עליו כדי לחשוף את הטקסט המלא לפני ההעתקה.
+                  </span>
+                </label>
+                {error && (
+                  <div role="alert" style={{ padding: 12, borderRadius: 12, background: "#fdecea", color: "#8a1c14", fontSize: ".9rem" }}>
+                    {error}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
+                  <button type="submit" className="primary-button" disabled={pastedCaption.trim().length < 20}>
+                    חילוץ מהטקסט שהדבקתי
+                  </button>
+                  <button
+                    type="button"
+                    className="outline-button"
+                    onClick={() => { setMode("file"); setError(null); }}
+                  >
+                    🎙️ העלאת קובץ אודיו במקום
+                  </button>
+                  <button
+                    type="button"
+                    className="outline-button"
+                    onClick={() => { setMode("url"); setError(null); setPastePrompt(null); }}
+                  >
+                    ← חזרה
+                  </button>
+                </div>
+              </form>
+            ) : (
             <form onSubmit={handleExtract} style={{ display: "grid", gap: 14 }}>
               {mode === "url" ? (
                 <label htmlFor="video-url" style={{ fontWeight: 800 }}>
@@ -284,6 +415,7 @@ export default function ImportVideoPage() {
                 <Link href="/import" className="outline-button">ביטול</Link>
               </div>
             </form>
+            )}
           </div>
 
           <aside className="provider-card">

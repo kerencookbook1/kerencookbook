@@ -633,6 +633,74 @@ async function extractTextWithGoogle(key: string, userMsg: string): Promise<Extr
   return { ...parseJsonFromModelText(content), provider: 'google:gemini-3.6-flash' }
 }
 
+/* ─────────────────────────────────────────────────────
+   EXTRACT FROM YOUTUBE VIDEO URL — Gemini video understanding fallback
+   Only Gemini supports YouTube URLs directly via fileData. Called when the
+   YouTube caption track is missing so we can still recover a recipe without
+   asking the user to upload the audio file.
+   ───────────────────────────────────────────────────── */
+
+const YOUTUBE_VIDEO_SYSTEM_PROMPT = `אתה מומחה בזיהוי מתכונים מסרטוני YouTube בעברית.
+המשתמש שולח קישור לסרטון וידאו. תפקידך לצפות בו ולהחזיר את המתכון במבנה JSON.
+
+חוקים:
+1. חלץ את שם המתכון, המרכיבים והשלבים. שמור על עברית אם הסרטון בעברית.
+2. אם היוצר הזכיר מותג/מוצר או שף — אל תמציא כמויות; ציין רק מה שנאמר.
+3. **שמור זמנים בתוך השלבים** — כל אזכור של דקות/שעות בסרטון חייב להישאר בשלב הרלוונטי כדי שהמערכת תבנה כפתור טיימר.
+4. **פרק לשלבים אמיתיים** — לא פסקה אחת ארוכה, אלא שלבים ממוספרים של 1–2 פעולות.
+5. בחר קטגוריה אחת בלבד מתוך: ${CATEGORY_LIST}. אם לא ברור — בחר "אחר".
+6. אם לא הצלחת לזהות מתכון (הסרטון על נושא אחר, או שאין די מידע) — החזר recognition_failed=true עם reason קצר.
+
+החזר JSON תקף בלבד:
+{
+  "title": "שם המתכון",
+  "description": "תיאור קצר או null",
+  "category": "${CATEGORY_LIST}",
+  "servings": מספר או null,
+  "prep_minutes": מספר או null,
+  "cook_minutes": מספר או null,
+  "author": "שם היוצר/השף או null",
+  "ingredients": ["מרכיב עם כמות ויחידה", ...],
+  "steps": ["שלב 1", "שלב 2", ...],
+  "recognition_failed": false,
+  "reason": null
+}`
+
+/**
+ * Ask Gemini to watch a YouTube video URL and extract the recipe.
+ * Gemini accepts public YouTube URIs via `fileData` — no download needed.
+ * Throws on network / API errors; caller decides whether to fall back further.
+ */
+export async function extractRecipeFromYoutubeUrlWithGemini(
+  key: string,
+  youtubeUrl: string,
+): Promise<ExtractedRecipe> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(key)}`
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: YOUTUBE_VIDEO_SYSTEM_PROMPT }] },
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { fileData: { fileUri: youtubeUrl, mimeType: 'video/mp4' } },
+            { text: 'צפי בסרטון וחלצי את המתכון. החזירי JSON תקף בלבד.' },
+          ],
+        },
+      ],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
+    }),
+    signal: AbortSignal.timeout(50_000),
+  })
+  if (!r.ok) throw new Error(`Google video ${r.status}: ${extractApiMessage(await r.text().catch(() => ''))}`)
+  const data = await r.json()
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text
+  if (!content) throw new Error('Empty video-understanding response from Google')
+  return { ...parseJsonFromModelText(content), provider: 'google:gemini-3.6-flash (video)' }
+}
+
 function parseJsonFromModelText(text: string): Omit<ExtractedRecipe, 'provider'> {
   const cleaned = text
     .replace(/^```(?:json)?\s*/i, '')
