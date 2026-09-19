@@ -813,3 +813,63 @@ a, [role="button"] { cursor: pointer; }
     @apply bg-background text-foreground; }
   html {
     @apply font-sans; } }
+
+/* Dark-theme compatibility for Tailwind utility classes used across legacy and newer screens. */
+[data-theme="editorial"] {
+  --muted: rgba(245, 237, 224, .72);
+  --line: rgba(245, 237, 224, .16);
+  --focus-ring: rgba(255, 90, 26, .62);
+}
+[data-theme="editorial"] [class~="bg-white"],
+[data-theme="editorial"] [class~="bg-white/95"],
+[data-theme="editorial"] [class~="bg-white/90"],
+[data-theme="editorial"] [class~="bg-white/72"] { background-color: var(--surface) !important; }
+[data-theme="editorial"] [class~="bg-neutral-50"],
+[data-theme="editorial"] [class~="bg-neutral-100"],
+[data-theme="editorial"] [class~="bg-neutral-200"] { background-color: #21180e !important; }
+[data-theme="editorial"] [class~="text-neutral-900"],
+[data-theme="editorial"] [class~="text-neutral-800"],
+[data-theme="editorial"] [class~="text-neutral-700"],
+[data-theme="editorial"] [class~="text-neutral-600"] { color: var(--ink) !important; }
+[data-theme="editorial"] [class~="text-neutral-500"],
+[data-theme="editorial"] [class~="text-neutral-400"] { color: var(--muted) !important; }
+[data-theme="editorial"] [class~="border-neutral-100"],
+[data-theme="editorial"] [class~="border-neutral-200"],
+[data-theme="editorial"] [class~="border-neutral-300"] { border-color: var(--line) !important; }
+[data-theme="editorial"] [class~="hover:bg-neutral-50"]:hover,
+[data-theme="editorial"] [class~="hover:bg-neutral-100"]:hover { background-color: rgba(255, 255, 255, .08) !important; }
+[data-theme="editorial"] [class~="bg-lime-50"],
+[data-theme="editorial"] [class~="bg-lime-100"] { background-color: rgba(255, 90, 26, .14) !important; }
+[data-theme="editorial"] [class~="text-lime-700"],
+[data-theme="editorial"] [class~="text-lime-800"],
+[data-theme="editorial"] [class~="text-lime-600"] { color: #ffad91 !important; }
+[data-theme="editorial"] [class~="border-lime-600"],
+[data-theme="editorial"] [class~="border-lime-400"] { border-color: #ff5a1a !important; }
+[data-theme="editorial"] [class~="bg-lime-600"] { background-color: #d94315 !important; color: #fff !important; }
+[data-theme="editorial"] [class~="hover:bg-lime-700"]:hover { background-color: #ff5a1a !important; }
+[data-theme="editorial"] [class~="text-sky-800"],
+[data-theme="editorial"] [class~="text-sky-700"] { color: #8ed8ff !important; }
+[data-theme="editorial"] [class~="bg-sky-50"] { background-color: rgba(56, 189, 248, .14) !important; }
+[data-theme="editorial"] [class~="border-sky-500"] { border-color: #38bdf8 !important; }
+[data-theme="editorial"] [class~="bg-amber-50"] { background-color: rgba(245, 158, 11, .14) !important; }
+[data-theme="editorial"] input::placeholder,
+[data-theme="editorial"] textarea::placeholder { color: rgba(245, 237, 224, .48) !important; }
+[data-theme="editorial"] input,
+[data-theme="editorial"] textarea,
+[data-theme="editorial"] select { color-scheme: dark; }
+[data-theme="editorial"] .share-inbox-trigger,
+[data-theme="editorial"] .share-inbox-panel,
+[data-theme="editorial"] .share-inbox-item,
+[data-theme="editorial"] .recipe-list-row,
+[data-theme="editorial"] .recipe-view-toggle { background: var(--surface); border-color: var(--line); color: var(--ink); }
+[data-theme="editorial"] .share-inbox-trigger:hover,
+[data-theme="editorial"] .share-inbox-trigger.is-open,
+[data-theme="editorial"] .recipe-view-toggle button:hover,
+[data-theme="editorial"] .recipe-view-toggle button.is-active { background: rgba(255, 90, 26, .14); color: #ffad91; }
+[data-theme="editorial"] .share-inbox-item-copy strong,
+[data-theme="editorial"] .recipe-list-title-row h3 { color: var(--ink); }
+[data-theme="editorial"] .share-inbox-item-copy span,
+[data-theme="editorial"] .recipe-collection-meta,
+[data-theme="editorial"] .recipe-list-copy > p { color: var(--muted); }
+[data-theme="editorial"] .recipe-list-diet,
+[data-theme="editorial"] .recipe-collection-category { background: rgba(255, 90, 26, .14); color: #ffad91; }
