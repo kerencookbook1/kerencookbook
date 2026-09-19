@@ -7,6 +7,7 @@ import { SearchBarTrigger } from './_components/search-trigger'
 import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeholder'
 import { getIncomingShares } from '@/lib/actions/sharing'
 import { ShareNotification } from '@/components/sharing/share-notification'
+import { ShareInboxButton } from '@/components/sharing/share-inbox-button'
 
 export const metadata = { title: 'המטבח של קרן' }
 
@@ -56,6 +57,7 @@ export default async function HomePage() {
         </Link>
         <div className="flex items-center gap-2">
           <SearchBarTrigger />
+          <ShareInboxButton shares={incomingShares} />
           <Link
             href="/import"
             className="inline-flex items-center gap-2 rounded-lg bg-lime-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-lime-700"

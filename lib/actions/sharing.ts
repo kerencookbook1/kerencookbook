@@ -157,5 +157,6 @@ export async function respondToRecipeShare(shareId: string, accept: boolean): Pr
   await admin.from('recipe_shares').update({ status: 'accepted', responded_at: new Date().toISOString() }).eq('id', shareId).eq('recipient_id', user.id)
   revalidatePath('/sharing')
   revalidatePath('/recipes')
+  revalidatePath('/')
   return { ok: true, recipeId: copy.id }
 }

@@ -612,6 +612,30 @@ a, [role="button"] { cursor: pointer; }
 .share-notification-actions button { flex: 1; min-height: 48px; }
 .share-notification-link { width: 100%; min-height: 48px; margin-top: 20px; text-decoration: none; }
 .share-notification-count { margin: 14px 0 0; color: var(--muted); font-size: .8rem; }
+.share-inbox { position: relative; z-index: 10; }
+.share-inbox-trigger { position: relative; display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid #d9c8b6; border-radius: 12px; background: rgb(255 255 255 / 72%); color: var(--ink); transition: border-color 160ms ease-out, background 160ms ease-out; }
+.share-inbox-trigger:hover, .share-inbox-trigger.is-open { border-color: var(--terracotta); background: #fff0eb; color: var(--terracotta-dark); }
+.share-inbox-trigger:focus-visible, .share-inbox-actions button:focus-visible, .share-inbox-all:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.share-inbox-badge { position: absolute; top: -6px; right: -6px; display: grid; min-width: 20px; height: 20px; place-items: center; border: 2px solid var(--surface); border-radius: 999px; padding: 0 4px; background: var(--terracotta-dark); color: #fff; font-size: .68rem; font-weight: 900; line-height: 1; }
+.share-inbox-panel { position: absolute; top: calc(100% + 10px); right: 0; width: min(370px, calc(100vw - 32px)); overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: 0 20px 50px rgb(41 35 28 / 18%); }
+.share-inbox-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px 13px; border-bottom: 1px solid var(--line); color: var(--terracotta-dark); }
+.share-inbox-heading .eyebrow { margin-bottom: 2px; }
+.share-inbox-heading h2 { margin: 0; font-family: Georgia, serif; font-size: 1.35rem; }
+.share-inbox-empty { margin: 0; padding: 24px 18px; color: var(--muted); text-align: center; }
+.share-inbox-list { max-height: min(55vh, 420px); overflow-y: auto; }
+.share-inbox-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #efe6dc; }
+.share-inbox-item-copy { display: grid; min-width: 0; gap: 4px; }
+.share-inbox-item-copy strong { overflow: hidden; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; }
+.share-inbox-item-copy span { color: var(--muted); font-size: .78rem; line-height: 1.4; }
+.share-inbox-actions { display: flex; flex-shrink: 0; gap: 5px; }
+.share-inbox-actions button { display: inline-flex; min-height: 36px; align-items: center; justify-content: center; gap: 3px; border: 1px solid var(--line); border-radius: 9px; padding: 0 8px; background: var(--surface); color: var(--ink); font-size: .75rem; font-weight: 800; }
+.share-inbox-actions button:hover { border-color: var(--terracotta); }
+.share-inbox-accept { color: var(--sage-dark) !important; }
+.share-inbox-reject { color: var(--muted) !important; }
+.share-inbox-status { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: #eef5e5; color: var(--sage-dark); font-weight: 900; }
+.share-inbox-item.is-rejected .share-inbox-status { background: #f5eee7; color: var(--muted); }
+.share-inbox-all { display: block; padding: 13px 18px; color: var(--terracotta-dark); font-size: .84rem; font-weight: 800; text-align: center; text-decoration: none; }
+.share-inbox-all:hover { background: #fff8f1; }
 @media (max-width: 720px) { .sharing-card { align-items: stretch; flex-direction: column; }.sharing-actions button { flex: 1; } }
 @keyframes pantry-pulse { 50% { box-shadow: 0 0 0 6px rgb(212 83 30 / 12%); } }
 @media (prefers-reduced-motion: reduce) { .voice-button.is-listening { animation: none; } }
