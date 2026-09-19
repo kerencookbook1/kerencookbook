@@ -10,6 +10,7 @@ import { IngredientListWithToggle } from '@/components/recipes/ingredient-list-w
 import { StepTimerButton } from '@/components/recipes/step-timer-button'
 import { parseStepTimers } from '@/lib/step-timers'
 import { WhatsAppShareButton } from '@/components/recipes/whatsapp-share-button'
+import { RecipeShareButton } from '@/components/recipes/recipe-share-button'
 import { RebuildRecipeButton } from '@/components/recipes/rebuild-recipe-button'
 import { NutritionCard } from '@/components/recipes/nutrition-card'
 
@@ -355,6 +356,7 @@ export default async function RecipePage({ params }: Props) {
               sourceName={recipe.source_name}
               sourceUrl={recipe.source_url}
             />
+            <RecipeShareButton recipeId={id} />
             {recipe.source_url && (
               <a
                 href={recipe.source_url}

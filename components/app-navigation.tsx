@@ -32,6 +32,7 @@ const items: NavItem[] = [
   { href: "/calories", label: "מחשבון קלוריות", mobileLabel: "קלוריות", icon: "flame",  mobile: true,  desktop: true },
   { href: "/scale",    label: "התאמת מנות",    mobileLabel: "מנות",   icon: "scale",   mobile: true,  desktop: true },
   { href: "/meals",    label: "תכנון ארוחות",  mobileLabel: "ארוחות", icon: "calendar", mobile: true,  desktop: true },
+  { href: "/sharing",  label: "שיתופים",        mobileLabel: "שיתופים", icon: "book", mobile: true, desktop: true, section: "כלים" },
 ];
 
 // Rendered separately at the bottom of the desktop sidebar (above logout).

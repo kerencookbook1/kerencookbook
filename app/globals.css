@@ -582,6 +582,24 @@ a, [role="button"] { cursor: pointer; }
 .pantry-missing { border-radius: 9px; padding: 8px; background: #fff5df; color: #795b24 !important; }
 .pantry-missing strong { display: inline; margin: 0; font-size: inherit; }
 .pantry-ai-error { margin: 0 0 14px; border-radius: 10px; padding: 10px 12px; background: #fff0eb; color: #7a2f1e; font-size: .9rem; }
+.recipe-share-wrap { position: relative; display: inline-flex; flex-direction: column; gap: 8px; }
+.recipe-share-trigger { min-height: 44px; }
+.recipe-share-form { display: grid; z-index: 2; gap: 8px; min-width: min(330px, 90vw); border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: var(--surface); box-shadow: var(--shadow); }
+.recipe-share-form label { font-size: .82rem; font-weight: 800; }
+.recipe-share-form input { min-height: 44px; border: 1px solid var(--line); border-radius: 10px; padding: 0 11px; background: #fffdfa; }
+.recipe-share-form .primary-button { min-height: 44px; box-shadow: none; font-size: .88rem; }
+.recipe-share-form p { margin: 2px 0 0; color: var(--sage-dark); font-size: .8rem; line-height: 1.45; }
+.sharing-list { display: grid; gap: 14px; margin-top: 20px; }
+.sharing-card { display: flex; align-items: center; justify-content: space-between; gap: 18px; border: 1px solid var(--line); border-radius: 18px; padding: 18px; background: var(--surface); box-shadow: var(--shadow); }
+.sharing-card h2 { margin: 2px 0 5px; font-family: Georgia, "Times New Roman", serif; }
+.sharing-card p:not(.eyebrow) { margin: 0; color: var(--muted); }
+.sharing-card-content { min-width: 0; flex: 1; }
+.sharing-preview { max-width: 720px; margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; color: var(--muted); line-height: 1.55; }
+.sharing-preview h3 { margin: 12px 0 4px; color: var(--ink); font-size: .95rem; }
+.sharing-preview ul, .sharing-preview ol { display: grid; gap: 5px; margin: 4px 0 0; padding-inline-start: 22px; }
+.sharing-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.sharing-actions button { min-height: 44px; }
+@media (max-width: 720px) { .sharing-card { align-items: stretch; flex-direction: column; }.sharing-actions button { flex: 1; } }
 @keyframes pantry-pulse { 50% { box-shadow: 0 0 0 6px rgb(212 83 30 / 12%); } }
 @media (prefers-reduced-motion: reduce) { .voice-button.is-listening { animation: none; } }
 @media (max-width: 720px) { .pantry-assistant, .pantry-menu { padding: 17px; }.assistant-status { align-self: flex-start; font-size: 0; padding: 8px; }.assistant-status span { width: 8px; height: 8px; }.pantry-menu-grid { grid-template-columns: 1fr; }.pantry-menu-card { min-height: unset; }.pantry-menu-heading { align-items: flex-start; }.pantry-menu-heading .outline-button { padding: 0 12px; }.assistant-actions button { flex: 1; padding: 0 12px; font-size: .88rem; } }
