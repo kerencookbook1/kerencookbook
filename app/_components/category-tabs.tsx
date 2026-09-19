@@ -186,7 +186,7 @@ export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
                     )}
                     <div className="recipe-title-overlay">
                       <h3>{recipe.title}</h3>
-                      {recipe.author && <p>מאת {recipe.author}</p>}
+                      <p>מאת {recipe.author?.trim() || 'אנונימי'}</p>
                     </div>
                   </Link>
                   <FavoriteButton recipeId={recipe.id} initial={!!recipe.is_favorite} title={recipe.title} />

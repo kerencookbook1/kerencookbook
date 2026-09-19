@@ -160,7 +160,7 @@ export default async function HomePage() {
                     <h3 className="line-clamp-2 text-sm font-semibold leading-snug">
                       {recipe.title}
                     </h3>
-                    {recipe.author && <p className="mt-1 text-xs text-neutral-500">מאת {recipe.author}</p>}
+                    <p className="mt-1 text-xs text-neutral-500">מאת {recipe.author?.trim() || 'אנונימי'}</p>
                   </div>
                 </article>
               )
