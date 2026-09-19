@@ -24,10 +24,28 @@ export type SharePreview = {
   steps: Array<{ title: string | null; body: string }>
 }
 
+export type ShareableUser = { id: string; name: string; email: string }
+
 async function currentUser() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   return { supabase, user }
+}
+
+export async function getRegisteredUsers(): Promise<ShareableUser[]> {
+  const { user } = await currentUser()
+  if (!user) return []
+  const admin = createAdminClient()
+  const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+  if (error) return []
+  return data.users
+    .filter((candidate) => candidate.id !== user.id && candidate.email)
+    .map((candidate) => ({
+      id: candidate.id,
+      email: candidate.email!,
+      name: (candidate.user_metadata?.full_name as string | undefined)?.trim() || candidate.email!,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'he'))
 }
 
 export async function sendRecipeShare(recipeId: string, recipientEmail: string): Promise<{ ok: boolean; error?: string }> {

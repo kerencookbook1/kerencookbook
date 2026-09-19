@@ -586,7 +586,8 @@ a, [role="button"] { cursor: pointer; }
 .recipe-share-trigger { min-height: 44px; }
 .recipe-share-form { display: grid; z-index: 2; gap: 8px; min-width: min(330px, 90vw); border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: var(--surface); box-shadow: var(--shadow); }
 .recipe-share-form label { font-size: .82rem; font-weight: 800; }
-.recipe-share-form input { min-height: 44px; border: 1px solid var(--line); border-radius: 10px; padding: 0 11px; background: #fffdfa; }
+.recipe-share-form input, .recipe-share-form select { min-height: 44px; border: 1px solid var(--line); border-radius: 10px; padding: 0 11px; background: #fffdfa; color: var(--ink); }
+.recipe-share-or { color: var(--muted); font-size: .78rem; text-align: center; }
 .recipe-share-form .primary-button { min-height: 44px; box-shadow: none; font-size: .88rem; }
 .recipe-share-form p { margin: 2px 0 0; color: var(--sage-dark); font-size: .8rem; line-height: 1.45; }
 .sharing-list { display: grid; gap: 14px; margin-top: 20px; }
