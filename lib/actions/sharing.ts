@@ -20,6 +20,9 @@ export type IncomingShare = {
 export type SharePreview = {
   title: string
   description: string | null
+  author: string | null
+  sourceName: string | null
+  sourceUrl: string | null
   ingredients: Array<{ name: string; amount: string | null; unit: string | null }>
   steps: Array<{ title: string | null; body: string }>
 }
@@ -110,12 +113,12 @@ export async function getSharePreview(shareId: string): Promise<{ ok: boolean; p
   const { data: share } = await admin.from('recipe_shares').select('recipe_id').eq('id', shareId).eq('recipient_id', user.id).single()
   if (!share) return { ok: false, error: 'בקשת השיתוף לא נמצאה' }
   const [{ data: recipe }, { data: ingredients }, { data: steps }] = await Promise.all([
-    admin.from('recipes').select('title, description').eq('id', share.recipe_id).single(),
+    admin.from('recipes').select('title, description, author, source_name, source_url').eq('id', share.recipe_id).single(),
     admin.from('ingredients').select('name, amount, unit').eq('recipe_id', share.recipe_id).order('position'),
     admin.from('recipe_steps').select('title, body').eq('recipe_id', share.recipe_id).order('position'),
   ])
   if (!recipe) return { ok: false, error: 'המתכון המקורי לא נמצא' }
-  return { ok: true, preview: { title: recipe.title, description: recipe.description, ingredients: ingredients ?? [], steps: steps ?? [] } }
+  return { ok: true, preview: { title: recipe.title, description: recipe.description, author: recipe.author, sourceName: recipe.source_name, sourceUrl: recipe.source_url, ingredients: ingredients ?? [], steps: steps ?? [] } }
 }
 
 export async function respondToRecipeShare(shareId: string, accept: boolean): Promise<{ ok: boolean; recipeId?: string; error?: string }> {
@@ -130,14 +133,17 @@ export async function respondToRecipeShare(shareId: string, accept: boolean): Pr
     return { ok: true }
   }
 
-  const [{ data: source }, { data: ingredients }, { data: steps }] = await Promise.all([
+  const [{ data: source }, { data: ingredients }, { data: steps }, { data: images }] = await Promise.all([
     admin.from('recipes').select('*').eq('id', share.recipe_id).single(),
     admin.from('ingredients').select('*').eq('recipe_id', share.recipe_id).order('position'),
     admin.from('recipe_steps').select('*').eq('recipe_id', share.recipe_id).order('position'),
+    admin.from('recipe_images').select('storage_path, is_primary, position').eq('recipe_id', share.recipe_id).order('position'),
   ])
   if (!source) return { ok: false, error: 'המתכון המקורי לא נמצא' }
   const { data: senderAuth } = await admin.auth.admin.getUserById(share.sender_id)
   const senderName = senderAuth.user?.user_metadata?.full_name ?? senderAuth.user?.email ?? 'משתמש רשום'
+  const shareNote = `שיתוף מ־${senderName}`
+  const copiedNotes = [shareNote, source.notes].filter(Boolean).join('\n\n')
   const { data: copy, error: copyError } = await admin.from('recipes').insert({
     owner_id: user.id,
     title: source.title,
@@ -147,13 +153,19 @@ export async function respondToRecipeShare(shareId: string, accept: boolean): Pr
     servings: source.servings,
     prep_time: source.prep_time,
     cook_time: source.cook_time,
-    source_name: `שיתוף מ־${senderName}`,
+    author: source.author,
+    source_name: source.source_name ?? shareNote,
+    source_url: source.source_url,
+    source_photo_path: source.source_photo_path,
+    notes: copiedNotes,
     status: 'draft',
     is_diet_auto: source.is_diet_auto,
+    is_diet_override: source.is_diet_override,
   }).select('id').single()
   if (copyError || !copy) return { ok: false, error: `שמירת העותק נכשלה: ${copyError?.message ?? 'שגיאה'}` }
   if (ingredients?.length) await admin.from('ingredients').insert(ingredients.map((item) => ({ recipe_id: copy.id, name: item.name, amount: item.amount, unit: item.unit, position: item.position })))
   if (steps?.length) await admin.from('recipe_steps').insert(steps.map((step) => ({ recipe_id: copy.id, title: step.title, body: step.body, duration_seconds: step.duration_seconds, position: step.position })))
+  if (images?.length) await admin.from('recipe_images').insert(images.map((image) => ({ recipe_id: copy.id, storage_path: image.storage_path, is_primary: image.is_primary, position: image.position })))
   await admin.from('recipe_shares').update({ status: 'accepted', responded_at: new Date().toISOString() }).eq('id', shareId).eq('recipient_id', user.id)
   revalidatePath('/sharing')
   revalidatePath('/recipes')
