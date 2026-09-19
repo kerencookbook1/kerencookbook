@@ -7,6 +7,9 @@ type SearchRecipe = {
   id: string
   title: string
   category: string | null
+  author: string | null
+  source_name: string | null
+  notes: string | null
   image_url: string | null
   ingredientNames: string[]
   prep_time: number | null
@@ -26,6 +29,9 @@ function scoreMatch(query: string, recipe: SearchRecipe): { score: number; match
 
   const title = normalize(recipe.title)
   const category = recipe.category ? normalize(recipe.category) : ''
+  const author = recipe.author ? normalize(recipe.author) : ''
+  const source = recipe.source_name ? normalize(recipe.source_name) : ''
+  const notes = recipe.notes ? normalize(recipe.notes) : ''
   const ingredients = recipe.ingredientNames.map(normalize)
 
   let score = 0
@@ -37,6 +43,9 @@ function scoreMatch(query: string, recipe: SearchRecipe): { score: number; match
     else if (title.includes(term)) score += 8
 
     if (category && category.includes(term)) score += 4
+    if (author && author.includes(term)) score += 12
+    if (source && source.includes(term)) score += 6
+    if (notes && notes.includes(term)) score += 10
 
     for (const ing of ingredients) {
       if (ing.includes(term)) {
@@ -243,6 +252,11 @@ export function SearchDialog({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                           <p style={{ margin: 0, fontWeight: 800, color: 'var(--ink)', fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {r.title}
                           </p>
+                          {(r.author || r.source_name || r.notes?.includes('שיתוף')) && (
+                            <p style={{ margin: '2px 0 0', color: 'var(--sage-dark)', fontSize: '.78rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {r.author ? `מאת ${r.author}` : r.notes?.match(/שיתוף מ־([^\n]+)/)?.[1] ? `שיתוף מ־${r.notes.match(/שיתוף מ־([^\n]+)/)?.[1]}` : r.source_name}
+                            </p>
+                          )}
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '.8rem', color: 'var(--muted)', marginTop: 2 }}>
                             {r.category && <span>{r.category}</span>}
                             {totalMinutes > 0 && <span>· {totalMinutes} דק׳</span>}

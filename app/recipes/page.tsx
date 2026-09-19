@@ -18,24 +18,31 @@ export default async function RecipesPage({
 }) {
   const params = await searchParams
   const dietOnly = params.diet === '1'
+  const query = (params.q ?? '').trim()
   const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const [recipes, totalCount] = user
+  const [loadedRecipes, countedRecipes] = user
     ? await Promise.all([
         // Diet filter runs in-memory, so we skip DB LIMIT when active
         // (see getRecipeCards). Otherwise we paginate at the DB layer.
-        getRecipeCards(user.id, {
-          dietOnly,
-          ...(dietOnly ? {} : { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
-        }),
+        getRecipeCards(user.id, query
+          ? (dietOnly ? { dietOnly } : {})
+          : { dietOnly, ...(dietOnly ? {} : { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }) }),
         countRecipes(user.id),
       ])
     : [[], 0]
+  const normalizedQuery = query.toLocaleLowerCase('he-IL')
+  const recipes = query
+    ? loadedRecipes.filter((recipe) => [recipe.title, recipe.author, recipe.source_name, recipe.notes, recipe.category, ...recipe.ingredientNames]
+        .filter(Boolean)
+        .some((value) => value!.toLocaleLowerCase('he-IL').includes(normalizedQuery)))
+    : loadedRecipes
+  const totalCount = query ? recipes.length : countedRecipes
   const activeFilter = params.filter ?? 'הכל'
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
   const hasPrev = page > 1
-  const hasNext = !dietOnly && page < pageCount
+  const hasNext = !dietOnly && !query && page < pageCount
 
   const dietHref = (() => {
     const next = new URLSearchParams(
@@ -89,15 +96,18 @@ export default async function RecipesPage({
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 shadow-sm sm:min-w-70">
+        <form method="get" className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 shadow-sm sm:min-w-70">
           <span aria-hidden="true" className="text-neutral-400">🔎</span>
           <input
             type="search"
+            name="q"
+            defaultValue={query}
             aria-label="חיפוש מתכון"
             placeholder="חיפוש מתכון, מרכיב, קטגוריה..."
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-neutral-400"
           />
-        </div>
+          {dietOnly && <input type="hidden" name="diet" value="1" />}
+        </form>
         <Link
           href={dietHref}
           className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold shadow-sm transition ${
@@ -147,7 +157,9 @@ export default async function RecipesPage({
         <>
           <div className="mt-8 mb-4 flex items-baseline justify-between">
             <h2 className="text-lg font-semibold">
-              {dietOnly
+              {query
+                ? `תוצאות חיפוש עבור ״${query}״ (${recipes.length})`
+                : dietOnly
                 ? `${recipes.length} מתכונים דיאטטיים`
                 : `מציג ${(page - 1) * PAGE_SIZE + 1}–${(page - 1) * PAGE_SIZE + recipes.length} מתוך ${totalCount}`}
             </h2>
@@ -208,7 +220,7 @@ export default async function RecipesPage({
             })}
           </div>}
 
-          {!dietOnly && pageCount > 1 && (
+          {!dietOnly && !query && pageCount > 1 && (
             <nav
               className="mt-8 flex items-center justify-center gap-2"
               aria-label="פאגינציה"
