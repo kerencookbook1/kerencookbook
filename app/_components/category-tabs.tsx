@@ -9,6 +9,7 @@ import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeh
 type RecipeCard = {
   id: string
   title: string
+  author?: string | null
   prep_time: number | null
   cook_time: number | null
   category: string | null
@@ -185,6 +186,7 @@ export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
                     )}
                     <div className="recipe-title-overlay">
                       <h3>{recipe.title}</h3>
+                      {recipe.author && <p>מאת {recipe.author}</p>}
                     </div>
                   </Link>
                   <FavoriteButton recipeId={recipe.id} initial={!!recipe.is_favorite} title={recipe.title} />

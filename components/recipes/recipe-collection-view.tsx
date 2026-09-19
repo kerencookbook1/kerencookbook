@@ -14,6 +14,7 @@ function RecipeMeta({ recipe, compact = false }: { recipe: RecipeCardRow; compac
   const totalMinutes = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0)
   return <div className={`recipe-collection-meta${compact ? ' is-compact' : ''}`}>
     {recipe.category && <span className="recipe-collection-category">{recipe.category}</span>}
+    {recipe.author && <span className="recipe-collection-author">מאת {recipe.author}</span>}
     <span>{totalMinutes > 0 ? `${totalMinutes} דק׳` : 'ללא זמן'}</span>
     {recipe.servings ? <span>· {recipe.servings} מנות</span> : null}
   </div>
