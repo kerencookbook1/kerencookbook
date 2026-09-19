@@ -172,3 +172,17 @@ export async function respondToRecipeShare(shareId: string, accept: boolean): Pr
   revalidatePath('/')
   return { ok: true, recipeId: copy.id }
 }
+
+export async function deleteRecipeShare(shareId: string): Promise<{ ok: boolean; error?: string }> {
+  const { user } = await currentUser()
+  if (!user) return { ok: false, error: 'לא מחובר' }
+  const admin = createAdminClient()
+  const { data: share } = await admin.from('recipe_shares').select('id, status').eq('id', shareId).eq('recipient_id', user.id).single()
+  if (!share) return { ok: false, error: 'ההודעה לא נמצאה' }
+  if (share.status === 'pending') return { ok: false, error: 'יש לאשר או לדחות את הבקשה לפני מחיקה' }
+  const { error } = await admin.from('recipe_shares').delete().eq('id', shareId).eq('recipient_id', user.id)
+  if (error) return { ok: false, error: 'מחיקת ההודעה נכשלה' }
+  revalidatePath('/sharing')
+  revalidatePath('/')
+  return { ok: true }
+}

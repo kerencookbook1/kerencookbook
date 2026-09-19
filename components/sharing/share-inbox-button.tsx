@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Bell, Check, Inbox, X } from 'lucide-react'
-import { respondToRecipeShare, type IncomingShare } from '@/lib/actions/sharing'
+import { Bell, Check, Inbox, Trash2, X } from 'lucide-react'
+import { deleteRecipeShare, respondToRecipeShare, type IncomingShare } from '@/lib/actions/sharing'
 
 export function ShareInboxButton({ shares }: { shares: IncomingShare[] }) {
   const [open, setOpen] = useState(false)
@@ -19,6 +19,13 @@ export function ShareInboxButton({ shares }: { shares: IncomingShare[] }) {
         share.id === id ? { ...share, status: accept ? 'accepted' : 'rejected' } : share,
       ))
     }
+    setBusy(null)
+  }
+
+  async function remove(id: string) {
+    setBusy(id)
+    const result = await deleteRecipeShare(id)
+    if (result.ok) setItems((current) => current.filter((share) => share.id !== id))
     setBusy(null)
   }
 
@@ -70,6 +77,9 @@ export function ShareInboxButton({ shares }: { shares: IncomingShare[] }) {
                   ) : (
                     <span className="share-inbox-status" aria-label={share.status === 'accepted' ? 'אושר' : 'נדחה'}>{share.status === 'accepted' ? '✓' : '×'}</span>
                   )}
+                  <button type="button" className="share-inbox-delete" onClick={() => { void remove(share.id) }} disabled={share.status === 'pending' || busy !== null} aria-label={`מחיקת הודעת ${share.recipeTitle}`}>
+                    <Trash2 size={16} aria-hidden="true" />
+                  </button>
                 </article>
               ))}
             </div>

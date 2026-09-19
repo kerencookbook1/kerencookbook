@@ -615,7 +615,7 @@ a, [role="button"] { cursor: pointer; }
 .share-inbox { position: relative; z-index: 10; }
 .share-inbox-trigger { position: relative; display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid #d9c8b6; border-radius: 12px; background: rgb(255 255 255 / 72%); color: var(--ink); transition: border-color 160ms ease-out, background 160ms ease-out; }
 .share-inbox-trigger:hover, .share-inbox-trigger.is-open { border-color: var(--terracotta); background: #fff0eb; color: var(--terracotta-dark); }
-.share-inbox-trigger:focus-visible, .share-inbox-actions button:focus-visible, .share-inbox-all:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.share-inbox-trigger:focus-visible, .share-inbox-actions button:focus-visible, .share-inbox-delete:focus-visible, .share-inbox-all:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .share-inbox-badge { position: absolute; top: -6px; right: -6px; display: grid; min-width: 20px; height: 20px; place-items: center; border: 2px solid var(--surface); border-radius: 999px; padding: 0 4px; background: var(--terracotta-dark); color: #fff; font-size: .68rem; font-weight: 900; line-height: 1; }
 .share-inbox-panel { position: absolute; top: calc(100% + 10px); right: 0; width: min(370px, calc(100vw - 32px)); overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: 0 20px 50px rgb(41 35 28 / 18%); }
 .share-inbox-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px 13px; border-bottom: 1px solid var(--line); color: var(--terracotta-dark); }
@@ -630,6 +630,9 @@ a, [role="button"] { cursor: pointer; }
 .share-inbox-actions { display: flex; flex-shrink: 0; gap: 5px; }
 .share-inbox-actions button { display: inline-flex; min-height: 36px; align-items: center; justify-content: center; gap: 3px; border: 1px solid var(--line); border-radius: 9px; padding: 0 8px; background: var(--surface); color: var(--ink); font-size: .75rem; font-weight: 800; }
 .share-inbox-actions button:hover { border-color: var(--terracotta); }
+.share-inbox-delete { display: grid; width: 36px; height: 36px; flex: 0 0 36px; place-items: center; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--muted); }
+.share-inbox-delete:hover { border-color: var(--terracotta); background: #fff0eb; color: var(--terracotta-dark); }
+.share-inbox-delete:disabled { cursor: not-allowed; opacity: .42; }
 .share-inbox-accept { color: var(--sage-dark) !important; }
 .share-inbox-reject { color: var(--muted) !important; }
 .share-inbox-status { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: #eef5e5; color: var(--sage-dark); font-weight: 900; }
