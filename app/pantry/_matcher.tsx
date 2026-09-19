@@ -208,7 +208,7 @@ export function PantryMatcher({ recipes }: { recipes: Recipe[] }) {
   }
 
   function handleScanFiles(event: ChangeEvent<HTMLInputElement>) {
-    const selected = Array.from(event.target.files ?? []).slice(0, 5 - scanFiles.length)
+    const selected = Array.from(event.target.files ?? []).slice(0, 10 - scanFiles.length)
     if (selected.length === 0) return
     setScanFiles((current) => [...current, ...selected])
     setScanPreviews((current) => [...current, ...selected.map((file) => URL.createObjectURL(file))])
@@ -417,10 +417,10 @@ export function PantryMatcher({ recipes }: { recipes: Recipe[] }) {
           </div>
         </div>
         <div className="pantry-photo-scan">
-          <div className="pantry-photo-scan-copy"><Camera size={20} aria-hidden="true" /><div><strong>אפשר גם לצלם את המקרר</strong><span>עד 5 תמונות — ה‑AI יזהה את המוצרים ויוסיף אותם לרשימה.</span></div></div>
+          <div className="pantry-photo-scan-copy"><Camera size={20} aria-hidden="true" /><div><strong>אפשר גם לצלם את המקרר</strong><span>עד 10 תמונות — ה‑AI יזהה את המוצרים ויוסיף אותם לרשימה.</span></div></div>
           <div className="pantry-photo-picker-row">
-            <label className="pantry-photo-picker"><Camera size={18} /> צלמי עכשיו<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={handleScanFiles} disabled={scanFiles.length >= 5} /></label>
-            <label className="pantry-photo-picker"><ImagePlus size={18} /> הוסיפי מהגלריה<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleScanFiles} disabled={scanFiles.length >= 5} /></label>
+            <label className="pantry-photo-picker"><Camera size={18} /> צלמי עכשיו<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={handleScanFiles} disabled={scanFiles.length >= 10} /></label>
+            <label className="pantry-photo-picker"><ImagePlus size={18} /> הוסיפי מהגלריה<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleScanFiles} disabled={scanFiles.length >= 10} /></label>
           </div>
           {scanPreviews.length > 0 && <div className="pantry-photo-previews">{scanPreviews.map((preview, index) => <div className="pantry-photo-preview" key={preview}><img src={preview} alt={`תמונה ${index + 1}`} /><button type="button" onClick={() => removeScanFile(index)} aria-label={`הסירי תמונה ${index + 1}`}><X size={15} /></button></div>)}</div>}
           {scanFiles.length > 0 && <button type="button" className="primary-button pantry-scan-button" onClick={() => { void scanPantryPhotos() }} disabled={isScanning}><Camera size={18} /> {isScanning ? 'מזהה מוצרים…' : `זהי מוצרים מ־${scanFiles.length} ${scanFiles.length === 1 ? 'תמונה' : 'תמונות'}`}</button>}

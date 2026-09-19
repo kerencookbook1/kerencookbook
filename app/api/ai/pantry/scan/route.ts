@@ -10,7 +10,7 @@ const requestSchema = z.object({
   images: z.array(z.object({
     data: z.string().startsWith('data:image/').max(4_500_000),
     mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
-  })).min(1).max(5),
+  })).min(1).max(10),
 })
 
 const systemPrompt = `את עוזרת לזיהוי מוצרי מזון מתמונות של מקרר, מזווה או משטח מטבח.
