@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getRecipeCards, countRecipes } from '@/lib/repositories/recipes'
 import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeholder'
 import Link from 'next/link'
+import { RecipeCollectionView } from '@/components/recipes/recipe-collection-view'
 
 const PAGE_SIZE = 24
 
@@ -154,7 +155,8 @@ export default async function RecipesPage({
               ממוין לפי תאריך הוספה
             </span>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <RecipeCollectionView recipes={recipes} />
+          {false && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {recipes.map((recipe) => {
               const totalMinutes = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0)
               return (
@@ -204,7 +206,7 @@ export default async function RecipesPage({
                 </Link>
               )
             })}
-          </div>
+          </div>}
 
           {!dietOnly && pageCount > 1 && (
             <nav
