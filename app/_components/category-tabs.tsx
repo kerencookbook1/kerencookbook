@@ -5,11 +5,15 @@ import { useMemo, useState } from 'react'
 import { CATEGORIES, guessCategory, isCategoryId, type CategoryId } from '@/lib/categories'
 import { FavoriteButton } from './favorite-button'
 import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeholder'
+import { recipeByline } from '@/lib/recipe-attribution'
 
 type RecipeCard = {
   id: string
   title: string
   author?: string | null
+  source_name?: string | null
+  source_url?: string | null
+  notes?: string | null
   prep_time: number | null
   cook_time: number | null
   category: string | null
@@ -186,7 +190,7 @@ export function CategoryTabs({ recipes }: { recipes: RecipeCard[] }) {
                     )}
                     <div className="recipe-title-overlay">
                       <h3>{recipe.title}</h3>
-                      <p>מאת {recipe.author?.trim() || 'אנונימי'}</p>
+                      <p>מאת {recipeByline({ author: recipe.author, sourceName: recipe.source_name, sourceUrl: recipe.source_url, notes: recipe.notes })}</p>
                     </div>
                   </Link>
                   <FavoriteButton recipeId={recipe.id} initial={!!recipe.is_favorite} title={recipe.title} />

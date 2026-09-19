@@ -8,6 +8,7 @@ import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeh
 import { getIncomingShares } from '@/lib/actions/sharing'
 import { ShareNotification } from '@/components/sharing/share-notification'
 import { ShareInboxButton } from '@/components/sharing/share-inbox-button'
+import { recipeByline } from '@/lib/recipe-attribution'
 
 export const metadata = { title: 'המטבח של קרן' }
 
@@ -160,7 +161,7 @@ export default async function HomePage() {
                     <h3 className="line-clamp-2 text-sm font-semibold leading-snug">
                       {recipe.title}
                     </h3>
-                    <p className="mt-1 text-xs text-neutral-500">מאת {recipe.author?.trim() || 'אנונימי'}</p>
+                    <p className="mt-1 text-xs text-neutral-500">מאת {recipeByline({ author: recipe.author, sourceName: recipe.source_name, sourceUrl: recipe.source_url, notes: recipe.notes })}</p>
                   </div>
                 </article>
               )

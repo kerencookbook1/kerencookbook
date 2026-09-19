@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { Grid2X2, List } from 'lucide-react'
 import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeholder'
 import type { RecipeCardRow } from '@/lib/repositories/recipes'
+import { recipeByline } from '@/lib/recipe-attribution'
 
 type ViewMode = 'grid' | 'list'
 
@@ -14,7 +15,7 @@ function RecipeMeta({ recipe, compact = false }: { recipe: RecipeCardRow; compac
   const totalMinutes = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0)
   return <div className={`recipe-collection-meta${compact ? ' is-compact' : ''}`}>
     {recipe.category && <span className="recipe-collection-category">{recipe.category}</span>}
-    <span className="recipe-collection-author">מאת {recipe.author?.trim() || 'אנונימי'}</span>
+    <span className="recipe-collection-author">מאת {recipeByline({ author: recipe.author, sourceName: recipe.source_name, sourceUrl: recipe.source_url, notes: recipe.notes })}</span>
     <span>{totalMinutes > 0 ? `${totalMinutes} דק׳` : 'ללא זמן'}</span>
     {recipe.servings ? <span>· {recipe.servings} מנות</span> : null}
   </div>
