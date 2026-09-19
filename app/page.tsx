@@ -5,6 +5,8 @@ import { CategoryTabs } from './_components/category-tabs'
 import { FavoriteButton } from './_components/favorite-button'
 import { SearchBarTrigger } from './_components/search-trigger'
 import { RecipeImagePlaceholder } from '@/components/recipes/recipe-image-placeholder'
+import { getIncomingShares } from '@/lib/actions/sharing'
+import { ShareNotification } from '@/components/sharing/share-notification'
 
 export const metadata = { title: 'המטבח של קרן' }
 
@@ -36,6 +38,7 @@ export default async function HomePage() {
       ? supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle()
       : Promise.resolve({ data: null }),
   ])
+  const incomingShares = user ? await getIncomingShares() : []
   const displayName = profileRes.data?.display_name?.trim() || null
   const favorites = recipes.filter((r) => r.is_favorite).slice(0, 4)
   const dietCount = recipes.filter((r) => r.is_diet_effective).length
@@ -44,6 +47,7 @@ export default async function HomePage() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8" dir="rtl">
       <a href="#main-content" className="skip-link">דלג לתוכן</a>
+      <ShareNotification shares={incomingShares} />
 
       <header className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">

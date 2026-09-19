@@ -600,6 +600,18 @@ a, [role="button"] { cursor: pointer; }
 .sharing-preview ul, .sharing-preview ol { display: grid; gap: 5px; margin: 4px 0 0; padding-inline-start: 22px; }
 .sharing-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .sharing-actions button { min-height: 44px; }
+.share-notification-backdrop { position: fixed; z-index: 30; inset: 0; display: grid; place-items: center; padding: 18px; background: rgb(41 35 28 / 42%); backdrop-filter: blur(3px); }
+.share-notification { position: relative; width: min(100%, 430px); border: 1px solid #dfcdbb; border-radius: 24px; padding: 28px; background: var(--surface); box-shadow: 0 24px 70px rgb(41 35 28 / 25%); text-align: center; }
+.share-notification-close { position: absolute; top: 12px; left: 12px; display: grid; width: 40px; height: 40px; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted); }
+.share-notification-close:hover { background: #f5eee7; color: var(--ink); }
+.share-notification-icon { display: grid; width: 54px; height: 54px; place-items: center; margin: 0 auto 13px; border-radius: 17px; background: #fff0eb; color: var(--terracotta); }
+.share-notification h2 { margin: 3px 0 7px; font-family: Georgia, "Times New Roman", serif; font-size: 1.75rem; }
+.share-notification p:not(.eyebrow):not(.share-notification-note):not(.share-notification-count):not(.pantry-ai-error) { margin: 0; color: var(--muted); }
+.share-notification-note { margin: 16px 0; color: var(--muted); font-size: .86rem; line-height: 1.55; }
+.share-notification-actions { display: flex; gap: 9px; margin-top: 20px; }
+.share-notification-actions button { flex: 1; min-height: 48px; }
+.share-notification-link { width: 100%; min-height: 48px; margin-top: 20px; text-decoration: none; }
+.share-notification-count { margin: 14px 0 0; color: var(--muted); font-size: .8rem; }
 @media (max-width: 720px) { .sharing-card { align-items: stretch; flex-direction: column; }.sharing-actions button { flex: 1; } }
 @keyframes pantry-pulse { 50% { box-shadow: 0 0 0 6px rgb(212 83 30 / 12%); } }
 @media (prefers-reduced-motion: reduce) { .voice-button.is-listening { animation: none; } }
