@@ -1,10 +1,12 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { recipeFormSchema } from '@/lib/validations/recipes'
 import type { IngredientItem, StepItem } from '@/lib/validations/recipes'
 import { isDietAuto } from '@/lib/diet'
+import { parseIngredientLine } from '@/lib/ingredients'
 import type { Database } from '@/lib/supabase/types'
 
 type RecipeInsert = Database['public']['Tables']['recipes']['Insert']
@@ -290,4 +292,55 @@ export async function toggleFavorite(recipeId: string, next: boolean): Promise<{
 
   if (error) return { ok: false, error: error.message }
   return { ok: true }
+}
+
+/** Save a recipe generated from the pantry assistant as a reviewable draft. */
+export async function saveGeneratedRecipe(input: {
+  title: string
+  description: string
+  ingredients: string[]
+  steps: string[]
+}): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'לא מחובר' }
+
+  const title = input.title.trim().slice(0, 160)
+  const description = input.description.trim().slice(0, 500)
+  const ingredients = input.ingredients.map((line) => parseIngredientLine(line)).filter((item) => item.name.trim()).slice(0, 40)
+  const steps = input.steps.map((body) => body.trim().slice(0, 1000)).filter(Boolean).slice(0, 20)
+  if (!title || ingredients.length === 0 || steps.length === 0) return { ok: false, error: 'המתכון שהתקבל חסר מרכיבים או שלבים' }
+
+  const displayName = user.email?.split('@')[0] ?? null
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .upsert({ id: user.id, display_name: displayName }, { onConflict: 'id' })
+  if (profileError) return { ok: false, error: `יצירת פרופיל נכשלה: ${profileError.message}` }
+
+  const { data: recipe, error: recipeError } = await supabase
+    .from('recipes')
+    .insert({
+      owner_id: user.id,
+      title,
+      description: description || null,
+      category: 'אחר',
+      source_name: 'העוזר החכם — מה שיש בבית',
+      status: 'draft',
+      is_diet_auto: isDietAuto(title, ingredients.map((item) => item.name)),
+    })
+    .select('id')
+    .single()
+  if (recipeError || !recipe) return { ok: false, error: `שמירת המתכון נכשלה: ${recipeError?.message ?? 'שגיאה לא ידועה'}` }
+
+  const { error: ingredientsError } = await supabase.from('ingredients').insert(
+    ingredients.map((item, position) => ({ recipe_id: recipe.id, name: item.name, amount: item.amount || null, unit: item.unit || null, position }))
+  )
+  const { error: stepsError } = await supabase.from('recipe_steps').insert(
+    steps.map((body, position) => ({ recipe_id: recipe.id, title: `שלב ${position + 1}`, body, position }))
+  )
+  if (ingredientsError || stepsError) return { ok: false, error: `המתכון נשמר חלקית: ${ingredientsError?.message ?? stepsError?.message ?? 'שגיאה בשמירת הפרטים'}` }
+
+  revalidatePath('/recipes')
+  revalidatePath(`/recipes/${recipe.id}`)
+  return { ok: true, id: recipe.id }
 }

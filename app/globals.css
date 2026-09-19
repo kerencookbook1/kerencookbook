@@ -515,6 +515,77 @@ a, [role="button"] { cursor: pointer; }
 .empty-state { display: grid; place-items: center; gap: 20px; padding: 80px 24px; text-align: center; color: var(--muted); }
 .empty-state p { margin: 0; font-size: 1.1rem; }
 
+/* Pantry AI assistant */
+.pantry-workspace { display: grid; gap: 24px; margin-top: 20px; }
+.pantry-assistant { overflow: hidden; border: 1px solid #d9c8b5; border-radius: 22px; padding: 22px; background: linear-gradient(145deg, #fffaf2, #f2f5e9); box-shadow: 0 12px 30px rgb(73 49 31 / 8%); }
+.pantry-assistant-header { display: flex; align-items: center; gap: 12px; }
+.pantry-assistant-header h2, .pantry-menu-heading h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.45rem, 3vw, 2rem); letter-spacing: -.025em; }
+.pantry-assistant-header .eyebrow { margin-bottom: 2px; }
+.pantry-assistant-avatar { display: grid; width: 46px; height: 46px; flex: 0 0 auto; place-items: center; border-radius: 15px; background: var(--terracotta); color: #fff; box-shadow: 0 7px 16px rgb(212 83 30 / 22%); }
+.assistant-status { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; border-radius: 999px; padding: 7px 10px; background: #e6f0df; color: #4e7137; font-size: .78rem; font-weight: 800; white-space: nowrap; }
+.assistant-status span { width: 7px; height: 7px; border-radius: 50%; background: #5e9842; }
+.assistant-messages { display: grid; gap: 9px; max-height: 245px; overflow: auto; margin: 22px 0 16px; padding: 2px 2px 2px 0; }
+.assistant-message { max-width: min(88%, 620px); border-radius: 16px; padding: 12px 14px; line-height: 1.55; }
+.assistant-message p { margin: 0; }
+.assistant-message.is-assistant { border: 1px solid #d8e2cc; background: #fff; }
+.assistant-message.is-user { justify-self: end; background: var(--terracotta); color: #fff; }
+.assistant-speak { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; margin-top: 7px; border: 0; padding: 0; background: transparent; color: var(--terracotta-dark); font-size: .78rem; font-weight: 800; }
+.assistant-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.assistant-actions button { min-height: 46px; }
+.assistant-menu-button { box-shadow: 0 7px 16px rgb(212 83 30 / 18%); }
+.assistant-search-button { background: #fff; }
+.assistant-composer { display: flex; align-items: center; gap: 8px; margin-top: 14px; border: 1px solid #cfbfae; border-radius: 15px; padding: 5px; background: #fff; }
+.assistant-composer input { min-width: 0; min-height: 44px; flex: 1; border: 0; outline: 0; padding: 0 10px; background: transparent; color: var(--ink); }
+.assistant-composer:focus-within { border-color: var(--focus); outline: 3px solid var(--focus-ring); }
+.voice-button, .send-button { display: grid; width: 44px; height: 44px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 12px; background: transparent; color: var(--terracotta-dark); }
+.voice-button:hover, .send-button:hover { background: #fff0eb; }
+.voice-button.is-listening { background: #fff0eb; color: var(--terracotta); animation: pantry-pulse 1.2s ease-in-out infinite; }
+.send-button { background: var(--terracotta); color: #fff; }
+.send-button:disabled { cursor: not-allowed; opacity: .45; }
+.assistant-suggestions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
+.assistant-suggestions button { min-height: 38px; border: 1px solid #d9c8b5; border-radius: 999px; padding: 0 12px; background: transparent; color: var(--muted); font-size: .8rem; font-weight: 700; }
+.assistant-suggestions button:hover { border-color: var(--terracotta); color: var(--terracotta-dark); background: #fff; }
+.pantry-photo-scan { display: grid; gap: 12px; margin-top: 20px; border-top: 1px solid #e1d4c6; padding-top: 17px; }
+.pantry-photo-scan-copy { display: flex; align-items: flex-start; gap: 9px; color: var(--terracotta-dark); }
+.pantry-photo-scan-copy svg { flex: 0 0 auto; margin-top: 2px; }
+.pantry-photo-scan-copy strong, .pantry-photo-scan-copy span { display: block; }
+.pantry-photo-scan-copy span { margin-top: 3px; color: var(--muted); font-size: .82rem; line-height: 1.45; }
+.pantry-photo-picker-row { display: flex; flex-wrap: wrap; gap: 9px; }
+.pantry-photo-picker { display: inline-flex; width: fit-content; min-height: 44px; align-items: center; gap: 7px; border: 1px solid #cdbba8; border-radius: 12px; padding: 0 14px; background: #fff; color: var(--terracotta-dark); font-weight: 800; cursor: pointer; }
+.pantry-photo-picker:hover { border-color: var(--terracotta); background: #fff8f3; }
+.pantry-photo-picker input { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
+.pantry-photo-previews { display: flex; flex-wrap: wrap; gap: 9px; }
+.pantry-photo-preview { position: relative; width: 74px; height: 74px; overflow: hidden; border: 1px solid #cfbfae; border-radius: 11px; background: #fff; }
+.pantry-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.pantry-photo-preview button { position: absolute; top: 4px; right: 4px; display: grid; width: 25px; height: 25px; place-items: center; border: 0; border-radius: 50%; background: rgb(41 35 28 / 78%); color: #fff; }
+.pantry-scan-button { width: fit-content; min-height: 44px; padding: 0 16px; box-shadow: none; font-size: .9rem; }
+.pantry-menu { border-radius: 22px; padding: 22px; background: #e9f0e0; }
+.pantry-menu-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.pantry-menu-heading .outline-button { min-height: 42px; background: transparent; }
+.pantry-menu-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.pantry-menu-card { min-height: 170px; border: 1px solid #cbd9bd; border-radius: 17px; padding: 16px; background: rgb(255 255 255 / 78%); }
+.pantry-menu-card-top { display: flex; align-items: center; justify-content: space-between; color: var(--sage-dark); font-size: .82rem; font-weight: 800; }
+.pantry-menu-card-top svg { opacity: .7; }
+.pantry-menu-recipe { display: block; margin: 18px 0 5px; color: var(--ink); font-family: Georgia, "Times New Roman", serif; font-size: 1.23rem; font-weight: 900; text-decoration: none; }
+.pantry-menu-recipe:hover { color: var(--terracotta-dark); }
+.pantry-menu-card strong { display: block; margin: 18px 0 5px; font-size: 1.05rem; }
+.pantry-menu-card p { margin: 0 0 10px; color: var(--muted); font-size: .83rem; line-height: 1.45; }
+.pantry-menu-card .text-button { gap: 4px; min-height: 36px; font-size: .82rem; }
+.pantry-save-button { width: 100%; min-height: 44px; margin-top: 12px; padding: 0 12px; font-size: .82rem; box-shadow: none; }
+.pantry-saved-link { margin-top: 10px; color: var(--sage-dark); }
+.pantry-menu-card details { margin-top: 10px; color: var(--muted); font-size: .83rem; }
+.pantry-menu-card summary { min-height: 36px; cursor: pointer; color: var(--terracotta-dark); font-weight: 800; }
+.pantry-menu-card details ul, .pantry-menu-card details ol { display: grid; gap: 4px; margin: 7px 0 12px; padding-inline-start: 20px; line-height: 1.45; }
+.pantry-menu-card details ol { padding-inline-start: 24px; }
+.pantry-recipe-sections { display: grid; gap: 8px; }
+.pantry-recipe-sections h4 { margin: 8px 0 0; color: var(--ink); font-size: .82rem; }
+.pantry-missing { border-radius: 9px; padding: 8px; background: #fff5df; color: #795b24 !important; }
+.pantry-missing strong { display: inline; margin: 0; font-size: inherit; }
+.pantry-ai-error { margin: 0 0 14px; border-radius: 10px; padding: 10px 12px; background: #fff0eb; color: #7a2f1e; font-size: .9rem; }
+@keyframes pantry-pulse { 50% { box-shadow: 0 0 0 6px rgb(212 83 30 / 12%); } }
+@media (prefers-reduced-motion: reduce) { .voice-button.is-listening { animation: none; } }
+@media (max-width: 720px) { .pantry-assistant, .pantry-menu { padding: 17px; }.assistant-status { align-self: flex-start; font-size: 0; padding: 8px; }.assistant-status span { width: 8px; height: 8px; }.pantry-menu-grid { grid-template-columns: 1fr; }.pantry-menu-card { min-height: unset; }.pantry-menu-heading { align-items: flex-start; }.pantry-menu-heading .outline-button { padding: 0 12px; }.assistant-actions button { flex: 1; padding: 0 12px; font-size: .88rem; } }
+
 /* Delete button */
 .delete-button { margin-top: 8px; color: #7a2f1e; border-color: #cfbfae; }
 .delete-button:hover { background: #fff0eb; }
