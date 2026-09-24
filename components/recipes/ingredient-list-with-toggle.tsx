@@ -142,13 +142,15 @@ export function IngredientListWithToggle({ ingredients, recipeTitle }: Props) {
               <div key={si}>
                 {section.title && (
                   <h3 style={{
-                    margin: '0 0 8px',
-                    fontSize: '1rem',
-                    fontWeight: 700,
+                    margin: '0 0 10px',
+                    fontSize: '.9rem',
+                    fontWeight: 800,
                     color: 'var(--ink)',
-                    borderBottom: '2px solid var(--accent, #65a30d)',
-                    paddingBottom: 4,
-                    display: 'inline-block',
+                    background: 'var(--terracotta-bg, #ecfccb)',
+                    padding: '6px 14px',
+                    borderRadius: 8,
+                    borderRight: '4px solid var(--accent, #65a30d)',
+                    display: 'block',
                   }}>
                     {section.title}
                   </h3>
