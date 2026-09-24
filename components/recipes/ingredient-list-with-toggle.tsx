@@ -149,7 +149,7 @@ export function IngredientListWithToggle({ ingredients, recipeTitle }: Props) {
                     background: 'var(--terracotta-bg, #ecfccb)',
                     padding: '6px 14px',
                     borderRadius: 8,
-                    borderRight: '4px solid var(--accent, #65a30d)',
+                    borderRight: '4px solid var(--terracotta, #65a30d)',
                     display: 'block',
                   }}>
                     {section.title}
