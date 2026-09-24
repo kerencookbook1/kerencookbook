@@ -53,8 +53,8 @@ export async function rebuildRecipeFromSource(recipeId: string): Promise<Rebuild
     .filter((i) => i.name.trim().length > 0)
 
   const cleanedSteps = extracted.steps
-    .map((body) => body.trim())
-    .filter(Boolean)
+    .map((s) => ({ title: s.title ?? null, body: s.body.trim() }))
+    .filter((s) => s.body)
 
   // Replace ingredients + steps in a single transaction-ish sequence.
   // (Supabase JS lacks explicit transactions client-side, but delete-then-
@@ -80,10 +80,10 @@ export async function rebuildRecipeFromSource(recipeId: string): Promise<Rebuild
 
   if (cleanedSteps.length > 0) {
     const { error: insStepErr } = await supabase.from('recipe_steps').insert(
-      cleanedSteps.map((body, i) => ({
+      cleanedSteps.map((step, i) => ({
         recipe_id: recipeId,
-        title: null,
-        body,
+        title: step.title,
+        body: step.body,
         duration_seconds: null,
         position: i,
       })),

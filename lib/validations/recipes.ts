@@ -4,6 +4,7 @@ export const ingredientItemSchema = z.object({
   name: z.string().min(1, 'שם מרכיב הוא שדה חובה'),
   amount: z.string().optional().default(''),
   unit: z.string().optional().default(''),
+  groupTitle: z.string().optional().default(''),
 })
 
 export const stepItemSchema = z.object({

@@ -14,6 +14,7 @@ export type IncomingShare = {
   senderName: string
   senderEmail: string | null
   createdAt: string
+  respondedAt: string | null
   status: 'pending' | 'accepted' | 'rejected'
 }
 
@@ -102,6 +103,7 @@ export async function getIncomingShares(): Promise<IncomingShare[]> {
     senderName: profileById.get(share.sender_id) ?? 'משתמשת רשומה',
     senderEmail: null,
     createdAt: share.created_at,
+    respondedAt: share.responded_at,
     status: share.status as IncomingShare['status'],
   }))
 }

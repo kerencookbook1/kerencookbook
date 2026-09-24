@@ -29,9 +29,21 @@ const SYSTEM_PROMPT = `אתה מומחה OCR ומחלץ מתכונים מתמו�
   "prep_minutes": דקות הכנה או null,
   "cook_minutes": דקות בישול או null,
   "author": "שם השף/המחבר אם רשום בתמונה (למשל: 'המתכון של סבתא רות', 'מאת אבי כהן') — אחרת null",
-  "ingredients": ["מרכיב שכתוב בתמונה", ...],
-  "steps": ["שלב שכתוב בתמונה", ...]
-}`
+  "ingredientGroups": [
+    {"title": "כותרת החלק (למשל 'לעוגה', 'לרוטב', 'לפירורים') — או null אם אין חלקים נפרדים", "items": ["מרכיב עם כמות ויחידה", ...]},
+    {"title": "כותרת חלק נוסף", "items": ["..."]}
+  ],
+  "steps": [
+    {"title": "שם הסעיף אם השלב שייך לחלק מסוים (למשל 'לפירורים', 'הכנת הרוטב') — או null", "body": "תיאור השלב כפי שכתוב"},
+    ...
+  ]
+}
+הערות חשובות: אם המתכון פשוט ללא חלקים, השתמש ב-ingredientGroups עם פריט אחד שה-title שלו הוא null. אל תמציא חלוקה לחלקים אם אין כזאת בפועל.`
+
+export type IngredientGroup = {
+  title: string | null
+  items: string[]
+}
 
 export type ExtractedRecipe = {
   title: string
@@ -42,8 +54,12 @@ export type ExtractedRecipe = {
   cook_minutes?: number | null
   /** Name of the chef / recipe author, when detectable from the text. */
   author?: string | null
+  /** Flat ingredient strings — derived from ingredientGroups, kept for backward compat. */
   ingredients: string[]
-  steps: string[]
+  /** Grouped ingredients — always present (at least one group with title=null for simple recipes). */
+  ingredientGroups: IngredientGroup[]
+  /** Structured steps — each may carry an optional section title. */
+  steps: Array<{ title: string | null; body: string }>
   provider?: string
   raw_text?: string | null
   recognition_failed?: boolean
@@ -232,6 +248,7 @@ export async function extractRecipe(
       prep_minutes: null,
       cook_minutes: null,
       ingredients: [],
+      ingredientGroups: [],
       steps: [],
       raw_text: ocr.raw_text || '',
       recognition_failed: true,
@@ -251,6 +268,7 @@ export async function extractRecipe(
       prep_minutes: null,
       cook_minutes: null,
       ingredients: [],
+      ingredientGroups: [],
       steps: [],
       raw_text: ocr.raw_text,
       recognition_failed: true,
@@ -263,7 +281,10 @@ export async function extractRecipe(
   const structured = await extractRecipeFromText(id, key, ocr.raw_text, '')
 
   // Gate C — structuring stage output doesn't match the OCR text
-  const score = groundingScore(structured, ocr.raw_text)
+  const score = groundingScore(
+    { title: structured.title, ingredients: structured.ingredients, steps: structured.steps.map((s) => s.body) },
+    ocr.raw_text,
+  )
   if (score < 0.4) {
     return {
       title: 'זיהוי לא אמין',
@@ -273,6 +294,7 @@ export async function extractRecipe(
       prep_minutes: null,
       cook_minutes: null,
       ingredients: [],
+      ingredientGroups: [],
       steps: [],
       raw_text: ocr.raw_text,
       recognition_failed: true,
@@ -332,6 +354,7 @@ export async function extractRecipeFromPages(
       prep_minutes: null,
       cook_minutes: null,
       ingredients: [],
+      ingredientGroups: [],
       steps: [],
       raw_text: combinedText,
       recognition_failed: true,
@@ -340,8 +363,6 @@ export async function extractRecipeFromPages(
     }
   }
 
-  // Same "too many [לא ברור]" gate — but computed on the combined text, so a
-  // single hard-to-read page in a batch of three doesn't fail the whole scan.
   const unclear = unclearRatio(combinedText)
   if (unclear > 0.35) {
     return {
@@ -352,6 +373,7 @@ export async function extractRecipeFromPages(
       prep_minutes: null,
       cook_minutes: null,
       ingredients: [],
+      ingredientGroups: [],
       steps: [],
       raw_text: combinedText,
       recognition_failed: true,
@@ -363,7 +385,10 @@ export async function extractRecipeFromPages(
   // ─── Stage 2: structure the combined text into a single recipe ───
   const structured = await extractRecipeFromText(id, key, combinedText, '')
 
-  const score = groundingScore(structured, combinedText)
+  const score = groundingScore(
+    { title: structured.title, ingredients: structured.ingredients, steps: structured.steps.map((s) => s.body) },
+    combinedText,
+  )
   if (score < 0.4) {
     return {
       title: 'זיהוי לא אמין',
@@ -373,6 +398,7 @@ export async function extractRecipeFromPages(
       prep_minutes: null,
       cook_minutes: null,
       ingredients: [],
+      ingredientGroups: [],
       steps: [],
       raw_text: combinedText,
       recognition_failed: true,
@@ -554,9 +580,16 @@ const TEXT_SYSTEM_PROMPT = `אתה מומחה בזיהוי מתכונים מטק
   "prep_minutes": דקות הכנה או null,
   "cook_minutes": דקות בישול או null,
   "author": "שם השף/המחבר או null",
-  "ingredients": ["מרכיב עם כמות ויחידה", ...],
-  "steps": ["שלב 1", "שלב 2", ...]
-}`
+  "ingredientGroups": [
+    {"title": "כותרת החלק (למשל 'לרוטב', 'לבצק', 'לציפוי') — null אם אין חלקים נפרדים", "items": ["מרכיב עם כמות ויחידה", ...]},
+    {"title": "חלק נוסף אם קיים", "items": ["..."]}
+  ],
+  "steps": [
+    {"title": "שם הסעיף אם השלב שייך לחלק מסוים (למשל 'הכנת הרוטב') — null אם אין", "body": "תיאור מלא של השלב"},
+    ...
+  ]
+}
+חשוב: אם המתכון פשוט ללא חלקים נפרדים, השתמש ב-ingredientGroups עם אובייקט אחד בלבד שה-title שלו הוא null. אל תמציא חלוקה לחלקים אם אין כזאת בטקסט.`
 
 /**
  * Extra prompt appended when the caller wants the output localized to Hebrew
@@ -689,8 +722,14 @@ const YOUTUBE_VIDEO_SYSTEM_PROMPT = `אתה מומחה בזיהוי מתכוני
   "prep_minutes": מספר או null,
   "cook_minutes": מספר או null,
   "author": "שם היוצר/השף או null",
-  "ingredients": ["מרכיב עם כמות ויחידה", ...],
-  "steps": ["שלב 1", "שלב 2", ...],
+  "ingredientGroups": [
+    {"title": "כותרת החלק (למשל 'לרוטב') — null אם אין חלקים", "items": ["מרכיב עם כמות ויחידה", ...]},
+    ...
+  ],
+  "steps": [
+    {"title": "שם הסעיף אם רלוונטי — null אם לא", "body": "תיאור השלב"},
+    ...
+  ],
   "recognition_failed": false,
   "reason": null
 }`
@@ -741,6 +780,36 @@ function parseJsonFromModelText(text: string): Omit<ExtractedRecipe, 'provider'>
     .trim()
   const parsed = JSON.parse(cleaned)
   const rawTitle = typeof parsed.title === 'string' && parsed.title.trim() ? parsed.title.trim() : null
+
+  // Parse ingredientGroups (new format) — fall back to flat ingredients (old format)
+  let ingredientGroups: IngredientGroup[]
+  if (Array.isArray(parsed.ingredientGroups) && parsed.ingredientGroups.length > 0) {
+    ingredientGroups = parsed.ingredientGroups.map((g: unknown) => {
+      const group = g as Record<string, unknown>
+      const title = typeof group.title === 'string' && group.title.trim() ? group.title.trim() : null
+      const items = Array.isArray(group.items) ? group.items.map(String).filter(Boolean) : []
+      return { title, items }
+    }).filter((g: IngredientGroup) => g.items.length > 0)
+  } else if (Array.isArray(parsed.ingredients) && parsed.ingredients.length > 0) {
+    ingredientGroups = [{ title: null, items: parsed.ingredients.map(String).filter(Boolean) }]
+  } else {
+    ingredientGroups = []
+  }
+
+  // Derive flat list for backward compat
+  const ingredients = ingredientGroups.flatMap((g) => g.items)
+
+  // Parse steps — new format is [{title, body}], old format is [string]
+  const steps: Array<{ title: string | null; body: string }> = Array.isArray(parsed.steps)
+    ? parsed.steps.map((s: unknown) => {
+        if (typeof s === 'string') return { title: null, body: s }
+        const obj = s as Record<string, unknown>
+        const title = typeof obj.title === 'string' && obj.title.trim() ? obj.title.trim() : null
+        const body = typeof obj.body === 'string' ? obj.body : String(s)
+        return { title, body }
+      }).filter((s: { body: string }) => s.body.trim())
+    : []
+
   return {
     title: rawTitle ?? 'מתכון ללא שם',
     description: parsed.description ?? null,
@@ -748,8 +817,10 @@ function parseJsonFromModelText(text: string): Omit<ExtractedRecipe, 'provider'>
     servings: typeof parsed.servings === 'number' ? parsed.servings : null,
     prep_minutes: typeof parsed.prep_minutes === 'number' ? parsed.prep_minutes : null,
     cook_minutes: typeof parsed.cook_minutes === 'number' ? parsed.cook_minutes : null,
-    ingredients: Array.isArray(parsed.ingredients) ? parsed.ingredients.map(String) : [],
-    steps: Array.isArray(parsed.steps) ? parsed.steps.map(String) : [],
+    author: typeof parsed.author === 'string' && parsed.author.trim() ? parsed.author.trim() : null,
+    ingredients,
+    ingredientGroups,
+    steps,
     raw_text: typeof parsed.raw_text === 'string' ? parsed.raw_text : null,
     recognition_failed: parsed.recognition_failed === true || rawTitle === null,
     reason: typeof parsed.reason === 'string' ? parsed.reason : null,

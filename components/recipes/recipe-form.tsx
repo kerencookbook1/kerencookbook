@@ -41,7 +41,7 @@ export function RecipeForm({ action, initial = {}, imagesSection }: Props) {
   )
   const [title, setTitle] = useState<string>(initial.title ?? '')
   const [ingredients, setIngredients] = useState<IngredientItem[]>(
-    initial.ingredients ?? [{ name: '', amount: '', unit: '' }]
+    initial.ingredients ?? [{ name: '', amount: '', unit: '', groupTitle: '' }]
   )
   const [steps, setSteps] = useState<StepItem[]>(
     initial.steps ?? [{ title: '', body: '', durationSeconds: null }]

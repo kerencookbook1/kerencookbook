@@ -4,12 +4,12 @@ import { useSearch } from './search-provider'
 
 /** Compact icon-only button (used in sidebar top / bottom nav). */
 export function SearchTrigger({ className, style, label }: { className?: string; style?: React.CSSProperties; label?: string }) {
-  const { open } = useSearch()
+  const { openWebSearch } = useSearch()
   return (
     <button
       type="button"
       className={className}
-      onClick={open}
+      onClick={openWebSearch}
       aria-label="חיפוש חכם"
       style={style}
     >
@@ -33,7 +33,7 @@ export function SearchBarTrigger({ placeholder = 'חיפוש מתכון, מרכ�
       type="button"
       onClick={open}
       className="search-box"
-      aria-label="פתחי חיפוש חכם"
+      aria-label="חיפוש במתכונים שלי"
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
         width: '100%', minHeight: 46, border: '1px solid var(--line)',

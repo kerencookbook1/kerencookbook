@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { AppNavigation } from "../components/app-navigation";
 import { SearchProvider } from "./_components/search-provider";
 import "./globals.css";
 import { Geist } from "next/font/google";
+import Script from "next/script";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
@@ -15,12 +16,20 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="he" dir="rtl" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <head>
         {/* Restore saved theme before first paint to avoid flash */}
-        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('theme')||'modern';document.documentElement.setAttribute('data-theme',t);}catch(e){}` }} />
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`try{var t=localStorage.getItem('theme')||'modern';document.documentElement.setAttribute('data-theme',t);}catch(e){}`}
+        </Script>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&family=Playfair+Display:wght@700;900&family=Space+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet" />
@@ -29,7 +38,13 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <SearchProvider>
           <div className="app-frame">
             <AppNavigation />
-            <div className="app-page">{children}</div>
+            <div className="app-page">
+              {children}
+              <div className="page-watermark" aria-hidden="true">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo-watermark.png" alt="" />
+              </div>
+            </div>
           </div>
         </SearchProvider>
       </body>

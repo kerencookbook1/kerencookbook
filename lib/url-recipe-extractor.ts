@@ -220,7 +220,8 @@ function extractFromJsonLd(html: string, sourceUrl: string): ImportResult | null
     prep_minutes: parseIsoDuration(strGet(recipe, 'prepTime')),
     cook_minutes: parseIsoDuration(strGet(recipe, 'cookTime')),
     ingredients: parseStringArray(recipe['recipeIngredient']),
-    steps: parseInstructions(recipe['recipeInstructions']),
+    ingredientGroups: [],
+    steps: parseInstructions(recipe['recipeInstructions']).map(body => ({ title: null, body })),
     author: parseAuthor(recipe['author']),
     source_url: sourceUrl,
     source_site: safeHostname(sourceUrl),
@@ -310,6 +311,18 @@ function cleanRecipeText(input: string): string {
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
+    .replace(/&ldquo;/gi, '“')
+    .replace(/&rdquo;/gi, '”')
+    .replace(/&lsquo;/gi, '‘')
+    .replace(/&rsquo;/gi, '’')
+    .replace(/&ndash;/gi, '–')
+    .replace(/&mdash;/gi, '—')
+    .replace(/&minus;/gi, '−')
+    .replace(/&times;/gi, '×')
+    .replace(/&deg;/gi, '°')
+    .replace(/&frac14;/gi, '¼')
+    .replace(/&frac12;/gi, '½')
+    .replace(/&frac34;/gi, '¾')
     .replace(/&apos;/gi, "'")
   // Numeric decimal / hex entities
   s = s.replace(/&#(\d+);/g, (_, n) => {
@@ -500,6 +513,18 @@ export function stripHtml(html: string): string {
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
+    .replace(/&ldquo;/gi, '“')
+    .replace(/&rdquo;/gi, '”')
+    .replace(/&lsquo;/gi, '‘')
+    .replace(/&rsquo;/gi, '’')
+    .replace(/&ndash;/gi, '–')
+    .replace(/&mdash;/gi, '—')
+    .replace(/&minus;/gi, '−')
+    .replace(/&times;/gi, '×')
+    .replace(/&deg;/gi, '°')
+    .replace(/&frac14;/gi, '¼')
+    .replace(/&frac12;/gi, '½')
+    .replace(/&frac34;/gi, '¾')
     .replace(/&#39;/gi, "'")
     .replace(/&#(\d+);/g, (_, n) => { try { return String.fromCodePoint(parseInt(n, 10)) } catch { return _ } })
     .replace(/&#x([0-9a-fA-F]+);/g, (_, n) => { try { return String.fromCodePoint(parseInt(n, 16)) } catch { return _ } })
@@ -587,12 +612,14 @@ export async function importRecipeFromUrl(
       // links, hashtags, and other noise that leaked through from the page
       // shell into the AI's step + ingredient output.
       const hebrew = looksHebrew(recipe.title + ' ' + recipe.ingredients.join(' '))
-      const cleanedIngredients = filterNoiseSteps(recipe.ingredients, hebrew)
-      const cleanedSteps = filterNoiseSteps(recipe.steps, hebrew)
+      const normalizedIngredients = recipe.ingredients.map(cleanRecipeText)
+      const normalizedSteps = recipe.steps.map(s => ({ ...s, body: cleanRecipeText(s.body) }))
+      const cleanedIngredients = filterNoiseSteps(normalizedIngredients, hebrew)
+      const cleanedSteps = normalizedSteps.filter(s => filterNoiseSteps([s.body], hebrew).length > 0)
       return {
         ...recipe,
-        ingredients: cleanedIngredients.length ? cleanedIngredients : recipe.ingredients,
-        steps: cleanedSteps.length ? cleanedSteps : recipe.steps,
+        ingredients: cleanedIngredients.length ? cleanedIngredients : normalizedIngredients,
+        steps: cleanedSteps.length ? cleanedSteps : normalizedSteps,
         source_url: url.toString(),
         source_site: safeHostname(url.toString()),
         image_url: ogImage,

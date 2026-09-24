@@ -21,7 +21,7 @@ type ImportResult = {
   prep_minutes?: number | null;
   cook_minutes?: number | null;
   ingredients: string[];
-  steps: string[];
+  steps: Array<{ title: string | null; body: string }>;
   provider?: string;
   source_url: string;
   source_site?: string;
@@ -72,7 +72,7 @@ export default function ImportUrlPage() {
       setDescription(extracted.description || "");
       setCategory(isCategoryId(extracted.category) ? extracted.category : "");
       setIngredients((extracted.ingredients || []).join("\n"));
-      setSteps((extracted.steps || []).map((s, i) => `${i + 1}. ${s}`).join("\n"));
+      setSteps((extracted.steps || []).map((s, i) => `${i + 1}. ${typeof s === 'string' ? s : s.body}`).join("\n"));
       setStage("review");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

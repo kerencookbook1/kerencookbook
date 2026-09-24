@@ -28,6 +28,51 @@ function parseJson<T>(raw: string): T[] {
   }
 }
 
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
+
+async function insertIngredientsWithGroups(
+  supabase: SupabaseClient,
+  recipeId: string,
+  ingredients: IngredientItem[],
+) {
+  if (ingredients.length === 0) return
+
+  // Collect unique named group titles in order of first appearance
+  const groupTitles: string[] = []
+  for (const ing of ingredients) {
+    const t = ing.groupTitle?.trim() ?? ''
+    if (t && !groupTitles.includes(t)) groupTitles.push(t)
+  }
+
+  // Insert ingredient_groups rows and build title→id map
+  const groupIdByTitle = new Map<string, string>()
+  if (groupTitles.length > 0) {
+    const { data: groups } = await supabase
+      .from('ingredient_groups')
+      .insert(groupTitles.map((title, position) => ({ recipe_id: recipeId, title, position })))
+      .select('id, title')
+    for (const g of groups ?? []) {
+      if (g.title) groupIdByTitle.set(g.title, g.id)
+    }
+  }
+
+  await supabase.from('ingredients').insert(
+    ingredients
+      .filter((ing) => ing.name.trim())
+      .map((ing, i) => {
+        const t = ing.groupTitle?.trim() ?? ''
+        return {
+          recipe_id: recipeId,
+          name: ing.name.trim(),
+          amount: ing.amount?.trim() || null,
+          unit: ing.unit?.trim() || null,
+          group_id: t ? (groupIdByTitle.get(t) ?? null) : null,
+          position: i,
+        }
+      }),
+  )
+}
+
 export async function createRecipe(
   _prev: RecipeActionState,
   formData: FormData
@@ -129,19 +174,7 @@ Run this in Supabase SQL Editor to re-enable them:
     }
   }
 
-  if (ingredients.length > 0) {
-    await supabase.from('ingredients').insert(
-      ingredients
-        .filter(ing => ing.name.trim())
-        .map((ing, i) => ({
-          recipe_id: recipe.id,
-          name: ing.name.trim(),
-          amount: ing.amount?.trim() || null,
-          unit: ing.unit?.trim() || null,
-          position: i,
-        }))
-    )
-  }
+  await insertIngredientsWithGroups(supabase, recipe.id, ingredients)
 
   if (steps.length > 0) {
     await supabase.from('recipe_steps').insert(
@@ -239,22 +272,12 @@ export async function updateRecipe(
 
   if (updateError) return { error: 'שגיאה בעדכון המתכון' }
 
+  // Ingredients reference ingredient_groups via FK — delete ingredients first
   await supabase.from('ingredients').delete().eq('recipe_id', recipeId)
+  await supabase.from('ingredient_groups').delete().eq('recipe_id', recipeId)
   await supabase.from('recipe_steps').delete().eq('recipe_id', recipeId)
 
-  if (ingredients.length > 0) {
-    await supabase.from('ingredients').insert(
-      ingredients
-        .filter(ing => ing.name.trim())
-        .map((ing, i) => ({
-          recipe_id: recipeId,
-          name: ing.name.trim(),
-          amount: ing.amount?.trim() || null,
-          unit: ing.unit?.trim() || null,
-          position: i,
-        }))
-    )
-  }
+  await insertIngredientsWithGroups(supabase, recipeId, ingredients)
 
   if (steps.length > 0) {
     await supabase.from('recipe_steps').insert(

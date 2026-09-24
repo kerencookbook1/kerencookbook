@@ -125,6 +125,12 @@ docs/         decisions, progress, test matrix, responsive contract
 - `editor`: יצירה ועריכה.
 - `viewer`: צפייה בלבד.
 
+### כלל שיתוף מתכון
+
+- שיתוף מתכון אינו מעניק למקבל הרשאה לשנות מרכיבים, שלבים או כל פרט אצל השולח.
+- באישור שיתוף נוצר עותק פרטי אצל המקבל; שינויים בעותק אינם משפיעים על המתכון המקורי.
+- התצוגה הראשונית של שיתוף היא לקריאה ואישור בלבד; השולח נשאר הבעלים היחיד של המקור.
+
 ## 9. משתני סביבה
 
 שמות בלבד. אסור להכניס ערכים או סודות לקובץ זה או ל-Git.
@@ -257,7 +263,7 @@ npx vercel --prod
 | Local | `http://localhost:3000` | local | - | not_started | - |
 | Preview | יתווסף | test/preview | - | not_started | - |
 | Staging | יתווסף | staging | - | not_started | - |
-| Production | יתווסף | production | - | not_started | - |
+| Production | `https://kerencookbook-web-gray.vercel.app` | production | Vercel | deployed | 2026-09-20 |
 
 ## 16. החלטות טכניות
 

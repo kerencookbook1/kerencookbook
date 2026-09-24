@@ -4,12 +4,15 @@ import { resolveRecipeImageUrl } from '@/lib/recipe-image-url'
 
 export type RecipeRow = Database['public']['Tables']['recipes']['Row']
 export type IngredientRow = Database['public']['Tables']['ingredients']['Row']
+export type IngredientGroupRow = Database['public']['Tables']['ingredient_groups']['Row']
 export type StepRow = Database['public']['Tables']['recipe_steps']['Row']
 export type ImageRow = Database['public']['Tables']['recipe_images']['Row']
 
+export type IngredientWithGroup = IngredientRow & { groupTitle: string | null }
+
 export type RecipeWithDetails = {
   recipe: RecipeRow
-  ingredients: IngredientRow[]
+  ingredients: IngredientWithGroup[]
   steps: StepRow[]
   images: ImageRow[]
 }
@@ -127,16 +130,28 @@ export async function getRecipeCards(
 
 export async function getRecipe(id: string): Promise<RecipeWithDetails | null> {
   const supabase = await createClient()
-  const [recipeRes, ingredientsRes, stepsRes, imagesRes] = await Promise.all([
+  const [recipeRes, ingredientsRes, groupsRes, stepsRes, imagesRes] = await Promise.all([
     supabase.from('recipes').select('*').eq('id', id).single(),
     supabase.from('ingredients').select('*').eq('recipe_id', id).order('position'),
+    supabase.from('ingredient_groups').select('*').eq('recipe_id', id).order('position'),
     supabase.from('recipe_steps').select('*').eq('recipe_id', id).order('position'),
     supabase.from('recipe_images').select('*').eq('recipe_id', id).order('position'),
   ])
   if (recipeRes.error || !recipeRes.data) return null
+
+  const groupById = new Map<string, string>()
+  for (const g of groupsRes.data ?? []) {
+    if (g.title) groupById.set(g.id, g.title)
+  }
+
+  const ingredients: IngredientWithGroup[] = (ingredientsRes.data ?? []).map((ing) => ({
+    ...ing,
+    groupTitle: ing.group_id ? (groupById.get(ing.group_id) ?? null) : null,
+  }))
+
   return {
     recipe: recipeRes.data,
-    ingredients: ingredientsRes.data ?? [],
+    ingredients,
     steps: stepsRes.data ?? [],
     images: imagesRes.data ?? [],
   }

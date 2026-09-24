@@ -64,6 +64,7 @@ export default async function EditRecipePage({ params }: Props) {
             name: ing.name,
             amount: ing.amount ?? '',
             unit: ing.unit ?? '',
+            groupTitle: ing.groupTitle ?? '',
           })),
           steps: steps.map((s) => ({
             title: s.title ?? '',

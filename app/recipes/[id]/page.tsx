@@ -81,6 +81,7 @@ export default async function RecipePage({ params }: Props) {
               amount: ing.amount,
               unit: ing.unit,
               name: ing.name,
+              groupTitle: ing.groupTitle,
             }))}
           />
         </section>
@@ -104,40 +105,65 @@ export default async function RecipePage({ params }: Props) {
   )
 
   const stepsPanel = steps.length > 0 ? (
-    <ol style={{ display: 'grid', gap: 20, margin: 0, paddingRight: 22 }}>
-      {steps.map((step, i) => {
-        // Detect timer expressions inside the step body ("3 דקות", "1½ שעות",
-        // "5-7 דק'") and emit one countdown button per hit. The `duration_seconds`
-        // column feeds a primary timer button that appears first when present.
-        const inlineTimers = parseStepTimers(step.body)
-        const timers: Array<{ seconds: number; label?: string }> = []
-        if (step.duration_seconds && step.duration_seconds > 0) {
-          timers.push({ seconds: step.duration_seconds })
-        }
-        for (const t of inlineTimers) {
-          if (!timers.some((existing) => Math.abs(existing.seconds - t.seconds) < 5)) {
-            timers.push({ seconds: t.seconds, label: t.label })
+    <div style={{ display: 'grid', gap: 24 }}>
+      {(() => {
+        // Group consecutive steps that share the same title into sections
+        const sections: Array<{ title: string | null; steps: typeof steps }> = []
+        for (const step of steps) {
+          const t = step.title?.trim() || null
+          if (!sections.length || t !== sections[sections.length - 1].title) {
+            sections.push({ title: t, steps: [] })
           }
+          sections[sections.length - 1].steps.push(step)
         }
-        return (
-          <li key={step.id} style={{ lineHeight: 1.65 }}>
-            {step.title && (
-              <strong style={{ display: 'block', marginBottom: 4, color: 'var(--ink)' }}>
-                שלב {i + 1}: {step.title}
-              </strong>
+        let stepCounter = 0
+        return sections.map((section, si) => (
+          <div key={si}>
+            {section.title && (
+              <h3 style={{
+                margin: '0 0 12px',
+                fontSize: '1.05rem',
+                fontWeight: 700,
+                color: 'var(--ink)',
+                borderBottom: '2px solid var(--accent, #65a30d)',
+                paddingBottom: 4,
+                display: 'inline-block',
+              }}>
+                {section.title}
+              </h3>
             )}
-            <p style={{ margin: 0, color: '#51473e' }}>{step.body}</p>
-            {timers.length > 0 && (
-              <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {timers.map((t, ti) => (
-                  <StepTimerButton key={ti} seconds={t.seconds} restLabel={t.label} />
-                ))}
-              </div>
-            )}
-          </li>
-        )
-      })}
-    </ol>
+            <ol style={{ display: 'grid', gap: 16, margin: 0, paddingRight: 22, counterReset: `step ${stepCounter}` }}>
+              {section.steps.map((step) => {
+                stepCounter++
+                const n = stepCounter
+                const inlineTimers = parseStepTimers(step.body)
+                const timers: Array<{ seconds: number; label?: string }> = []
+                if (step.duration_seconds && step.duration_seconds > 0) {
+                  timers.push({ seconds: step.duration_seconds })
+                }
+                for (const t of inlineTimers) {
+                  if (!timers.some((existing) => Math.abs(existing.seconds - t.seconds) < 5)) {
+                    timers.push({ seconds: t.seconds, label: t.label })
+                  }
+                }
+                return (
+                  <li key={step.id} style={{ lineHeight: 1.65 }} value={n}>
+                    <p style={{ margin: 0, color: '#51473e' }}>{step.body}</p>
+                    {timers.length > 0 && (
+                      <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {timers.map((t, ti) => (
+                          <StepTimerButton key={ti} seconds={t.seconds} restLabel={t.label} />
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
+            </ol>
+          </div>
+        ))
+      })()}
+    </div>
   ) : (
     <p style={{ color: 'var(--muted)' }}>אין הוראות רשומות.</p>
   )

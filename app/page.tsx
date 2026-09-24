@@ -32,10 +32,10 @@ export default async function HomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Home page is a snapshot — cap at 12 latest recipes to keep the query
-  // fast. The full list lives at /recipes with pagination.
+  // Load the complete recipe set so dashboard totals, favorites, diet count,
+  // and category counts stay synchronized with the recipes library.
   const [recipes, profileRes] = await Promise.all([
-    user ? getRecipeCards(user.id, { limit: 12 }) : Promise.resolve([]),
+    user ? getRecipeCards(user.id) : Promise.resolve([]),
     user
       ? supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle()
       : Promise.resolve({ data: null }),

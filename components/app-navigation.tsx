@@ -4,9 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/lib/actions/auth";
 import { ThemeToggle } from "./theme-toggle";
-import { SearchTrigger } from "../app/_components/search-trigger";
 
-type IconName = "home" | "book" | "add" | "chef" | "cart" | "calendar" | "user" | "flame" | "scale";
+type IconName = "home" | "book" | "add" | "chef" | "search" | "cart" | "calendar" | "user" | "flame" | "scale";
 
 type NavItem = {
   href: string;
@@ -22,6 +21,7 @@ type NavItem = {
 
 const items: NavItem[] = [
   { href: "/",         label: "בית",          icon: "home",     exact: true, mobile: true,  desktop: true },
+  { href: "/web-search", label: "חיפוש באינטרנט", mobileLabel: "חיפוש", icon: "search", mobile: true, desktop: true },
   // Recipes — "הוספת מתכון" first, then "שפים" below it (per user request 2026-09-12)
   { href: "/recipes",  label: "המתכונים שלי", mobileLabel: "מתכונים", icon: "book",     mobile: true,  desktop: true, section: "מתכונים" },
   { href: "/import",   label: "הוספת מתכון",  mobileLabel: "הוספה",   icon: "add",      mobile: true,  desktop: true, highlight: true },
@@ -63,6 +63,8 @@ function Icon({ name }: { name: IconName }) {
       return <svg {...props}><circle cx="12" cy="12" r="9" /><path d="M12 8v8" /><path d="M8 12h8" /></svg>;
     case "chef":
       return <svg {...props}><path d="M6 13a4 4 0 0 1-4-4 4 4 0 0 1 4-4 5 5 0 0 1 5-3 5 5 0 0 1 5 3 4 4 0 0 1 4 4 4 4 0 0 1-4 4" /><path d="M6 13v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-6" /></svg>;
+    case "search":
+      return <svg {...props}><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 5 5" /></svg>;
     case "cart":
       return <svg {...props}><circle cx="9" cy="21" r="1.4" /><circle cx="18" cy="21" r="1.4" /><path d="M2 3h3l3 12h11l2-9H7" /></svg>;
     case "calendar":
@@ -84,7 +86,7 @@ function isActive(pathname: string, item: NavItem): boolean {
 
 export function AppNavigation() {
   const pathname = usePathname();
-  const mobileItems = [...items, ...bottomItems].filter((i) => i.mobile !== false);
+  const mobileItems = [...items, ...bottomItems].filter((item) => item.mobile !== false);
   const desktopItems = items.filter((i) => i.desktop !== false);
   const desktopBottomItems = bottomItems.filter((i) => i.desktop !== false);
 
@@ -101,8 +103,7 @@ export function AppNavigation() {
   }
 
   // Split off the very first (untitled) section — typically just "בית" — so
-  // it can render above the search trigger while the titled sections stay
-  // below it. Requested by the user 2026-09-12.
+  // it can render above the titled sidebar sections.
   const [topSection, ...restSections] =
     sections.length && !sections[0].title
       ? [sections[0], ...sections.slice(1)]
@@ -135,9 +136,6 @@ export function AppNavigation() {
           })}
         </div>
       )}
-
-      {/* Sidebar search trigger */}
-      <SearchTrigger className="sidebar-link sidebar-search-btn" label="חיפוש" />
 
       {/* Desktop sidebar — remaining grouped sections */}
       <div className="navigation-sections">

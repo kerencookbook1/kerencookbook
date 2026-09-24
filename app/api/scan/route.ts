@@ -9,6 +9,29 @@ export const maxDuration = 60
 const MAX_PAGES = 3
 const MAX_BYTES_PER_PAGE = 8 * 1024 * 1024 // 8MB
 
+const OCR_MODELS = {
+  openai: 'gpt-4o',
+  anthropic: 'claude-opus-4-7',
+  google: 'gemini-3.6-flash',
+} as const
+
+async function recordOcrScan(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  ownerId: string,
+  provider: keyof typeof OCR_MODELS,
+  status: 'succeeded' | 'failed',
+  details?: string
+) {
+  const { error } = await supabase.from('ocr_scan_logs').insert({
+    owner_id: ownerId,
+    provider,
+    model: OCR_MODELS[provider],
+    status,
+    details: details ?? null,
+  })
+  if (error) console.warn('[scan] could not record OCR model:', error.message)
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -72,10 +95,16 @@ export async function POST(request: Request) {
   for (const { id, key } of candidates) {
     try {
       const recipe = await extractRecipeFromPages(id, key, pages)
-      return NextResponse.json(recipe)
+      await recordOcrScan(supabase, user.id, id, 'succeeded', recipe.provider)
+      return NextResponse.json({
+        ...recipe,
+        ocr_provider: id,
+        ocr_model: OCR_MODELS[id],
+      })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error(`[scan] ${id} failed:`, msg)
+      await recordOcrScan(supabase, user.id, id, 'failed', msg.slice(0, 500))
       errors.push(`${id}: ${msg}`)
     }
   }

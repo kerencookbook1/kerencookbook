@@ -57,7 +57,7 @@ export default async function RecipesPage({
   const dietCountOnPage = recipes.filter((r) => r.is_diet_effective).length
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8" dir="rtl">
+    <main className="w-full px-4 py-6 sm:px-6 sm:py-8" dir="rtl">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
@@ -76,7 +76,7 @@ export default async function RecipesPage({
         </Link>
       </header>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-4">
+      <div className="recipe-stats-grid mt-5">
         {[
           { label: 'סה"כ מתכונים', value: totalCount },
           { label: 'בעמוד זה', value: recipes.length },
@@ -85,12 +85,12 @@ export default async function RecipesPage({
         ].map((s) => (
           <div
             key={s.label}
-            className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm"
+            className="recipe-stat-card"
           >
-            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+            <p className="recipe-stat-label">
               {s.label}
             </p>
-            <p className="mt-1.5 text-2xl font-bold tracking-tight">{s.value}</p>
+            <p className="recipe-stat-value">{s.value}</p>
           </div>
         ))}
       </div>
@@ -130,7 +130,7 @@ export default async function RecipesPage({
           <Link
             key={filter}
             href={filter === 'הכל' ? '/recipes' : `/recipes?filter=${encodeURIComponent(filter)}`}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+            className={`recipe-filter-tab ${activeFilter === filter ? 'recipe-filter-tab-active' : ''} rounded-md px-3 py-1.5 text-sm font-medium transition ${
               activeFilter === filter
                 ? 'bg-neutral-900 text-white'
                 : 'text-neutral-600 hover:bg-neutral-100'

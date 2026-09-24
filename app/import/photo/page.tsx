@@ -53,7 +53,8 @@ type ExtractedRecipe = {
   prep_minutes?: number | null;
   cook_minutes?: number | null;
   ingredients: string[];
-  steps: string[];
+  ingredientGroups?: Array<{ title: string | null; items: string[] }>;
+  steps: Array<{ title: string | null; body: string }>;
   provider?: string;
   raw_text?: string | null;
   recognition_failed?: boolean;
@@ -205,8 +206,21 @@ export default function PhotoImportPage() {
         setSteps("");
       } else {
         setTitle(extracted.title || "");
-        setIngredients((extracted.ingredients || []).join("\n"));
-        setSteps((extracted.steps || []).map((s, i) => `${i + 1}. ${s}`).join("\n"));
+        // Format ingredients with group headers when groups exist
+        const groups = extracted.ingredientGroups;
+        if (groups && groups.length > 1) {
+          setIngredients(groups.map((g) => {
+            const header = g.title ? `=== ${g.title} ===` : '';
+            return [header, ...g.items].filter(Boolean).join('\n');
+          }).join('\n'));
+        } else {
+          setIngredients((extracted.ingredients || []).join("\n"));
+        }
+        // Steps: use body field (new format)
+        setSteps((extracted.steps || []).map((s, i) => {
+          const prefix = s.title ? `[${s.title}] ` : '';
+          return `${i + 1}. ${prefix}${s.body}`;
+        }).join("\n"));
       }
       setStage("review");
     } catch (err) {

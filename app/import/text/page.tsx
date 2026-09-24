@@ -20,7 +20,7 @@ type ExtractedRecipe = {
   prep_minutes?: number | null;
   cook_minutes?: number | null;
   ingredients: string[];
-  steps: string[];
+  steps: Array<{ title: string | null; body: string }>;
   provider?: string;
   author?: string | null;
 };
@@ -59,7 +59,7 @@ export default function ImportTextPage() {
       setRecipe(extracted);
       setTitle(extracted.title || "");
       setIngredients((extracted.ingredients || []).join("\n"));
-      setSteps((extracted.steps || []).map((s, i) => `${i + 1}. ${s}`).join("\n"));
+      setSteps((extracted.steps || []).map((s, i) => `${i + 1}. ${typeof s === 'string' ? s : s.body}`).join("\n"));
       setStage("review");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
