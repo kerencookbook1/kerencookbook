@@ -5,15 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createRecipe } from "@/lib/actions/recipes";
 import { ImageCropper } from "../../_components/image-cropper";
 import { DietFieldControl, type DietOverride } from "@/components/recipes/diet-field-control";
-import { IngredientPicker } from "@/components/recipes/ingredient-picker";
+import { IngredientFields } from "@/components/recipes/ingredient-fields";
 import { parseIngredientLine } from "@/lib/ingredients";
+import type { IngredientItem } from "@/lib/validations/recipes";
 import { createClient } from "@/lib/supabase/client";
 import { RECIPE_IMAGES_BUCKET } from "@/lib/recipe-image-url";
-
-function appendIngredient(current: string, name: string): string {
-  const trimmed = current.replace(/\s+$/, '');
-  return trimmed ? `${trimmed}\n${name}` : name;
-}
 
 /**
  * Normalize an image before sending: apply EXIF orientation so vision
@@ -80,15 +76,15 @@ export default function PhotoImportPage() {
   const [cropActive, setCropActive] = useState<boolean>(false);
   const [recipe, setRecipe] = useState<ExtractedRecipe | null>(null);
   const [title, setTitle] = useState("");
-  const [ingredients, setIngredients] = useState("");
+  const [ingredientItems, setIngredientItems] = useState<IngredientItem[]>([]);
   const [steps, setSteps] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [dietOverride, setDietOverride] = useState<DietOverride>('auto');
 
   const ingredientNames = useMemo(
-    () => ingredients.split("\n").map((l) => l.trim()).filter(Boolean),
-    [ingredients]
+    () => ingredientItems.map(i => i.name).filter(Boolean),
+    [ingredientItems]
   );
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -202,19 +198,21 @@ export default function PhotoImportPage() {
       setRecipe(extracted);
       if (extracted.recognition_failed) {
         setTitle("");
-        setIngredients("");
+        setIngredientItems([]);
         setSteps("");
       } else {
         setTitle(extracted.title || "");
-        // Format ingredients with group headers when groups exist
         const groups = extracted.ingredientGroups;
-        if (groups && groups.length > 1) {
-          setIngredients(groups.map((g) => {
-            const header = g.title ? `=== ${g.title} ===` : '';
-            return [header, ...g.items].filter(Boolean).join('\n');
-          }).join('\n'));
+        if (groups && groups.length > 0) {
+          setIngredientItems(
+            groups.flatMap(g =>
+              g.items.map(item => ({ ...parseIngredientLine(item), groupTitle: g.title ?? '' }))
+            )
+          );
         } else {
-          setIngredients((extracted.ingredients || []).join("\n"));
+          setIngredientItems(
+            (extracted.ingredients || []).map(line => ({ ...parseIngredientLine(line), groupTitle: '' }))
+          );
         }
         // Steps: use body field (new format)
         setSteps((extracted.steps || []).map((s, i) => {
@@ -245,18 +243,7 @@ export default function PhotoImportPage() {
     setSaveError(null);
     setSaving(true);
     try {
-      const ingredientItems: Array<{ name: string; amount: string; unit: string; groupTitle: string }> = [];
-      let currentGroup = '';
-      for (const rawLine of ingredients.split('\n')) {
-        const line = rawLine.trim();
-        if (!line) continue;
-        const groupMatch = line.match(/^===\s*(.+?)\s*===$/);
-        if (groupMatch) {
-          currentGroup = groupMatch[1];
-        } else {
-          ingredientItems.push({ ...parseIngredientLine(line), groupTitle: currentGroup });
-        }
-      }
+      const filteredIngredients = ingredientItems.filter(i => i.name.trim());
 
       const stepItems = steps
         .split("\n")
@@ -297,7 +284,7 @@ export default function PhotoImportPage() {
       if (recipe?.prep_minutes != null) fd.append("prepTime", String(recipe.prep_minutes));
       if (recipe?.cook_minutes != null) fd.append("cookTime", String(recipe.cook_minutes));
       if (recipe?.servings != null) fd.append("servings", String(recipe.servings));
-      fd.append("ingredientsJson", JSON.stringify(ingredientItems));
+      fd.append("ingredientsJson", JSON.stringify(filteredIngredients));
       fd.append("stepsJson", JSON.stringify(stepItems));
       fd.append("isDietOverride", dietOverride);
       if (recipe?.author) fd.append("author", recipe.author);
@@ -616,16 +603,6 @@ export default function PhotoImportPage() {
                       className="outline-button"
                       style={{ minHeight: 38, flex: 1 }}
                       onClick={() => {
-                        if (recipe.raw_text) setIngredients(recipe.raw_text);
-                      }}
-                    >
-                      ⤵ העתיקי לשדה המרכיבים
-                    </button>
-                    <button
-                      type="button"
-                      className="outline-button"
-                      style={{ minHeight: 38, flex: 1 }}
-                      onClick={() => {
                         if (recipe.raw_text) navigator.clipboard?.writeText(recipe.raw_text);
                       }}
                     >
@@ -682,10 +659,13 @@ export default function PhotoImportPage() {
             <label>שם המתכון
               <input value={title} onChange={(e) => setTitle(e.target.value)} />
             </label>
-            <label>מרכיבים
-              <textarea rows={8} value={ingredients} onChange={(e) => setIngredients(e.target.value)} />
-            </label>
-            <IngredientPicker onPick={(name) => setIngredients((v) => appendIngredient(v, name))} />
+            <div>
+              <label style={{ fontWeight: 700, display: 'block', marginBottom: 8 }}>מרכיבים</label>
+              <IngredientFields
+                initial={ingredientItems}
+                onChange={setIngredientItems}
+              />
+            </div>
             <label>שלבי הכנה
               <textarea rows={8} value={steps} onChange={(e) => setSteps(e.target.value)} />
             </label>
