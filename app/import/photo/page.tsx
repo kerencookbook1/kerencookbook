@@ -245,11 +245,18 @@ export default function PhotoImportPage() {
     setSaveError(null);
     setSaving(true);
     try {
-      const ingredientItems = ingredients
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map(parseIngredientLine);
+      const ingredientItems: Array<{ name: string; amount: string; unit: string; groupTitle: string }> = [];
+      let currentGroup = '';
+      for (const rawLine of ingredients.split('\n')) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        const groupMatch = line.match(/^===\s*(.+?)\s*===$/);
+        if (groupMatch) {
+          currentGroup = groupMatch[1];
+        } else {
+          ingredientItems.push({ ...parseIngredientLine(line), groupTitle: currentGroup });
+        }
+      }
 
       const stepItems = steps
         .split("\n")
