@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import './connections.css'
 
-type ProviderId = 'openai' | 'anthropic' | 'google'
+type ProviderId = 'openai' | 'anthropic' | 'google' | 'openrouter'
 
 type ProviderStatus = {
   id: ProviderId
@@ -51,6 +51,15 @@ const HOW_TO: Record<ProviderId, { steps: string[]; note?: string; buttonLabel: 
       'העתיקי את המפתח (מתחיל ב־AIza…) והדביקי אותו כאן למטה.',
     ],
     note: 'חינם בגבולות שימוש רגילים. מהיר יחסית.',
+  },
+  openrouter: {
+    buttonLabel: 'פתח את OpenRouter להרשמה',
+    steps: [
+      'לחצי על הכפתור למטה — נפתח אתר OpenRouter.',
+      'הירשמי (חינם) ולחצי על "Keys" בתפריט.',
+      'לחצי על "Create Key", העתיקי את המפתח (מתחיל ב־sk-or-…) והדביקי אותו כאן.',
+    ],
+    note: 'מפתח אחד נותן גישה לעשרות מודלים — Gemini, GPT-4o, Claude ועוד. יש קרדיט התחלתי חינם.',
   },
 }
 
