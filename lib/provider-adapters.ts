@@ -145,7 +145,7 @@ async function testOpenRouter(key: string): Promise<TestResult> {
     headers: { Authorization: `Bearer ${key}` },
   })
   if (r.ok) {
-    return { ok: true, model: 'google/gemini-2.0-flash (vision)' }
+    return { ok: true, model: 'google/gemini-2.0-flash-001 (vision)' }
   }
   const body = await r.text().catch(() => '')
   return { ok: false, error: `HTTP ${r.status}: ${extractApiMessage(body) || 'לא מורשה'}` }
@@ -564,7 +564,7 @@ async function ocrWithOpenRouter(key: string, imageBase64: string, mimeType: str
       'HTTP-Referer': 'https://kerencookbook.vercel.app',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.0-flash',
+      model: 'google/gemini-2.0-flash-001',
       temperature: 0,
       response_format: { type: 'json_object' },
       messages: [
@@ -751,7 +751,7 @@ async function extractTextWithOpenRouter(key: string, userMsg: string): Promise<
       'HTTP-Referer': 'https://kerencookbook.vercel.app',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.0-flash',
+      model: 'google/gemini-2.0-flash-001',
       temperature: 0,
       response_format: { type: 'json_object' },
       messages: [
@@ -764,7 +764,7 @@ async function extractTextWithOpenRouter(key: string, userMsg: string): Promise<
   const data = await r.json()
   const content = data.choices?.[0]?.message?.content
   if (!content) throw new Error('Empty response from OpenRouter')
-  return { ...parseJsonFromModelText(content), provider: 'openrouter:google/gemini-2.0-flash' }
+  return { ...parseJsonFromModelText(content), provider: 'openrouter:google/gemini-2.0-flash-001' }
 }
 
 /* ─────────────────────────────────────────────────────

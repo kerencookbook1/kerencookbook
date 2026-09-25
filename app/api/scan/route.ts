@@ -13,7 +13,7 @@ const OCR_MODELS = {
   openai: 'gpt-4o',
   anthropic: 'claude-opus-4-7',
   google: 'gemini-3.6-flash',
-  openrouter: 'google/gemini-2.0-flash',
+  openrouter: 'google/gemini-2.0-flash-001',
 } as const
 
 async function recordOcrScan(
