@@ -81,6 +81,8 @@ export async function testProvider(id: ProviderId, key: string): Promise<TestRes
         return await testAnthropic(key)
       case 'google':
         return await testGoogle(key)
+      case 'openrouter':
+        return await testOpenRouter(key)
     }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
@@ -133,6 +135,17 @@ async function testGoogle(key: string): Promise<TestResult> {
   })
   if (r.ok) {
     return { ok: true, model: 'gemini-3.6-flash (vision)' }
+  }
+  const body = await r.text().catch(() => '')
+  return { ok: false, error: `HTTP ${r.status}: ${extractApiMessage(body) || 'לא מורשה'}` }
+}
+
+async function testOpenRouter(key: string): Promise<TestResult> {
+  const r = await fetch('https://openrouter.ai/api/v1/models', {
+    headers: { Authorization: `Bearer ${key}` },
+  })
+  if (r.ok) {
+    return { ok: true, model: 'google/gemini-2.0-flash (vision)' }
   }
   const body = await r.text().catch(() => '')
   return { ok: false, error: `HTTP ${r.status}: ${extractApiMessage(body) || 'לא מורשה'}` }
@@ -418,9 +431,10 @@ export async function extractRecipeFromPages(
 
 async function ocrImageWithProvider(id: ProviderId, key: string, imageBase64: string, mimeType: string): Promise<OcrResult> {
   switch (id) {
-    case 'anthropic': return ocrWithAnthropic(key, imageBase64, mimeType)
-    case 'openai':    return ocrWithOpenAI(key, imageBase64, mimeType)
-    case 'google':    return ocrWithGoogle(key, imageBase64, mimeType)
+    case 'anthropic':   return ocrWithAnthropic(key, imageBase64, mimeType)
+    case 'openai':      return ocrWithOpenAI(key, imageBase64, mimeType)
+    case 'google':      return ocrWithGoogle(key, imageBase64, mimeType)
+    case 'openrouter':  return ocrWithOpenRouter(key, imageBase64, mimeType)
   }
 }
 
@@ -541,6 +555,37 @@ async function ocrWithGoogle(key: string, imageBase64: string, mimeType: string)
   return parseOcrResult(content)
 }
 
+async function ocrWithOpenRouter(key: string, imageBase64: string, mimeType: string): Promise<OcrResult> {
+  const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${key}`,
+      'HTTP-Referer': 'https://kerencookbook.vercel.app',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.0-flash',
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: OCR_ONLY_PROMPT },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'העתק את הטקסט מהתמונה. אל תפרש, אל תמציא. החזר JSON תקף.' },
+            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}`, detail: 'high' } },
+          ],
+        },
+      ],
+    }),
+  })
+  if (!r.ok) throw new Error(`OpenRouter ${r.status}: ${extractApiMessage(await r.text().catch(() => ''))}`)
+  const data = await r.json()
+  const content = data.choices?.[0]?.message?.content
+  if (!content) throw new Error('Empty OCR response from OpenRouter')
+  return parseOcrResult(content)
+}
+
 /* ─────────────────────────────────────────────────────
    EXTRACT FROM TEXT — for URL import fallback
    ───────────────────────────────────────────────────── */
@@ -634,6 +679,8 @@ export async function extractRecipeFromText(
       return extractTextWithOpenAI(key, userMsg)
     case 'google':
       return extractTextWithGoogle(key, userMsg)
+    case 'openrouter':
+      return extractTextWithOpenRouter(key, userMsg)
   }
 }
 
@@ -693,6 +740,31 @@ async function extractTextWithGoogle(key: string, userMsg: string): Promise<Extr
   const content = data.candidates?.[0]?.content?.parts?.[0]?.text
   if (!content) throw new Error('Empty response from Google')
   return { ...parseJsonFromModelText(content), provider: 'google:gemini-3.6-flash' }
+}
+
+async function extractTextWithOpenRouter(key: string, userMsg: string): Promise<ExtractedRecipe> {
+  const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${key}`,
+      'HTTP-Referer': 'https://kerencookbook.vercel.app',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.0-flash',
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: TEXT_SYSTEM_PROMPT },
+        { role: 'user', content: userMsg },
+      ],
+    }),
+  })
+  if (!r.ok) throw new Error(`OpenRouter ${r.status}: ${extractApiMessage(await r.text().catch(() => ''))}`)
+  const data = await r.json()
+  const content = data.choices?.[0]?.message?.content
+  if (!content) throw new Error('Empty response from OpenRouter')
+  return { ...parseJsonFromModelText(content), provider: 'openrouter:google/gemini-2.0-flash' }
 }
 
 /* ─────────────────────────────────────────────────────

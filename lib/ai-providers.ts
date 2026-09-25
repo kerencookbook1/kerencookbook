@@ -177,7 +177,7 @@ export async function getKeyCandidates(): Promise<{ id: ProviderId; key: string;
   const active = rows.find((r) => r.is_active)
   if (active) candidates.push({ id: active.provider, key: active.api_key, source: 'user:active' })
 
-  for (const id of ['anthropic', 'openai', 'google'] as ProviderId[]) {
+  for (const id of ['anthropic', 'openai', 'google', 'openrouter'] as ProviderId[]) {
     const row = rows.find((r) => r.provider === id)
     if (row && !candidates.find((c) => c.id === id)) {
       candidates.push({ id, key: row.api_key, source: 'user' })
@@ -189,6 +189,7 @@ export async function getKeyCandidates(): Promise<{ id: ProviderId; key: string;
       ['anthropic', process.env.AI_PROVIDER_ANTHROPIC_API_KEY],
       ['openai', process.env.AI_PROVIDER_OPENAI_API_KEY],
       ['google', process.env.AI_PROVIDER_GOOGLE_API_KEY],
+      ['openrouter', process.env.AI_PROVIDER_OPENROUTER_API_KEY],
     ]
     for (const [id, key] of envMap) {
       if (key) candidates.push({ id, key, source: 'env' })

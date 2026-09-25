@@ -95,6 +95,8 @@ async function callProvider(id: ProviderId, key: string, userMsg: string): Promi
       return callOpenAI(key, userMsg)
     case 'google':
       return callGoogle(key, userMsg)
+    case 'openrouter':
+      return callOpenRouter(key, userMsg)
   }
 }
 
@@ -160,6 +162,30 @@ async function callGoogle(key: string, userMsg: string): Promise<Result> {
   if (!r.ok) throw new Error(`google ${r.status}: ${await r.text().catch(() => '')}`)
   const data = await r.json()
   const content = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+  return parseJson(content)
+}
+
+async function callOpenRouter(key: string, userMsg: string): Promise<Result> {
+  const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${key}`,
+      'HTTP-Referer': 'https://kerencookbook.vercel.app',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.0-flash',
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userMsg },
+      ],
+    }),
+    signal: AbortSignal.timeout(20_000),
+  })
+  if (!r.ok) throw new Error(`openrouter ${r.status}: ${await r.text().catch(() => '')}`)
+  const data = await r.json()
+  const content = data.choices?.[0]?.message?.content ?? ''
   return parseJson(content)
 }
 

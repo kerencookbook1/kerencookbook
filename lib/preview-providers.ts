@@ -15,7 +15,7 @@ const DATA_DIR = IS_SERVERLESS
   : path.join(process.cwd(), '.data')
 const FILE = path.join(DATA_DIR, 'preview-providers.json')
 
-export type ProviderId = 'openai' | 'anthropic' | 'google'
+export type ProviderId = 'openai' | 'anthropic' | 'google' | 'openrouter'
 
 export const PROVIDER_META: Record<ProviderId, {
   label: string
@@ -40,6 +40,12 @@ export const PROVIDER_META: Record<ProviderId, {
     hint: 'Gemini Vision — מהיר וזול, תמיכה טובה ב-OCR',
     keyPrefix: 'AIza',
     docsUrl: 'https://aistudio.google.com/app/apikey',
+  },
+  openrouter: {
+    label: 'OpenRouter',
+    hint: 'מפתח אחד לעשרות מודלים — Gemini, GPT-4o, Claude ועוד. מומלץ!',
+    keyPrefix: 'sk-or-',
+    docsUrl: 'https://openrouter.ai/settings/keys',
   },
 }
 
@@ -83,7 +89,7 @@ export function maskKey(key: string): string {
 }
 
 export function isValidProviderId(id: unknown): id is ProviderId {
-  return id === 'openai' || id === 'anthropic' || id === 'google'
+  return id === 'openai' || id === 'anthropic' || id === 'google' || id === 'openrouter'
 }
 
 /**
