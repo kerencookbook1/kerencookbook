@@ -81,6 +81,7 @@ export default function PhotoImportPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [dietOverride, setDietOverride] = useState<DietOverride>('auto');
+  const [ocrBadge, setOcrBadge] = useState<{ provider: string; model: string } | null>(null);
 
   const ingredientNames = useMemo(
     () => ingredientItems.map(i => i.name).filter(Boolean),
@@ -181,6 +182,7 @@ export default function PhotoImportPage() {
   async function handleAnalyze() {
     if (pages.length === 0) return;
     setError(null);
+    setOcrBadge(null);
     setStage("loading");
     try {
       const formData = new FormData();
@@ -194,6 +196,9 @@ export default function PhotoImportPage() {
       const res = await fetch("/api/scan", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `שגיאה ${res.status}`);
+      if (data.ocr_provider && data.ocr_model) {
+        setOcrBadge({ provider: data.ocr_provider as string, model: data.ocr_model as string });
+      }
       const extracted = data as ExtractedRecipe;
       setRecipe(extracted);
       if (extracted.recognition_failed) {
@@ -236,6 +241,7 @@ export default function PhotoImportPage() {
     setRecipe(null);
     setError(null);
     setSaveError(null);
+    setOcrBadge(null);
     setStage("upload");
   }
 
@@ -542,6 +548,14 @@ export default function PhotoImportPage() {
             </svg>
             <h2>מחלץ מתכון מ־{pages.length} {pages.length === 1 ? "דף" : "דפים"}…</h2>
             <p>שלב 1: קורא את הטקסט מכל דף · שלב 2: מארגן למבנה מתכון אחד.</p>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 20,
+              padding: '4px 12px', fontSize: 12, fontWeight: 700, color: '#92400e', marginTop: 12
+            }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', display: 'inline-block', animation: 'pulse 1s infinite' }} />
+              OCR עם {ocrBadge ? ocrBadge.model.split('/').pop() : '...'}
+            </div>
           </div>
         </section>
       )}
@@ -650,6 +664,16 @@ export default function PhotoImportPage() {
                 >
                   📷 צילום מחדש
                 </button>
+              </div>
+            )}
+            {ocrBadge && !recipe.recognition_failed && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 20,
+                padding: '4px 12px', fontSize: 12, fontWeight: 700, color: '#15803d',
+                marginBottom: 12
+              }}>
+                ✓ זוהה עם {ocrBadge.provider} · {ocrBadge.model.split('/').pop()}
               </div>
             )}
             <div className="review-status">

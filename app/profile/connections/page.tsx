@@ -17,6 +17,50 @@ type ProviderStatus = {
   lastTestOk?: boolean
   lastTestError?: string
   isActive: boolean
+  model?: string
+}
+
+type ModelOption = { id: string; note: string; category?: string }
+
+const MODEL_OPTIONS: Record<ProviderId, { defaultModel: string; options: ModelOption[] }> = {
+  openai: {
+    defaultModel: 'gpt-4o',
+    options: [
+      { id: 'gpt-4o',      note: 'מעולה לעברית' },
+      { id: 'gpt-4o-mini', note: 'זול יותר' },
+    ],
+  },
+  anthropic: {
+    defaultModel: 'claude-opus-4-7',
+    options: [
+      { id: 'claude-opus-4-7',   note: 'חזק ביותר לכתב יד' },
+      { id: 'claude-sonnet-4-6', note: 'מהיר יותר' },
+      { id: 'claude-haiku-4-5',  note: 'הכי זול' },
+    ],
+  },
+  google: {
+    defaultModel: 'gemini-2.0-flash-001',
+    options: [
+      { id: 'gemini-2.0-flash-001', note: 'ברירת מחדל, מהיר' },
+      { id: 'gemini-1.5-pro',       note: 'OCR מדויק יותר' },
+      { id: 'gemini-1.5-flash',     note: 'הכי מהיר' },
+    ],
+  },
+  openrouter: {
+    defaultModel: 'google/gemini-2.0-flash-001',
+    options: [
+      { id: 'google/gemini-2.0-flash-001',  note: 'מהיר, זול',       category: 'Google Gemini' },
+      { id: 'google/gemini-1.5-pro',        note: 'איכותי יותר',     category: 'Google Gemini' },
+      { id: 'openai/gpt-4o',                note: 'מעולה לעברית',    category: 'OpenAI' },
+      { id: 'openai/gpt-4o-mini',           note: 'זול יותר',        category: 'OpenAI' },
+      { id: 'anthropic/claude-opus-4-7',    note: 'חזק ביותר',       category: 'Anthropic' },
+      { id: 'anthropic/claude-sonnet-4-6',  note: 'מהיר יותר',       category: 'Anthropic' },
+      { id: 'meta-llama/llama-4-maverick',  note: 'ראייה חזקה',      category: 'Meta' },
+      { id: 'meta-llama/llama-4-scout',     note: 'חינם',            category: 'Meta' },
+      { id: 'mistralai/pixtral-large-2411', note: 'Mistral Vision',  category: 'אחר' },
+      { id: 'qwen/qwen2.5-vl-72b-instruct', note: 'Qwen Vision',     category: 'אחר' },
+    ],
+  },
 }
 
 type ProvidersResponse = {
@@ -71,6 +115,8 @@ export default function ConnectionsPage() {
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [revealed, setRevealed] = useState<Record<string, boolean>>({})
   const [testResults, setTestResults] = useState<Record<string, { ok: boolean; message: string }>>({})
+  const [openModelPicker, setOpenModelPicker] = useState<string | null>(null)
+  const [savingModel, setSavingModel] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -169,6 +215,26 @@ export default function ConnectionsPage() {
     }
   }
 
+  async function saveModelChoice(id: ProviderId, modelId: string) {
+    setSavingModel(id)
+    setError(null)
+    try {
+      const r = await fetch('/api/providers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: id, model: modelId }),
+      })
+      const json = await r.json()
+      if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`)
+      setData({ active: json.active, providers: json.providers })
+      setOpenModelPicker(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'שגיאה בשמירת מודל')
+    } finally {
+      setSavingModel(null)
+    }
+  }
+
   async function removeKey(id: ProviderId) {
     if (!confirm(`למחוק את המפתח של ${id}?`)) return
     setBusy(`del:${id}`)
@@ -257,6 +323,62 @@ export default function ConnectionsPage() {
                       </button>
                     </div>
                   )}
+
+                  {hasKey && (() => {
+                    const meta = MODEL_OPTIONS[p.id]
+                    const currentModel = p.model ?? meta.defaultModel
+                    const isOpen = openModelPicker === p.id
+                    const categories = [...new Set(meta.options.map((o) => o.category).filter(Boolean))] as string[]
+                    const hasCategories = categories.length > 0
+                    return (
+                      <div className="prov-model-picker">
+                        <button
+                          type="button"
+                          className="prov-model-toggle"
+                          onClick={() => setOpenModelPicker(isOpen ? null : p.id)}
+                        >
+                          <span>🤖 {currentModel.split('/').pop()}</span>
+                          <span>{isOpen ? 'סגור ▲' : 'שנה ▼'}</span>
+                        </button>
+                        {isOpen && (
+                          <div className="prov-model-list">
+                            {hasCategories ? (
+                              categories.map((cat) => (
+                                <div key={cat}>
+                                  <div className="prov-model-cat">{cat}</div>
+                                  {meta.options.filter((o) => o.category === cat).map((opt) => (
+                                    <button
+                                      key={opt.id}
+                                      type="button"
+                                      className={`prov-model-row${currentModel === opt.id ? ' is-selected' : ''}`}
+                                      onClick={() => saveModelChoice(p.id, opt.id)}
+                                      disabled={savingModel === p.id}
+                                    >
+                                      <span>{opt.id.split('/').pop()}</span>
+                                      <span className="prov-model-note">{opt.note}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              ))
+                            ) : (
+                              meta.options.map((opt) => (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  className={`prov-model-row${currentModel === opt.id ? ' is-selected' : ''}`}
+                                  onClick={() => saveModelChoice(p.id, opt.id)}
+                                  disabled={savingModel === p.id}
+                                >
+                                  <span>{opt.id}</span>
+                                  <span className="prov-model-note">{opt.note}</span>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
 
                   {p.lastTestError && !testResults[p.id] && (
                     <p className="prov-error">שגיאה אחרונה: {p.lastTestError}</p>
