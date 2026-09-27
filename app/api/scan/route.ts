@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getKeyCandidates } from '@/lib/ai-providers'
+import { getKeyCandidates, getModelFor } from '@/lib/ai-providers'
+import type { ProviderId } from '@/lib/preview-providers'
 import { extractRecipeFromPages } from '@/lib/provider-adapters'
 
 export const runtime = 'nodejs'
@@ -9,24 +10,18 @@ export const maxDuration = 60
 const MAX_PAGES = 3
 const MAX_BYTES_PER_PAGE = 8 * 1024 * 1024 // 8MB
 
-const OCR_MODELS = {
-  openai: 'gpt-4o',
-  anthropic: 'claude-opus-4-7',
-  google: 'gemini-3.6-flash',
-  openrouter: 'google/gemini-2.0-flash-001',
-} as const
-
 async function recordOcrScan(
   supabase: Awaited<ReturnType<typeof createClient>>,
   ownerId: string,
-  provider: keyof typeof OCR_MODELS,
+  provider: ProviderId,
   status: 'succeeded' | 'failed',
-  details?: string
+  details?: string,
+  model?: string,
 ) {
   const { error } = await supabase.from('ocr_scan_logs').insert({
     owner_id: ownerId,
     provider,
-    model: OCR_MODELS[provider],
+    model: model ?? provider,
     status,
     details: details ?? null,
   })
@@ -95,12 +90,13 @@ export async function POST(request: Request) {
   const errors: string[] = []
   for (const { id, key } of candidates) {
     try {
-      const recipe = await extractRecipeFromPages(id, key, pages)
-      await recordOcrScan(supabase, user.id, id, 'succeeded', recipe.provider)
+      const model = await getModelFor(id)
+      const recipe = await extractRecipeFromPages(id, key, pages, model)
+      await recordOcrScan(supabase, user.id, id, 'succeeded', recipe.provider, model)
       return NextResponse.json({
         ...recipe,
         ocr_provider: id,
-        ocr_model: OCR_MODELS[id],
+        ocr_model: model,
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)

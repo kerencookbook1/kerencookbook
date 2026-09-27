@@ -8,6 +8,7 @@ type ProviderRow = {
   owner_id: string
   provider: ProviderId
   api_key: string
+  model: string | null
   is_active: boolean
   saved_at: string
   last_tested_at: string | null
@@ -76,6 +77,7 @@ export async function listStatuses(): Promise<{ active: ProviderId | null; provi
       lastTestOk: row?.last_test_ok ?? undefined,
       lastTestError: row?.last_test_error ?? undefined,
       isActive: !!row?.is_active,
+      model: row?.model ?? undefined,
     }
   })
 
@@ -83,7 +85,7 @@ export async function listStatuses(): Promise<{ active: ProviderId | null; provi
 }
 
 /** Upsert an API key. Resets any prior test status. */
-export async function saveKey(provider: ProviderId, apiKey: string): Promise<void> {
+export async function saveKey(provider: ProviderId, apiKey: string, model?: string): Promise<void> {
   const userId = await requireUserId()
   if (!userId) throw new Error('לא מחובר')
   await ensureProfileFor(userId)
@@ -93,6 +95,7 @@ export async function saveKey(provider: ProviderId, apiKey: string): Promise<voi
       owner_id: userId,
       provider,
       api_key: apiKey,
+      model: model ?? null,
       saved_at: new Date().toISOString(),
       last_tested_at: null,
       last_test_ok: null,
@@ -204,4 +207,24 @@ export async function getKeyFor(provider: ProviderId): Promise<string | null> {
   const rows = await listRows()
   const row = rows.find((r) => r.provider === provider)
   return row?.api_key ?? null
+}
+
+/** Get the saved model for a provider, falling back to the provider default. */
+export async function getModelFor(provider: ProviderId): Promise<string> {
+  const rows = await listRows()
+  const row = rows.find((r) => r.provider === provider)
+  return row?.model ?? PROVIDER_META[provider].defaultModel
+}
+
+/** Update only the model for an already-saved provider. */
+export async function saveModel(provider: ProviderId, model: string): Promise<void> {
+  const userId = await requireUserId()
+  if (!userId) throw new Error('לא מחובר')
+  const supabase = await getSupabase()
+  const { error } = await supabase
+    .from('ai_providers')
+    .update({ model })
+    .eq('owner_id', userId)
+    .eq('provider', provider)
+  if (error) throw new Error(`עדכון מודל נכשל: ${error.message}`)
 }

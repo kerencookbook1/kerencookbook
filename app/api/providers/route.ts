@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { deleteKey, listStatuses, saveKey } from '@/lib/ai-providers'
+import { deleteKey, listStatuses, saveKey, saveModel } from '@/lib/ai-providers'
 import { isValidProviderId } from '@/lib/preview-providers'
 
 export const runtime = 'nodejs'
@@ -39,8 +39,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'מפתח לא תקין (מינימום 10 תווים)' }, { status: 400 })
   }
 
+  const model = (body as { model?: unknown }).model
+  const modelStr = typeof model === 'string' && model.trim() ? model.trim() : undefined
+
   try {
-    await saveKey(provider, apiKey.trim())
+    await saveKey(provider, apiKey.trim(), modelStr)
     const result = await listStatuses()
     return NextResponse.json({ ok: true, ...result })
   } catch (err) {
@@ -50,6 +53,29 @@ export async function POST(request: Request) {
       { error: message, userId: user.id },
       { status: 500 }
     )
+  }
+}
+
+export async function PATCH(request: Request) {
+  const user = await requireAuth()
+  if (!user) return NextResponse.json({ error: 'לא מחובר' }, { status: 401 })
+
+  let body: unknown
+  try { body = await request.json() } catch {
+    return NextResponse.json({ error: 'גוף לא תקין' }, { status: 400 })
+  }
+
+  const provider = (body as { provider?: unknown }).provider
+  const model = (body as { model?: unknown }).model
+  if (!isValidProviderId(provider)) return NextResponse.json({ error: 'ספק לא תקין' }, { status: 400 })
+  if (typeof model !== 'string' || !model.trim()) return NextResponse.json({ error: 'מודל לא תקין' }, { status: 400 })
+
+  try {
+    await saveModel(provider, model.trim())
+    const result = await listStatuses()
+    return NextResponse.json({ ok: true, ...result })
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 })
   }
 }
 

@@ -1,4 +1,4 @@
-import type { ProviderId } from './preview-providers'
+import { PROVIDER_META, type ProviderId } from './preview-providers'
 
 const CATEGORY_LIST = 'בשר, עוף, דגים, חלבי, צמחוני, פסטה, אורז ודגנים, סלטים, מרקים, מאפים, קינוחים, שתייה, אחר'
 
@@ -246,10 +246,11 @@ export async function extractRecipe(
   id: ProviderId,
   key: string,
   imageBase64: string,
-  mimeType: string
+  mimeType: string,
+  model?: string,
 ): Promise<ExtractedRecipe> {
   // ─── Stage 1: pure OCR ───
-  const ocr = await ocrImageWithProvider(id, key, imageBase64, mimeType)
+  const ocr = await ocrImageWithProvider(id, key, imageBase64, mimeType, model)
 
   // Gate A — nothing readable at all
   if (!ocr.readable || isTooSparseToBeARecipe(ocr.raw_text)) {
@@ -291,7 +292,7 @@ export async function extractRecipe(
   }
 
   // ─── Stage 2: structure the OCR text into a recipe ───
-  const structured = await extractRecipeFromText(id, key, ocr.raw_text, '')
+  const structured = await extractRecipeFromText(id, key, ocr.raw_text, '', undefined, model)
 
   // Gate C — structuring stage output doesn't match the OCR text
   const score = groundingScore(
@@ -340,13 +341,14 @@ export async function extractRecipeFromPages(
   id: ProviderId,
   key: string,
   pages: Array<{ imageBase64: string; mimeType: string }>,
+  model?: string,
 ): Promise<ExtractedRecipe> {
   if (pages.length === 0) throw new Error('אין דפים לסריקה')
-  if (pages.length === 1) return extractRecipe(id, key, pages[0].imageBase64, pages[0].mimeType)
+  if (pages.length === 1) return extractRecipe(id, key, pages[0].imageBase64, pages[0].mimeType, model)
 
   // ─── Stage 1: OCR each page in parallel ───
   const ocrResults = await Promise.all(
-    pages.map((p) => ocrImageWithProvider(id, key, p.imageBase64, p.mimeType)),
+    pages.map((p) => ocrImageWithProvider(id, key, p.imageBase64, p.mimeType, model)),
   )
 
   const totalPages = pages.length
@@ -396,7 +398,7 @@ export async function extractRecipeFromPages(
   }
 
   // ─── Stage 2: structure the combined text into a single recipe ───
-  const structured = await extractRecipeFromText(id, key, combinedText, '')
+  const structured = await extractRecipeFromText(id, key, combinedText, '', undefined, model)
 
   const score = groundingScore(
     { title: structured.title, ingredients: structured.ingredients, steps: structured.steps.map((s) => s.body) },
@@ -429,16 +431,17 @@ export async function extractRecipeFromPages(
   }
 }
 
-async function ocrImageWithProvider(id: ProviderId, key: string, imageBase64: string, mimeType: string): Promise<OcrResult> {
+async function ocrImageWithProvider(id: ProviderId, key: string, imageBase64: string, mimeType: string, model?: string): Promise<OcrResult> {
+  const m = model ?? PROVIDER_META[id].defaultModel
   switch (id) {
-    case 'anthropic':   return ocrWithAnthropic(key, imageBase64, mimeType)
-    case 'openai':      return ocrWithOpenAI(key, imageBase64, mimeType)
-    case 'google':      return ocrWithGoogle(key, imageBase64, mimeType)
-    case 'openrouter':  return ocrWithOpenRouter(key, imageBase64, mimeType)
+    case 'anthropic':   return ocrWithAnthropic(key, imageBase64, mimeType, m)
+    case 'openai':      return ocrWithOpenAI(key, imageBase64, mimeType, m)
+    case 'google':      return ocrWithGoogle(key, imageBase64, mimeType, m)
+    case 'openrouter':  return ocrWithOpenRouter(key, imageBase64, mimeType, m)
   }
 }
 
-async function ocrWithAnthropic(key: string, imageBase64: string, mimeType: string): Promise<OcrResult> {
+async function ocrWithAnthropic(key: string, imageBase64: string, mimeType: string, model: string): Promise<OcrResult> {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -447,7 +450,7 @@ async function ocrWithAnthropic(key: string, imageBase64: string, mimeType: stri
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-opus-4-7',  // strongest available — better handwriting recognition
+      model,
       max_tokens: 4096,
       temperature: 0,
       system: OCR_ONLY_PROMPT,
@@ -502,12 +505,12 @@ async function ocrWithAnthropicFallback(key: string, imageBase64: string, mimeTy
   return parseOcrResult(content)
 }
 
-async function ocrWithOpenAI(key: string, imageBase64: string, mimeType: string): Promise<OcrResult> {
+async function ocrWithOpenAI(key: string, imageBase64: string, mimeType: string, model: string): Promise<OcrResult> {
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
-      model: 'gpt-4o',
+      model,
       temperature: 0,
       response_format: { type: 'json_object' },
       messages: [
@@ -529,8 +532,8 @@ async function ocrWithOpenAI(key: string, imageBase64: string, mimeType: string)
   return parseOcrResult(content)
 }
 
-async function ocrWithGoogle(key: string, imageBase64: string, mimeType: string): Promise<OcrResult> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(key)}`
+async function ocrWithGoogle(key: string, imageBase64: string, mimeType: string, model: string): Promise<OcrResult> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -555,7 +558,7 @@ async function ocrWithGoogle(key: string, imageBase64: string, mimeType: string)
   return parseOcrResult(content)
 }
 
-async function ocrWithOpenRouter(key: string, imageBase64: string, mimeType: string): Promise<OcrResult> {
+async function ocrWithOpenRouter(key: string, imageBase64: string, mimeType: string, model: string): Promise<OcrResult> {
   const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -564,7 +567,7 @@ async function ocrWithOpenRouter(key: string, imageBase64: string, mimeType: str
       'HTTP-Referer': 'https://kerencookbook.vercel.app',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.0-flash-001',
+      model,
       temperature: 0,
       response_format: { type: 'json_object' },
       messages: [
@@ -669,27 +672,29 @@ export async function extractRecipeFromText(
   text: string,
   sourceUrl: string,
   options?: { translateToHebrew?: boolean },
+  model?: string,
 ): Promise<ExtractedRecipe> {
+  const m = model ?? PROVIDER_META[id].defaultModel
   const localization = options?.translateToHebrew ? HEBREW_LOCALIZATION_INSTRUCTIONS : ''
   const userMsg = `URL של הדף: ${sourceUrl}\n\nתוכן הדף (טקסט בלבד):\n\n${text}\n\nחלץ מתוך זה את המתכון והחזר JSON תקף בלבד.${localization}`
   switch (id) {
     case 'anthropic':
-      return extractTextWithAnthropic(key, userMsg)
+      return extractTextWithAnthropic(key, userMsg, m)
     case 'openai':
-      return extractTextWithOpenAI(key, userMsg)
+      return extractTextWithOpenAI(key, userMsg, m)
     case 'google':
-      return extractTextWithGoogle(key, userMsg)
+      return extractTextWithGoogle(key, userMsg, m)
     case 'openrouter':
-      return extractTextWithOpenRouter(key, userMsg)
+      return extractTextWithOpenRouter(key, userMsg, m)
   }
 }
 
-async function extractTextWithAnthropic(key: string, userMsg: string): Promise<ExtractedRecipe> {
+async function extractTextWithAnthropic(key: string, userMsg: string, model: string): Promise<ExtractedRecipe> {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model,
       max_tokens: 4096,
       temperature: 0,
       system: TEXT_SYSTEM_PROMPT,
@@ -700,15 +705,15 @@ async function extractTextWithAnthropic(key: string, userMsg: string): Promise<E
   const data = await r.json()
   const content = data.content?.[0]?.text
   if (!content) throw new Error('Empty response from Anthropic')
-  return { ...parseJsonFromModelText(content), provider: 'anthropic:claude-sonnet-4-6' }
+  return { ...parseJsonFromModelText(content), provider: `anthropic:${model}` }
 }
 
-async function extractTextWithOpenAI(key: string, userMsg: string): Promise<ExtractedRecipe> {
+async function extractTextWithOpenAI(key: string, userMsg: string, model: string): Promise<ExtractedRecipe> {
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
-      model: 'gpt-4o',
+      model,
       temperature: 0,
       response_format: { type: 'json_object' },
       messages: [
@@ -721,11 +726,11 @@ async function extractTextWithOpenAI(key: string, userMsg: string): Promise<Extr
   const data = await r.json()
   const content = data.choices?.[0]?.message?.content
   if (!content) throw new Error('Empty response from OpenAI')
-  return { ...parseJsonFromModelText(content), provider: 'openai:gpt-4o' }
+  return { ...parseJsonFromModelText(content), provider: `openai:${model}` }
 }
 
-async function extractTextWithGoogle(key: string, userMsg: string): Promise<ExtractedRecipe> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(key)}`
+async function extractTextWithGoogle(key: string, userMsg: string, model: string): Promise<ExtractedRecipe> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -739,10 +744,10 @@ async function extractTextWithGoogle(key: string, userMsg: string): Promise<Extr
   const data = await r.json()
   const content = data.candidates?.[0]?.content?.parts?.[0]?.text
   if (!content) throw new Error('Empty response from Google')
-  return { ...parseJsonFromModelText(content), provider: 'google:gemini-3.6-flash' }
+  return { ...parseJsonFromModelText(content), provider: `google:${model}` }
 }
 
-async function extractTextWithOpenRouter(key: string, userMsg: string): Promise<ExtractedRecipe> {
+async function extractTextWithOpenRouter(key: string, userMsg: string, model: string): Promise<ExtractedRecipe> {
   const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -751,7 +756,7 @@ async function extractTextWithOpenRouter(key: string, userMsg: string): Promise<
       'HTTP-Referer': 'https://kerencookbook.vercel.app',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.0-flash-001',
+      model,
       temperature: 0,
       response_format: { type: 'json_object' },
       messages: [
@@ -764,7 +769,7 @@ async function extractTextWithOpenRouter(key: string, userMsg: string): Promise<
   const data = await r.json()
   const content = data.choices?.[0]?.message?.content
   if (!content) throw new Error('Empty response from OpenRouter')
-  return { ...parseJsonFromModelText(content), provider: 'openrouter:google/gemini-2.0-flash-001' }
+  return { ...parseJsonFromModelText(content), provider: `openrouter:${model}` }
 }
 
 /* ─────────────────────────────────────────────────────

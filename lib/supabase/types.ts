@@ -115,6 +115,7 @@ export type Database = {
           owner_id: string
           provider: string
           api_key: string
+          model: string | null
           is_active: boolean
           saved_at: string
           last_tested_at: string | null
@@ -125,6 +126,7 @@ export type Database = {
           owner_id: string
           provider: string
           api_key: string
+          model?: string | null
           is_active?: boolean
           saved_at?: string
           last_tested_at?: string | null
@@ -135,6 +137,7 @@ export type Database = {
           owner_id?: string
           provider?: string
           api_key?: string
+          model?: string | null
           is_active?: boolean
           saved_at?: string
           last_tested_at?: string | null
